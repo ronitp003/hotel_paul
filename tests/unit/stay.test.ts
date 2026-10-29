@@ -278,10 +278,33 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
       const result = evaluateRoomAvailability(roomWithBooking, checkIn, checkOut, stay);
 
       expect(result.isAvailable).toBe(false);
-      expect(result.unavailableType).toBe("BOOKED");
-      expect(result.unavailableReason).toContain("Booked");
+      expect(result.unavailableType).toBe("RESERVED");
+      expect(result.unavailableReason).toContain("Reserved");
       expect(result.conflictingBooking?.guestName).toBe("Rajesh Sharma");
       expect(result.conflictingBooking?.reference).toBe("HP-2026-001");
+    });
+
+    it("detects booking conflict when booking is CHECKED_IN and marks BOOKED", () => {
+      const roomWithCheckedIn = {
+        ...baseRoom,
+        bookings: [
+          {
+            id: "bkg-ci",
+            reference: "HP-2026-CI",
+            status: BookingStatus.CHECKED_IN,
+            checkInAt: new Date("2026-11-01T12:00:00.000Z"),
+            checkOutAt: new Date("2026-11-02T12:00:00.000Z"),
+            guests: [{ name: "Pooja Banerjee", isPrimary: true }],
+          },
+        ],
+      };
+
+      const result = evaluateRoomAvailability(roomWithCheckedIn, checkIn, checkOut, stay);
+
+      expect(result.isAvailable).toBe(false);
+      expect(result.unavailableType).toBe("BOOKED");
+      expect(result.unavailableReason).toContain("Booked");
+      expect(result.conflictingBooking?.guestName).toBe("Pooja Banerjee");
     });
 
     it("allows back-to-back stays without collision", () => {

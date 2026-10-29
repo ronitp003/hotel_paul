@@ -6,6 +6,7 @@ import { PrismaClient, BookingStatus, Role, PaymentKind } from "@prisma/client";
 import * as sessionModule from "@/server/auth/session";
 import { ROLES } from "@/lib/constants";
 import { bookingService } from "@/server/services/booking.service";
+import { roomService } from "@/server/services/room.service";
 import { createBookingAction } from "@/server/actions/booking.actions";
 import { AppError } from "@/lib/errors";
 
@@ -146,6 +147,18 @@ describe("Phase 1.5: Booking & Check-in (Integration)", () => {
     expect(booking.stayDays).toBe(2);
     expect(booking.rateApplied).toBe(2400);
     expect(booking.advancePaid).toBe(0);
+
+    // Verify room status synchronizes to RESERVED across rooms tab and new booking
+    const roomStatus = await roomService.getRoomStatus(room201Id, checkIn);
+    expect(roomStatus.status).toBe("RESERVED");
+    expect(roomStatus.currentBooking?.reference).toBe(booking.reference);
+    expect(roomStatus.currentBooking?.guestName).toBe("Subhas Chandra Bose");
+
+    const availableRooms = await roomService.findAvailableRooms(checkIn, checkOut, { typeId: testTypeId });
+    const targetRoom = availableRooms.rooms.find((r) => r.id === room201Id);
+    expect(targetRoom?.isAvailable).toBe(false);
+    expect(targetRoom?.unavailableType).toBe("RESERVED");
+    expect(targetRoom?.unavailableReason).toContain("Reserved");
   });
 
   it("creates an immediate CHECKED_IN booking and records actualCheckInAt", async () => {

@@ -161,8 +161,8 @@ describe("Phase 1.4: Room Availability & Exclusion Constraints (Integration)", (
     const r101Exact = resultExact.rooms.find((r) => r.id === room101Id);
 
     expect(r101Exact?.isAvailable).toBe(false);
-    expect(r101Exact?.unavailableType).toBe("BOOKED");
-    expect(r101Exact?.unavailableReason).toContain("Booked");
+    expect(r101Exact?.unavailableType).toBe("RESERVED");
+    expect(r101Exact?.unavailableReason).toContain("Reserved");
     expect(r101Exact?.conflictingBooking?.guestName).toBe("Satyajit Ray");
     expect(r101Exact?.conflictingBooking?.id).toBe(booking.id);
 
@@ -174,7 +174,7 @@ describe("Phase 1.4: Room Availability & Exclusion Constraints (Integration)", (
     });
     const r101Inside = resultInside.rooms.find((r) => r.id === room101Id);
     expect(r101Inside?.isAvailable).toBe(false);
-    expect(r101Inside?.unavailableType).toBe("BOOKED");
+    expect(r101Inside?.unavailableType).toBe("RESERVED");
   });
 
   it("permits back-to-back stays where checkout at T matches next check-in at T", async () => {

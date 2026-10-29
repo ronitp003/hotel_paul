@@ -13,6 +13,7 @@ import {
   SearchIcon,
   AddIcon,
   RoomIcon,
+  CalendarIcon,
   ProblemIcon,
   MaintenanceIcon,
   CheckIcon,
@@ -31,7 +32,7 @@ interface RoomsManagerProps {
   userRole?: Role;
 }
 
-type StatusFilter = "ALL" | "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "PROBLEMS";
+type StatusFilter = "ALL" | "AVAILABLE" | "OCCUPIED" | "RESERVED" | "MAINTENANCE" | "PROBLEMS";
 
 export function RoomsManager({
   initialRooms,
@@ -52,12 +53,14 @@ export function RoomsManager({
   const counts = useMemo(() => {
     let available = 0;
     let occupied = 0;
+    let reserved = 0;
     let maintenance = 0;
     let problems = 0;
 
     for (const r of initialRooms) {
       if (r.status === "AVAILABLE") available++;
       if (r.status === "OCCUPIED") occupied++;
+      if (r.status === "RESERVED") reserved++;
       if (r.status === "MAINTENANCE") maintenance++;
       if (r.hasProblem) problems++;
     }
@@ -66,6 +69,7 @@ export function RoomsManager({
       total: initialRooms.length,
       available,
       occupied,
+      reserved,
       maintenance,
       problems,
     };
@@ -92,6 +96,9 @@ export function RoomsManager({
         return false;
       }
       if (statusFilter === "OCCUPIED" && room.status !== "OCCUPIED") {
+        return false;
+      }
+      if (statusFilter === "RESERVED" && room.status !== "RESERVED") {
         return false;
       }
       if (statusFilter === "MAINTENANCE" && room.status !== "MAINTENANCE") {
@@ -143,6 +150,16 @@ export function RoomsManager({
             inactiveBorder: "border-border hover:border-status-occupied/40",
             inactiveBgHover: "hover:bg-status-occupied/10",
             inactiveBadgeClass: "bg-status-occupied/15 text-status-occupied border-status-occupied/25",
+          },
+          {
+            id: "RESERVED" as const,
+            label: "Reserved",
+            icon: CalendarIcon,
+            count: counts.reserved,
+            inactiveColorClass: "text-status-reserved",
+            inactiveBorder: "border-border hover:border-status-reserved/40",
+            inactiveBgHover: "hover:bg-status-reserved/10",
+            inactiveBadgeClass: "bg-status-reserved/15 text-status-reserved border-status-reserved/25",
           },
           {
             id: "MAINTENANCE" as const,

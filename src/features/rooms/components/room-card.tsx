@@ -45,6 +45,8 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
     ? "border-l-4 border-l-muted-foreground/40 opacity-80"
     : room.status === "OCCUPIED"
     ? "border-l-4 border-l-status-occupied"
+    : room.status === "RESERVED"
+    ? "border-l-4 border-l-status-reserved"
     : room.status === "MAINTENANCE"
     ? "border-l-4 border-l-status-maintenance"
     : "border-l-4 border-l-status-available";
@@ -53,7 +55,7 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
     <>
       <Card
         onClick={() => {
-          if (room.status === "OCCUPIED" || room.status === "MAINTENANCE" || room.hasProblem) {
+          if (room.status === "OCCUPIED" || room.status === "RESERVED" || room.status === "MAINTENANCE" || room.hasProblem) {
             setIsDetailsOpen(true);
           }
         }}
@@ -120,6 +122,19 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
               </div>
             )}
 
+            {room.status === "RESERVED" && room.currentBooking && (
+              <div className="rounded-lg bg-status-reserved/10 border border-status-reserved/25 p-2.5 space-y-1 text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-status-reserved truncate">
+                  <GuestIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{room.currentBooking.guestName}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
+                  <span>Expected: {formatISTDate(new Date(room.currentBooking.checkInAt))}</span>
+                </div>
+              </div>
+            )}
+
             {room.status === "MAINTENANCE" && (
               <div className="rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 p-2.5 space-y-1 text-xs">
                 <div className="flex items-center gap-1.5 font-semibold text-status-maintenance">
@@ -153,6 +168,8 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
           <span className="text-[11px] font-medium">
             {room.status === "OCCUPIED"
               ? "Guest in room"
+              : room.status === "RESERVED"
+              ? "Reserved"
               : room.status === "MAINTENANCE"
               ? "Out of service"
               : !room.isActive
@@ -229,12 +246,30 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
               </div>
             </div>
 
-            {/* Occupied Guest Details */}
-            {room.status === "OCCUPIED" && room.currentBooking && (
-              <div className="rounded-xl bg-status-occupied/5 border border-status-occupied/20 p-4 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-status-occupied/15">
-                  <span className="text-xs font-bold uppercase tracking-wider text-status-occupied">Active Reservation</span>
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-status-occupied/15 text-status-occupied font-semibold">
+            {/* Occupied or Reserved Guest Details */}
+            {(room.status === "OCCUPIED" || room.status === "RESERVED") && room.currentBooking && (
+              <div className={cn(
+                "rounded-xl p-4 space-y-3 border",
+                room.status === "OCCUPIED"
+                  ? "bg-status-occupied/5 border-status-occupied/20"
+                  : "bg-status-reserved/5 border-status-reserved/25"
+              )}>
+                <div className={cn(
+                  "flex items-center justify-between pb-2 border-b",
+                  room.status === "OCCUPIED" ? "border-status-occupied/15" : "border-status-reserved/20"
+                )}>
+                  <span className={cn(
+                    "text-xs font-bold uppercase tracking-wider",
+                    room.status === "OCCUPIED" ? "text-status-occupied" : "text-status-reserved"
+                  )}>
+                    {room.status === "OCCUPIED" ? "Active Stay" : "Upcoming Reservation"}
+                  </span>
+                  <span className={cn(
+                    "font-mono text-xs px-2 py-0.5 rounded font-semibold",
+                    room.status === "OCCUPIED"
+                      ? "bg-status-occupied/15 text-status-occupied"
+                      : "bg-status-reserved/15 text-status-reserved"
+                  )}>
                     {room.currentBooking.reference}
                   </span>
                 </div>
@@ -244,7 +279,9 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
                     <span className="font-semibold text-foreground text-sm">{room.currentBooking.guestName}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block text-[11px]">Checked In</span>
+                    <span className="text-muted-foreground block text-[11px]">
+                      {room.status === "OCCUPIED" ? "Checked In" : "Expected Check-In"}
+                    </span>
                     <span className="font-medium text-foreground">{formatISTDateTime(new Date(room.currentBooking.checkInAt))}</span>
                   </div>
                   <div className="sm:col-span-2">
@@ -283,12 +320,12 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
           </div>
 
           <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5">
-            {room.status === "OCCUPIED" && room.currentBooking ? (
+            {(room.status === "OCCUPIED" || room.status === "RESERVED") && room.currentBooking ? (
               <Link
-                href={`/bookings/${room.currentBooking.id}`}
+                href={`/bookings`}
                 className={buttonVariants({ variant: "default", size: "sm" })}
               >
-                View Full Stay Details
+                View Booking Details
                 <ChevronRightIcon className="size-3.5 ml-1.5" aria-hidden="true" />
               </Link>
             ) : (

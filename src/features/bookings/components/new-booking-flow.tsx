@@ -643,10 +643,16 @@ export function NewBookingFlow({
                                 "text-xs font-semibold",
                                 isAvail
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
+                                  : room.unavailableType === "RESERVED"
+                                  ? "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
                                   : "bg-stone-100 text-stone-700 border-stone-300 dark:bg-stone-900 dark:text-stone-300"
                               )}
                             >
-                              {isAvail ? "Available" : room.unavailableType || "Unavailable"}
+                              {isAvail
+                                ? "Available"
+                                : room.unavailableType === "RESERVED"
+                                ? "Reserved"
+                                : room.unavailableType || "Unavailable"}
                             </Badge>
                             <span className="text-xs text-muted-foreground font-medium">
                               {room.typeName}
@@ -683,7 +689,14 @@ export function NewBookingFlow({
 
                         {/* Unavailable reason message */}
                         {!isAvail && room.unavailableReason && (
-                          <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 p-2 rounded-md border border-red-200 dark:border-red-900 font-medium">
+                          <div
+                            className={cn(
+                              "text-xs p-2 rounded-md border font-medium",
+                              room.unavailableType === "RESERVED"
+                                ? "text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900"
+                                : "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900"
+                            )}
+                          >
                             {room.unavailableReason}
                           </div>
                         )}

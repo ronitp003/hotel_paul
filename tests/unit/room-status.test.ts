@@ -81,7 +81,7 @@ describe("Room Status Calculation (calculateRoomStatus)", () => {
     expect(res.currentBooking?.reference).toBe("BK-20261029-001");
   });
 
-  it("does NOT mark OCCUPIED if booking is RESERVED, CANCELLED, or CHECKED_OUT", () => {
+  it("derives RESERVED when a RESERVED booking covers or is upcoming for current time", () => {
     const res = calculateRoomStatus(
       {
         bookings: [
@@ -89,6 +89,29 @@ describe("Room Status Calculation (calculateRoomStatus)", () => {
             id: "b-reserved",
             reference: "BK-RES",
             status: BookingStatus.RESERVED,
+            checkInAt: new Date("2026-10-28T14:00:00.000Z"),
+            checkOutAt: new Date("2026-10-30T10:00:00.000Z"),
+            guests: [{ name: "Ananya Roy", isPrimary: true }],
+          },
+        ],
+      },
+      baseTime
+    );
+
+    expect(res.status).toBe("RESERVED");
+    expect(res.currentBooking?.id).toBe("b-reserved");
+    expect(res.currentBooking?.guestName).toBe("Ananya Roy");
+    expect(res.currentBooking?.reference).toBe("BK-RES");
+  });
+
+  it("derives AVAILABLE if bookings are only CANCELLED or CHECKED_OUT", () => {
+    const res = calculateRoomStatus(
+      {
+        bookings: [
+          {
+            id: "b-cancelled",
+            reference: "BK-CAN",
+            status: BookingStatus.CANCELLED,
             checkInAt: new Date("2026-10-28T14:00:00.000Z"),
             checkOutAt: new Date("2026-10-30T10:00:00.000Z"),
           },

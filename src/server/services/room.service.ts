@@ -8,7 +8,7 @@ import { calculateStay, doIntervalsOverlap, type StayCalculationResult } from ".
 import { formatIST, formatISTDate, formatISTTime } from "@/lib/datetime";
 import { type BookingStatus, type ProblemStatus, type Severity } from "@prisma/client";
 
-export type DerivedRoomStatus = "AVAILABLE" | "OCCUPIED" | "MAINTENANCE";
+export type DerivedRoomStatus = "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "RESERVED";
 
 export interface ConflictingBookingInfo {
   id: string;
@@ -34,7 +34,7 @@ export interface AvailableRoomResult {
   isActive: boolean;
   isAvailable: boolean;
   unavailableReason: string | null;
-  unavailableType: "BOOKED" | "MAINTENANCE" | "DISABLED" | null;
+  unavailableType: "BOOKED" | "RESERVED" | "MAINTENANCE" | "DISABLED" | null;
   hasProblem: boolean;
   openProblemsCount: number;
   conflictingBooking: ConflictingBookingInfo | null;
@@ -172,7 +172,33 @@ export function calculateRoomStatus(
     };
   }
 
-  // 3. Available (empty)
+  // 3. Reserved check (RESERVED booking where checkOutAt >= now)
+  const reservedBooking = room.bookings
+    ?.filter((b) => b.status === "RESERVED" && new Date(b.checkOutAt) >= now)
+    ?.sort((a, b) => new Date(a.checkInAt).getTime() - new Date(b.checkInAt).getTime())[0];
+
+  if (reservedBooking) {
+    const primaryGuest =
+      reservedBooking.guests?.find((g) => g.isPrimary)?.name ||
+      reservedBooking.guests?.[0]?.name ||
+      "Guest";
+
+    return {
+      status: "RESERVED",
+      hasProblem,
+      openProblemsCount,
+      maintenanceReason: null,
+      currentBooking: {
+        id: reservedBooking.id,
+        reference: reservedBooking.reference,
+        guestName: primaryGuest,
+        checkInAt: reservedBooking.checkInAt,
+        checkOutAt: reservedBooking.checkOutAt,
+      },
+    };
+  }
+
+  // 4. Available (empty)
   return {
     status: "AVAILABLE",
     hasProblem,
@@ -334,11 +360,14 @@ export function evaluateRoomAvailability(
       firstBooking.guests?.[0]?.name ||
       "Guest";
 
+    const isReserved = firstBooking.status === "RESERVED";
+    const statusLabel = isReserved ? "Reserved" : "Booked";
+
     let reason: string;
     if (bCheckInAt.getTime() > checkIn.getTime()) {
-      reason = `Booked from ${formatFriendlyUntil(bCheckInAt, now)} to ${formatFriendlyUntil(bCheckOutAt, now)}`;
+      reason = `${statusLabel} from ${formatFriendlyUntil(bCheckInAt, now)} to ${formatFriendlyUntil(bCheckOutAt, now)}`;
     } else {
-      reason = `Booked until ${formatFriendlyUntil(bCheckOutAt, now)}`;
+      reason = `${statusLabel} until ${formatFriendlyUntil(bCheckOutAt, now)}`;
     }
 
     return {
@@ -350,7 +379,7 @@ export function evaluateRoomAvailability(
       isActive: true,
       isAvailable: false,
       unavailableReason: reason,
-      unavailableType: "BOOKED",
+      unavailableType: isReserved ? "RESERVED" : "BOOKED",
       hasProblem,
       openProblemsCount,
       conflictingBooking: {
@@ -402,11 +431,13 @@ export const roomService = {
         },
         bookings: {
           where: {
-            status: "CHECKED_IN",
+            status: { in: ["CHECKED_IN", "RESERVED"] },
+            checkOutAt: { gte: now },
           },
           include: {
             guests: true,
           },
+          orderBy: { checkInAt: "asc" },
         },
         problems: {
           where: {
@@ -454,11 +485,13 @@ export const roomService = {
         },
         bookings: {
           where: {
-            status: "CHECKED_IN",
+            status: { in: ["CHECKED_IN", "RESERVED"] },
+            checkOutAt: { gte: now },
           },
           include: {
             guests: true,
           },
+          orderBy: { checkInAt: "asc" },
         },
         problems: {
           where: {
