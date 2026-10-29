@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import { toast } from "sonner";
 import { formatINR, formatINRPlain } from "@/lib/money";
 import { getBookingBillAction } from "@/server/actions/billing.actions";
@@ -93,8 +93,8 @@ export function CheckoutDialog({
   onSuccess,
 }: CheckoutDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [isLoadingBill, setIsLoadingBill] = useState(false);
   const [billData, setBillData] = useState<BookingBillData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Settlement Form State
   const [paymentAmount, setPaymentAmount] = useState<string>("");
@@ -102,34 +102,58 @@ export function CheckoutDialog({
   const [paymentNote, setPaymentNote] = useState<string>("");
   const [allowZeroPaymentWithBalance, setAllowZeroPaymentWithBalance] = useState(false);
 
+  const isLoadingBill = open && !billData && !loadError;
+
   // Load live bill calculation when dialog opens
-  const handleOpen = async (isOpen: boolean) => {
-    onOpenChange(isOpen);
-    if (isOpen) {
-      setIsLoadingBill(true);
-      try {
-        const res = await getBookingBillAction(bookingId);
+  const fetchBill = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const res = await getBookingBillAction(bookingId);
+      if (res.ok && res.data) {
+        const data = res.data as BookingBillData;
+        setBillData(data);
+        if (data.bill.balanceDue > 0) {
+          setPaymentAmount(data.bill.balanceDue.toString());
+        } else {
+          setPaymentAmount("0");
+        }
+      } else {
+        setLoadError(res.message || "Failed to load stay bill calculation.");
+        toast.error(res.message || "Failed to load stay bill calculation.");
+      }
+    } catch {
+      setLoadError("Failed to fetch bill calculation.");
+      toast.error("Failed to fetch bill calculation.");
+    }
+  }, [bookingId]);
+
+  useEffect(() => {
+    if (!open) return;
+    let isCancelled = false;
+
+    getBookingBillAction(bookingId)
+      .then((res) => {
+        if (isCancelled) return;
         if (res.ok && res.data) {
           const data = res.data as BookingBillData;
           setBillData(data);
-          // Pre-fill settlement amount with remaining balance if positive
           if (data.bill.balanceDue > 0) {
             setPaymentAmount(data.bill.balanceDue.toString());
           } else {
             setPaymentAmount("0");
           }
         } else {
-          toast.error(res.message || "Failed to load stay bill calculation.");
+          setLoadError(res.message || "Failed to load stay bill calculation.");
         }
-      } catch {
-        toast.error("Failed to fetch bill calculation.");
-      } finally {
-        setIsLoadingBill(false);
-      }
-    } else {
-      setBillData(null);
-    }
-  };
+      })
+      .catch(() => {
+        if (!isCancelled) setLoadError("Failed to fetch bill calculation.");
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [open, bookingId]);
 
   const handleCheckout = () => {
     const amtNum = parseFloat(paymentAmount) || 0;
@@ -169,8 +193,19 @@ export function CheckoutDialog({
   const payAmt = parseFloat(paymentAmount) || 0;
   const netRemainingAfterPayment = Math.max(0, currentBalance - payAmt);
 
+  const handleDialogChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setBillData(null);
+      setLoadError(null);
+      setPaymentAmount("");
+      setPaymentNote("");
+      setAllowZeroPaymentWithBalance(false);
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={handleOpen}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg text-foreground">
@@ -368,8 +403,30 @@ export function CheckoutDialog({
                 )}
               </div>
             )}
+
+            {/* Fully Settled Banner */}
+            {currentBalance <= 0 && (
+              <div className="border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-200 text-xs">
+                <CheckIcon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span className="font-medium">Stay is fully settled (₹0.00 balance due). Ready to issue Tax Invoice.</span>
+              </div>
+            )}
           </div>
-        ) : null}
+        ) : (
+          <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
+            <ProblemIcon className="size-7 mx-auto text-amber-500" />
+            <p>Could not load stay bill calculations for this booking.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={fetchBill}
+              className="text-xs font-medium"
+            >
+              Retry Calculation
+            </Button>
+          </div>
+        )}
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
@@ -386,7 +443,12 @@ export function CheckoutDialog({
             variant="default"
             size="sm"
             onClick={handleCheckout}
-            disabled={isPending || isLoadingBill || !billData}
+            disabled={
+              isPending ||
+              isLoadingBill ||
+              !billData ||
+              (currentBalance > 0 && payAmt < currentBalance && !allowZeroPaymentWithBalance)
+            }
             className="font-semibold"
           >
             {isPending ? (
