@@ -13,6 +13,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+import { isNavItemActive } from "./sidebar";
+
 interface MobileNavProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,9 +47,7 @@ export function MobileNav({
           <nav className="flex-1 overflow-y-auto p-3 space-y-1" aria-label="Mobile Navigation">
             {filteredItems.map((item) => {
               const Icon = item.icon;
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              const isActive = isNavItemActive(pathname, item.href);
 
               return (
                 <Link
@@ -57,13 +57,23 @@ export function MobileNav({
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-primary text-primary-foreground font-semibold"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                       : item.highlight
-                        ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                        : "text-foreground hover:bg-muted"
+                      ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   )}
                 >
-                  <Icon className="size-5 shrink-0" aria-hidden="true" />
+                  <Icon
+                    className={cn(
+                      "size-5 shrink-0 transition-colors",
+                      isActive
+                        ? "text-primary-foreground"
+                        : item.highlight
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    )}
+                    aria-hidden="true"
+                  />
                   <span>{item.title}</span>
                 </Link>
               );

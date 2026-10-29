@@ -17,6 +17,22 @@ export interface Actor {
   role: string;
 }
 
+export function serializeGstSlab(slab: {
+  id: string;
+  minRate: Decimal | number | string;
+  maxRate: Decimal | number | string | null;
+  percent: Decimal | number | string;
+  isActive: boolean;
+}) {
+  return {
+    id: slab.id,
+    minRate: Number(slab.minRate),
+    maxRate: slab.maxRate !== null && slab.maxRate !== undefined ? Number(slab.maxRate) : null,
+    percent: Number(slab.percent),
+    isActive: Boolean(slab.isActive),
+  };
+}
+
 export const settingsService = {
   /**
    * Fetches the current settings, upserting id=1 if not present.
@@ -56,13 +72,7 @@ export const settingsService = {
     return {
       hotel,
       invoiceSequence: invoiceSeq,
-      gstSlabs: gstSlabs.map((s) => ({
-        id: s.id,
-        minRate: Number(s.minRate),
-        maxRate: s.maxRate !== null ? Number(s.maxRate) : null,
-        percent: Number(s.percent),
-        isActive: s.isActive,
-      })),
+      gstSlabs: gstSlabs.map(serializeGstSlab),
     };
   },
 
@@ -283,16 +293,16 @@ export const settingsService = {
           entityId: created.id,
           metadata: {
             after: {
-              minRate: created.minRate,
-              maxRate: created.maxRate,
-              percent: created.percent,
+              minRate: Number(created.minRate),
+              maxRate: created.maxRate !== null ? Number(created.maxRate) : null,
+              percent: Number(created.percent),
               isActive: created.isActive,
             },
           },
         },
       });
 
-      return created;
+      return serializeGstSlab(created);
     });
   },
 
@@ -344,22 +354,22 @@ export const settingsService = {
           entityId: id,
           metadata: {
             before: {
-              minRate: existing.minRate,
-              maxRate: existing.maxRate,
-              percent: existing.percent,
+              minRate: Number(existing.minRate),
+              maxRate: existing.maxRate !== null ? Number(existing.maxRate) : null,
+              percent: Number(existing.percent),
               isActive: existing.isActive,
             },
             after: {
-              minRate: updated.minRate,
-              maxRate: updated.maxRate,
-              percent: updated.percent,
+              minRate: Number(updated.minRate),
+              maxRate: updated.maxRate !== null ? Number(updated.maxRate) : null,
+              percent: Number(updated.percent),
               isActive: updated.isActive,
             },
           },
         },
       });
 
-      return updated;
+      return serializeGstSlab(updated);
     });
   },
 
@@ -401,7 +411,7 @@ export const settingsService = {
         },
       });
 
-      return updated;
+      return serializeGstSlab(updated);
     });
   },
 
@@ -437,9 +447,9 @@ export const settingsService = {
           entityId: id,
           metadata: {
             before: {
-              minRate: existing.minRate,
-              maxRate: existing.maxRate,
-              percent: existing.percent,
+              minRate: Number(existing.minRate),
+              maxRate: existing.maxRate !== null ? Number(existing.maxRate) : null,
+              percent: Number(existing.percent),
               isActive: existing.isActive,
             },
           },

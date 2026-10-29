@@ -4,13 +4,38 @@ import { useSyncExternalStore } from "react";
 import { ClockIcon } from "@/lib/icons";
 import { formatISTDate, formatISTTimeWithSeconds } from "@/lib/datetime";
 
+let currentSnapshot: string | null = null;
+const listeners = new Set<() => void>();
+let timerId: ReturnType<typeof setInterval> | null = null;
+
 function subscribe(callback: () => void) {
-  const interval = setInterval(callback, 1000);
-  return () => clearInterval(interval);
+  listeners.add(callback);
+
+  if (timerId === null) {
+    currentSnapshot = new Date().toISOString();
+    timerId = setInterval(() => {
+      currentSnapshot = new Date().toISOString();
+      for (const listener of listeners) {
+        listener();
+      }
+    }, 1000);
+  }
+
+  // Notify subscriber with current snapshot right after mounting
+  callback();
+
+  return () => {
+    listeners.delete(callback);
+    if (listeners.size === 0 && timerId !== null) {
+      clearInterval(timerId);
+      timerId = null;
+      currentSnapshot = null;
+    }
+  };
 }
 
-function getSnapshot(): string {
-  return new Date().toISOString();
+function getSnapshot(): string | null {
+  return currentSnapshot;
 }
 
 function getServerSnapshot(): string | null {

@@ -262,6 +262,18 @@ describe("Phase 1.2 Settings & Room Types (Integration)", () => {
       expect(gapRes.ok).toBe(false);
       expect(gapRes.code).toBe("VALIDATION_ERROR");
     });
+
+    it("returns plain objects with number types (no Decimal instances) on mutations", async () => {
+      const slabs = await prisma.gstSlab.findMany({ orderBy: { minRate: "asc" } });
+      const topSlab = slabs[slabs.length - 1];
+
+      const toggleRes = await toggleGstSlabAction(topSlab.id, topSlab.isActive);
+      expect(toggleRes.ok).toBe(true);
+      const data = toggleRes.data as { minRate: unknown; maxRate: unknown; percent: unknown };
+      expect(typeof data.minRate).toBe("number");
+      expect(typeof data.percent).toBe("number");
+      expect(data.minRate).not.toHaveProperty("d");
+    });
   });
 
   describe("Room Type Uniqueness & Delete Guard", () => {
