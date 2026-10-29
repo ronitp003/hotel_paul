@@ -22,6 +22,7 @@ import {
   CheckIcon,
   ProblemIcon,
   CalendarIcon,
+  InvoiceIcon,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,9 @@ export interface BookingBillData {
     roomNumber: string;
     roomTypeName: string;
     primaryGuest?: { name: string };
+    companyName?: string | null;
+    companyGstin?: string | null;
+    companyAddress?: string | null;
   };
   stay: {
     days: number;
@@ -114,6 +118,13 @@ export function CheckoutDialog({
   >("CASH");
   const [refundNote, setRefundNote] = useState<string>("Early check-out refund");
 
+  // Corporate Billing State
+  const [showCorporate, setShowCorporate] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [companyGstin, setCompanyGstin] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
+  const [gstinError, setGstinError] = useState<string | null>(null);
+
   const isLoadingBill = open && !billData && !loadError;
 
   // Load live bill calculation when dialog opens or when isEarlyCheckout toggles
@@ -132,6 +143,12 @@ export function CheckoutDialog({
             setPaymentAmount(data.bill.balanceDue.toString());
           } else {
             setPaymentAmount("0");
+          }
+          if (data.booking.companyName || data.booking.companyGstin) {
+            setShowCorporate(true);
+            setCompanyName(data.booking.companyName || "");
+            setCompanyGstin(data.booking.companyGstin || "");
+            setCompanyAddress(data.booking.companyAddress || "");
           }
         } else {
           setLoadError(res.message || "Failed to load stay bill calculation.");
@@ -158,6 +175,12 @@ export function CheckoutDialog({
           } else {
             setPaymentAmount("0");
           }
+          if (data.booking.companyName || data.booking.companyGstin) {
+            setShowCorporate(true);
+            setCompanyName(data.booking.companyName || "");
+            setCompanyGstin(data.booking.companyGstin || "");
+            setCompanyAddress(data.booking.companyAddress || "");
+          }
         } else {
           setLoadError(res.message || "Failed to load stay bill calculation.");
         }
@@ -182,6 +205,18 @@ export function CheckoutDialog({
       return;
     }
 
+    if (showCorporate && companyGstin.trim()) {
+      const gstinRegex =
+        /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstinRegex.test(companyGstin.trim())) {
+        setGstinError(
+          "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV)"
+        );
+        toast.error("Please enter a valid 15-character GSTIN for corporate billing.");
+        return;
+      }
+    }
+
     startTransition(async () => {
       const res = await checkoutAction({
         bookingId,
@@ -193,6 +228,16 @@ export function CheckoutDialog({
         refundAmount: excessRefund > 0 ? excessRefund : undefined,
         refundMode: excessRefund > 0 ? refundMode : undefined,
         refundNote: excessRefund > 0 ? refundNote : undefined,
+        companyName:
+          showCorporate && companyName.trim() ? companyName.trim() : undefined,
+        companyGstin:
+          showCorporate && companyGstin.trim()
+            ? companyGstin.trim().toUpperCase()
+            : undefined,
+        companyAddress:
+          showCorporate && companyAddress.trim()
+            ? companyAddress.trim()
+            : undefined,
       });
 
       if (!res.ok) {
@@ -228,19 +273,26 @@ export function CheckoutDialog({
       setIsEarlyCheckout(false);
       setRefundMode("CASH");
       setRefundNote("Early check-out refund");
+      setShowCorporate(false);
+      setCompanyName("");
+      setCompanyGstin("");
+      setCompanyAddress("");
+      setGstinError(null);
     }
     onOpenChange(isOpen);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg text-foreground">
-            <CheckOutIcon className="size-5 text-primary" />
-            Check-out & Issue Invoice — Room {roomNumber}
+      <DialogContent className="sm:max-w-xl md:max-w-2xl flex flex-col p-0 gap-0 max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden">
+        <DialogHeader className="p-4 sm:p-5 pb-3 sm:pb-3.5 border-b border-border/80 shrink-0 pr-12">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground font-semibold">
+            <CheckOutIcon className="size-5 text-primary shrink-0" />
+            <span className="truncate">
+              Check-out & Issue Invoice — Room {roomNumber}
+            </span>
           </DialogTitle>
-          <DialogDescription className="text-xs">
+          <DialogDescription className="text-xs text-muted-foreground leading-relaxed mt-0.5">
             Review final stay charges, settle any pending balance, and generate
             an immutable gapless GST Tax Invoice for booking{" "}
             <span className="font-mono font-semibold text-foreground">
@@ -251,25 +303,25 @@ export function CheckoutDialog({
         </DialogHeader>
 
         {isLoadingBill ? (
-          <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+          <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center gap-2.5 p-6 text-muted-foreground">
             <SpinnerIcon className="size-6 animate-spin text-primary" />
-            <span className="text-xs">
+            <span className="text-xs font-medium">
               Computing 24-hour stay and GST calculations...
             </span>
           </div>
         ) : billData ? (
-          <div className="space-y-4 py-2 text-xs">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 space-y-4 text-xs custom-scrollbar">
             {/* Early Departure Switch */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-border/80 bg-muted/40">
-              <div className="space-y-0.5 pr-4">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border/80 bg-muted/40 gap-3">
+              <div className="space-y-0.5 pr-2 min-w-0">
                 <label
                   htmlFor="early-checkout-toggle"
                   className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5"
                 >
-                  <CalendarIcon className="size-3.5 text-primary" />
-                  Early Departure / Bill Only Up to Today
+                  <CalendarIcon className="size-3.5 text-primary shrink-0" />
+                  <span>Early Departure / Bill Only Up to Today</span>
                 </label>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground leading-normal">
                   Guest leaving early? Recalculate stay tariff for duration up to now instead of full scheduled booking.
                 </p>
               </div>
@@ -278,21 +330,21 @@ export function CheckoutDialog({
                 type="checkbox"
                 checked={isEarlyCheckout}
                 onChange={(e) => setIsEarlyCheckout(e.target.checked)}
-                className="size-4 rounded border-border text-primary cursor-pointer accent-primary"
+                className="size-4 shrink-0 rounded border-border text-primary cursor-pointer accent-primary"
               />
             </div>
 
             {/* Stay & Room Summary Box */}
-            <div className="bg-muted/40 p-3 rounded-lg border border-border/80 flex items-center justify-between">
-              <div>
+            <div className="bg-muted/40 p-3 rounded-lg border border-border/80 flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <span className="text-muted-foreground block text-[11px]">
                   Primary Guest
                 </span>
-                <span className="font-semibold text-foreground text-sm">
+                <span className="font-semibold text-foreground text-sm truncate block">
                   {billData.booking.primaryGuest?.name || "Guest"}
                 </span>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <span className="text-muted-foreground block text-[11px]">
                   Billed Duration
                 </span>
@@ -302,6 +354,121 @@ export function CheckoutDialog({
                   {billData.stay.hours}h)
                 </span>
               </div>
+            </div>
+
+            {/* Corporate / GSTIN Billing Details */}
+            <div className="border border-border/70 rounded-lg p-3 bg-muted/20 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <InvoiceIcon className="size-3.5 text-primary shrink-0" />
+                  <span>Corporate / GSTIN Billing Details</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowCorporate(!showCorporate)}
+                  className="text-xs font-medium text-primary hover:underline cursor-pointer shrink-0"
+                >
+                  {showCorporate
+                    ? "− Hide Details"
+                    : companyName || companyGstin
+                      ? "Edit Corporate Details"
+                      : "+ Add Corporate / GSTIN"}
+                </button>
+              </div>
+
+              {showCorporate ? (
+                <div className="pt-2 border-t border-border/60 space-y-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <Label
+                        htmlFor="checkout-company-name"
+                        className="text-[11px] font-medium"
+                      >
+                        Company Name
+                      </Label>
+                      <Input
+                        id="checkout-company-name"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="e.g. ABC Technologies Pvt Ltd"
+                        className="h-8 text-xs mt-1 bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="checkout-company-gstin"
+                        className="text-[11px] font-medium"
+                      >
+                        Company GSTIN (15 characters)
+                      </Label>
+                      <Input
+                        id="checkout-company-gstin"
+                        value={companyGstin}
+                        onChange={(e) => {
+                          setCompanyGstin(e.target.value.toUpperCase());
+                          setGstinError(null);
+                        }}
+                        placeholder="e.g. 27AAPFU0939F1ZV"
+                        className={cn(
+                          "h-8 text-xs font-mono uppercase mt-1 bg-background",
+                          gstinError &&
+                            "border-destructive focus-visible:ring-destructive"
+                        )}
+                        maxLength={15}
+                      />
+                      {gstinError && (
+                        <p className="text-[10px] text-destructive font-medium mt-0.5">
+                          {gstinError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="checkout-company-address"
+                      className="text-[11px] font-medium"
+                    >
+                      Company Address
+                    </Label>
+                    <Input
+                      id="checkout-company-address"
+                      value={companyAddress}
+                      onChange={(e) => setCompanyAddress(e.target.value)}
+                      placeholder="e.g. 42 MG Road, Sector 5, Bangalore"
+                      className="h-8 text-xs mt-1 bg-background"
+                    />
+                  </div>
+                </div>
+              ) : companyName || companyGstin ? (
+                <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/40">
+                  Billed to:{" "}
+                  <strong className="text-foreground">
+                    {companyName || "Corporate Client"}
+                  </strong>
+                  {companyGstin && (
+                    <span>
+                      {" "}
+                      (GSTIN:{" "}
+                      <span className="font-mono text-foreground font-semibold">
+                        {companyGstin}
+                      </span>
+                      )
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">
+                  Need a B2B Tax Invoice with company GSTIN? Click{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowCorporate(true)}
+                    className="text-primary hover:underline font-medium cursor-pointer"
+                  >
+                    + Add Corporate / GSTIN
+                  </button>{" "}
+                  to attach business tax credentials.
+                </p>
+              )}
             </div>
 
             {/* Bill Breakdown Card */}
@@ -577,7 +744,7 @@ export function CheckoutDialog({
             )}
           </div>
         ) : (
-          <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
+          <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center p-6 text-center text-xs text-muted-foreground space-y-3">
             <ProblemIcon className="size-7 mx-auto text-amber-500" />
             <p>Could not load stay bill calculations for this booking.</p>
             <Button
@@ -585,27 +752,26 @@ export function CheckoutDialog({
               variant="outline"
               size="sm"
               onClick={handleRetry}
-              className="text-xs font-medium"
+              className="text-xs font-medium cursor-pointer"
             >
               Retry Calculation
             </Button>
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="m-0 border-t border-border/80 bg-muted/40 p-3.5 sm:p-4 px-4 sm:px-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 shrink-0 rounded-b-xl">
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
+            className="h-9 px-4 text-xs sm:text-sm font-medium w-full sm:w-auto cursor-pointer"
           >
             Cancel
           </Button>
           <Button
             type="button"
             variant="default"
-            size="sm"
             onClick={handleCheckout}
             disabled={
               isPending ||
@@ -616,22 +782,24 @@ export function CheckoutDialog({
                 payAmt < currentBalance &&
                 !allowZeroPaymentWithBalance)
             }
-            className="font-semibold"
+            className="h-9 px-4 sm:px-5 text-xs sm:text-sm font-semibold w-full sm:w-auto shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5"
           >
             {isPending ? (
               <>
-                <SpinnerIcon className="size-4 animate-spin mr-1.5" />
-                Processing Check-out...
+                <SpinnerIcon className="size-4 animate-spin shrink-0" />
+                <span>Processing Check-out...</span>
               </>
             ) : currentBalance < 0 ? (
               <>
-                <CheckIcon className="size-4 mr-1.5" />
-                Confirm Check-Out & Refund {formatINR(Math.abs(currentBalance))}
+                <CheckIcon className="size-4 shrink-0" />
+                <span>
+                  Confirm Check-Out & Refund {formatINR(Math.abs(currentBalance))}
+                </span>
               </>
             ) : (
               <>
-                <CheckIcon className="size-4 mr-1.5" />
-                Confirm Check-Out & Issue Invoice
+                <CheckIcon className="size-4 shrink-0" />
+                <span>Confirm Check-Out & Issue Invoice</span>
               </>
             )}
           </Button>

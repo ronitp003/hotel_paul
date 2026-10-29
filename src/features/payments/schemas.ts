@@ -40,6 +40,9 @@ export const checkoutSchema = z.object({
   refundAmount: z.number().min(0).optional(),
   refundMode: PaymentModeEnum.optional(),
   refundNote: z.string().trim().max(255).optional().or(z.literal("")),
+  companyName: z.string().trim().max(200).optional().or(z.literal("")),
+  companyGstin: z.string().trim().max(20).optional().or(z.literal("")),
+  companyAddress: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
 export const cancelInvoiceSchema = z.object({

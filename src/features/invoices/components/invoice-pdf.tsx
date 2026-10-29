@@ -322,6 +322,14 @@ export function InvoicePdfDocument({
                     </Text>
                   </View>
                 )}
+                {snapshot.booking.companyAddress && (
+                  <View style={styles.boxRow}>
+                    <Text style={styles.label}>Company Address:</Text>
+                    <Text style={styles.value}>
+                      {snapshot.booking.companyAddress}
+                    </Text>
+                  </View>
+                )}
               </>
             )}
           </View>

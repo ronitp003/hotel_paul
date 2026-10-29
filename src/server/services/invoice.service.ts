@@ -230,6 +230,19 @@ export const invoiceService = {
       }
     }
 
+    const finalCompanyName =
+      data.companyName !== undefined
+        ? data.companyName.trim() || null
+        : bookingPre.companyName;
+    const finalCompanyGstin =
+      data.companyGstin !== undefined
+        ? data.companyGstin.trim().toUpperCase() || null
+        : bookingPre.companyGstin;
+    const finalCompanyAddress =
+      data.companyAddress !== undefined
+        ? data.companyAddress.trim() || null
+        : bookingPre.companyAddress;
+
     return await prisma.$transaction(async (tx) => {
       // 1. Record final settlement payment or refund in DB if provided
       let finalPaymentId: string | null = null;
@@ -311,9 +324,9 @@ export const invoiceService = {
           rateApplied: Number(bookingPre.rateApplied),
           discount: Number(bookingPre.discount),
           gstPercent: calculation.gstPercent.toNumber(),
-          companyName: bookingPre.companyName,
-          companyGstin: bookingPre.companyGstin,
-          companyAddress: bookingPre.companyAddress,
+          companyName: finalCompanyName,
+          companyGstin: finalCompanyGstin,
+          companyAddress: finalCompanyAddress,
         },
         guests: bookingPre.guests.map((g) => ({
           name: g.name,
@@ -385,6 +398,9 @@ export const invoiceService = {
           checkOutAt: data.isEarlyCheckout ? actualCheckOut : bookingPre.checkOutAt,
           actualCheckInAt: actualCheckIn,
           actualCheckOutAt: actualCheckOut,
+          companyName: finalCompanyName,
+          companyGstin: finalCompanyGstin,
+          companyAddress: finalCompanyAddress,
         },
       });
 
