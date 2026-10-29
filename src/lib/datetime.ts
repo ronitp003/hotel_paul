@@ -64,6 +64,13 @@ export function formatISTTimeWithSeconds(date: Date | string | number): string {
 }
 
 /**
+ * Formats a Date into an HTML datetime-local input string in IST (e.g. "2026-10-29T10:00").
+ */
+export function toISTInputString(date: Date | string | number): string {
+  return formatIST(date, "yyyy-MM-dd'T'HH:mm");
+}
+
+/**
  * Full date and time in IST (e.g., "29 Oct 2026, 10:30 AM").
  */
 export function formatISTDateTime(date: Date | string | number): string {
