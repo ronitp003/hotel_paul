@@ -8,8 +8,8 @@ import { formatIST, formatISTDateTime, fromISTInput, toISTInputString } from "@/
 import { formatINR } from "@/lib/money";
 import { createBookingAction } from "@/server/actions/booking.actions";
 import { findAvailableRoomsAction } from "@/server/actions/room.actions";
-import { type AvailableRoomResult } from "@/server/services/room.service";
-import { calculateStay, type StayCalculationResult } from "@/server/services/billing.service";
+import type { AvailableRoomResult } from "@/server/services/room.service";
+import { calculateStay, type StayCalculationResult } from "@/lib/stay";
 import {
   CalendarIcon,
   CheckInIcon,
