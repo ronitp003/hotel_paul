@@ -19,6 +19,7 @@ import {
   AddIcon,
   DeleteIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   CheckIcon,
   ClockIcon,
   SpinnerIcon,
@@ -32,6 +33,15 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface GuestState {
   id: string;
@@ -309,6 +319,15 @@ export function NewBookingFlow({
 
   const availableCount = filteredRooms.filter((r) => r.isAvailable).length;
 
+  const selectedTypeName =
+    typeFilter === "ALL"
+      ? "All Room Types"
+      : roomTypes.find((t) => t.id === typeFilter)?.name || "All Room Types";
+  const selectedTypeCount =
+    typeFilter === "ALL"
+      ? rooms.length
+      : rooms.filter((r) => r.typeId === typeFilter).length;
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16">
       {/* ───────── Flow Header / Stepper Progress ───────── */}
@@ -550,24 +569,117 @@ export function NewBookingFlow({
               </div>
 
               {/* Room Type Dropdown */}
-              <div className="w-full sm:w-56">
-                <select
-                  id="room-type-filter"
-                  aria-label="Filter by Room Type"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground font-medium cursor-pointer"
-                >
-                  <option value="ALL">All Room Types ({rooms.length})</option>
-                  {roomTypes.map((type) => {
-                    const count = rooms.filter((r) => r.typeId === type.id).length;
-                    return (
-                      <option key={type.id} value={type.id}>
-                        {type.name} ({count})
-                      </option>
-                    );
-                  })}
-                </select>
+              <div className="w-full sm:w-64">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        id="room-type-filter"
+                        variant="outline"
+                        aria-label="Filter by Room Type"
+                        className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-xs hover:bg-muted/60 hover:border-border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <RoomIcon className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                          <span className="truncate text-sm font-medium">
+                            {selectedTypeName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] font-semibold px-1.5 py-0 bg-muted text-muted-foreground rounded-full border border-border/50"
+                          >
+                            {selectedTypeCount}
+                          </Badge>
+                          <ChevronDownIcon className="size-4 text-muted-foreground shrink-0 transition-transform duration-200" />
+                        </div>
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent
+                    align="start"
+                    sideOffset={6}
+                    className="w-(--anchor-width) min-w-[260px] max-h-64 overflow-y-auto p-1.5 shadow-lg border border-border bg-popover z-50 rounded-lg"
+                  >
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Filter by Room Type
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => setTypeFilter("ALL")}
+                        className={cn(
+                          "flex items-center justify-between gap-2 px-2.5 py-2 cursor-pointer text-sm rounded-md transition-colors",
+                          typeFilter === "ALL"
+                            ? "bg-primary/10 text-primary font-semibold"
+                            : "text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="size-4 flex items-center justify-center shrink-0">
+                            {typeFilter === "ALL" && (
+                              <CheckIcon className="size-3.5 text-primary stroke-[2.5]" />
+                            )}
+                          </div>
+                          <span className="truncate">All Room Types</span>
+                        </div>
+                        <Badge
+                          variant={typeFilter === "ALL" ? "default" : "secondary"}
+                          className={cn(
+                            "text-[11px] px-1.5 py-0 shrink-0 font-medium",
+                            typeFilter === "ALL"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {rooms.length}
+                        </Badge>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+
+                    <DropdownMenuSeparator className="my-1 border-border/60" />
+
+                    <DropdownMenuGroup>
+                      {roomTypes.map((type) => {
+                        const count = rooms.filter((r) => r.typeId === type.id).length;
+                        const isSelected = typeFilter === type.id;
+                        return (
+                          <DropdownMenuItem
+                            key={type.id}
+                            onClick={() => setTypeFilter(type.id)}
+                            className={cn(
+                              "flex items-center justify-between gap-2 px-2.5 py-2 cursor-pointer text-sm rounded-md transition-colors",
+                              isSelected
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-foreground hover:bg-muted"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="size-4 flex items-center justify-center shrink-0">
+                                {isSelected && (
+                                  <CheckIcon className="size-3.5 text-primary stroke-[2.5]" />
+                                )}
+                              </div>
+                              <span className="truncate">{type.name}</span>
+                            </div>
+                            <Badge
+                              variant={isSelected ? "default" : "secondary"}
+                              className={cn(
+                                "text-[11px] px-1.5 py-0 shrink-0 font-medium",
+                                isSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {count}
+                            </Badge>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
