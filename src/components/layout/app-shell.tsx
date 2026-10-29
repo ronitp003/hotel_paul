@@ -17,7 +17,11 @@ interface AppShellProps {
 
 export function AppShell({
   children,
-  user = { name: "Front Desk Staff", email: "staff@hotelpaul.in", role: "OWNER" },
+  user = {
+    name: "Front Desk Staff",
+    email: "staff@hotelpaul.in",
+    role: "OWNER",
+  },
 }: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -29,10 +33,7 @@ export function AppShell({
       {/* Main Column */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
-        <Topbar
-          onMobileMenuOpen={() => setMobileNavOpen(true)}
-          user={user}
-        />
+        <Topbar onMobileMenuOpen={() => setMobileNavOpen(true)} user={user} />
 
         {/* Content View */}
         <main className="flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 lg:p-6">

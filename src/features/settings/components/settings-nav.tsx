@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  SettingsIcon,
-  RoomIcon,
-  GuestIcon,
-} from "@/lib/icons";
+import { SettingsIcon, RoomIcon, GuestIcon } from "@/lib/icons";
 
 interface NavTab {
   label: string;

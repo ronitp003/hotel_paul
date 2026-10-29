@@ -117,7 +117,10 @@ export const invoiceService = {
     });
 
     if (!bookingPre) {
-      throw new AppError("BOOKING_NOT_FOUND", "The requested booking does not exist.");
+      throw new AppError(
+        "BOOKING_NOT_FOUND",
+        "The requested booking does not exist."
+      );
     }
 
     if (bookingPre.status === BookingStatus.CHECKED_OUT && bookingPre.invoice) {
@@ -389,7 +392,10 @@ export const invoiceService = {
    */
   async cancelInvoice(actor: Actor, data: CancelInvoiceInput) {
     if (actor.role !== Role.OWNER) {
-      throw new AppError("FORBIDDEN", "Only owners can cancel or correct issued invoices.");
+      throw new AppError(
+        "FORBIDDEN",
+        "Only owners can cancel or correct issued invoices."
+      );
     }
 
     return await prisma.$transaction(async (tx) => {
@@ -457,7 +463,10 @@ export const invoiceService = {
     });
 
     if (!invoice) {
-      throw new AppError("INVOICE_NOT_FOUND", "The requested invoice does not exist.");
+      throw new AppError(
+        "INVOICE_NOT_FOUND",
+        "The requested invoice does not exist."
+      );
     }
 
     return {
@@ -504,7 +513,11 @@ export const invoiceService = {
         { displayNo: { contains: q, mode: "insensitive" } },
         { booking: { reference: { contains: q, mode: "insensitive" } } },
         { booking: { room: { number: { contains: q, mode: "insensitive" } } } },
-        { booking: { guests: { some: { name: { contains: q, mode: "insensitive" } } } } },
+        {
+          booking: {
+            guests: { some: { name: { contains: q, mode: "insensitive" } } },
+          },
+        },
       ];
     }
 
@@ -564,7 +577,11 @@ export const invoiceService = {
       where.OR = [
         { booking: { reference: { contains: q, mode: "insensitive" } } },
         { booking: { room: { number: { contains: q, mode: "insensitive" } } } },
-        { booking: { guests: { some: { name: { contains: q, mode: "insensitive" } } } } },
+        {
+          booking: {
+            guests: { some: { name: { contains: q, mode: "insensitive" } } },
+          },
+        },
       ];
     }
 

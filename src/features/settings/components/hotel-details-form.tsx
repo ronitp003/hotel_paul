@@ -94,7 +94,9 @@ export function HotelDetailsForm({ initialData }: HotelDetailsFormProps) {
                     aria-invalid={Boolean(error)}
                   />
                   {error && (
-                    <p className="text-sm font-medium text-destructive">{error}</p>
+                    <p className="text-sm font-medium text-destructive">
+                      {error}
+                    </p>
                   )}
                 </div>
               );
@@ -107,7 +109,8 @@ export function HotelDetailsForm({ initialData }: HotelDetailsFormProps) {
               return (
                 <div className="space-y-1.5">
                   <Label htmlFor={field.name}>
-                    Full Postal Address <span className="text-destructive">*</span>
+                    Full Postal Address{" "}
+                    <span className="text-destructive">*</span>
                   </Label>
                   <Textarea
                     id={field.name}
@@ -119,7 +122,9 @@ export function HotelDetailsForm({ initialData }: HotelDetailsFormProps) {
                     aria-invalid={Boolean(error)}
                   />
                   {error && (
-                    <p className="text-sm font-medium text-destructive">{error}</p>
+                    <p className="text-sm font-medium text-destructive">
+                      {error}
+                    </p>
                   )}
                 </div>
               );
@@ -133,7 +138,8 @@ export function HotelDetailsForm({ initialData }: HotelDetailsFormProps) {
                 return (
                   <div className="space-y-1.5">
                     <Label htmlFor={field.name}>
-                      Front Desk Phone <span className="text-destructive">*</span>
+                      Front Desk Phone{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id={field.name}
@@ -145,7 +151,9 @@ export function HotelDetailsForm({ initialData }: HotelDetailsFormProps) {
                       aria-invalid={Boolean(error)}
                     />
                     {error && (
-                      <p className="text-sm font-medium text-destructive">{error}</p>
+                      <p className="text-sm font-medium text-destructive">
+                        {error}
+                      </p>
                     )}
                   </div>
                 );
@@ -169,10 +177,13 @@ export function HotelDetailsForm({ initialData }: HotelDetailsFormProps) {
                       aria-invalid={Boolean(error)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Leave blank if GST is not applicable. Invoices will show GSTIN if provided.
+                      Leave blank if GST is not applicable. Invoices will show
+                      GSTIN if provided.
                     </p>
                     {error && (
-                      <p className="text-sm font-medium text-destructive">{error}</p>
+                      <p className="text-sm font-medium text-destructive">
+                        {error}
+                      </p>
                     )}
                   </div>
                 );
@@ -182,10 +193,14 @@ export function HotelDetailsForm({ initialData }: HotelDetailsFormProps) {
         </CardContent>
 
         <CardFooter className="flex justify-end border-t pt-4">
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => (
               <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                {isSubmitting && (
+                  <LoaderIcon className="h-4 w-4 animate-spin mr-2" />
+                )}
                 Save Hotel Details
               </Button>
             )}

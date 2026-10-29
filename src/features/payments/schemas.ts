@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-export const PaymentModeEnum = z.enum([
-  "CASH",
-  "UPI",
-  "CARD",
-  "BANK_TRANSFER",
-]);
+export const PaymentModeEnum = z.enum(["CASH", "UPI", "CARD", "BANK_TRANSFER"]);
 
 export const PaymentKindEnum = z.enum(["ADVANCE", "PAYMENT", "REFUND"]);
 

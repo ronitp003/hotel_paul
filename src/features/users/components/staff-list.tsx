@@ -49,7 +49,9 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
   const [role, setRole] = useState<Role>(ROLES.RECEPTIONIST);
 
   // Reset Password Modal State
-  const [resetModalUser, setResetModalUser] = useState<StaffMember | null>(null);
+  const [resetModalUser, setResetModalUser] = useState<StaffMember | null>(
+    null
+  );
   const [newPassword, setNewPassword] = useState("");
 
   const handleCreateStaff = (e: React.FormEvent) => {
@@ -119,7 +121,8 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
         <div>
           <h2 className="text-lg font-semibold">Staff Accounts</h2>
           <p className="text-sm text-muted-foreground">
-            Manage front desk access and employee roles. Public registration is disabled.
+            Manage front desk access and employee roles. Public registration is
+            disabled.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
@@ -156,10 +159,16 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.email}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={user.role === "OWNER" ? "default" : "secondary"}>
+                        <Badge
+                          variant={
+                            user.role === "OWNER" ? "default" : "secondary"
+                          }
+                        >
                           {user.role}
                         </Badge>
                       </td>
@@ -191,7 +200,9 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
 
                         {!isSelf && (
                           <Button
-                            variant={user.isActive ? "destructive" : "secondary"}
+                            variant={
+                              user.isActive ? "destructive" : "secondary"
+                            }
                             size="xs"
                             onClick={() => handleToggleActive(user)}
                             disabled={isPending}
@@ -246,7 +257,9 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="staff-password">Initial Password (min 8 chars)</Label>
+              <Label htmlFor="staff-password">
+                Initial Password (min 8 chars)
+              </Label>
               <Input
                 id="staff-password"
                 type="password"
@@ -268,8 +281,12 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
                 onChange={(e) => setRole(e.target.value as Role)}
                 className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value={ROLES.RECEPTIONIST}>RECEPTIONIST (Front desk, rooms, payments)</option>
-                <option value={ROLES.OWNER}>OWNER (Full system access, settings, user management)</option>
+                <option value={ROLES.RECEPTIONIST}>
+                  RECEPTIONIST (Front desk, rooms, payments)
+                </option>
+                <option value={ROLES.OWNER}>
+                  OWNER (Full system access, settings, user management)
+                </option>
               </select>
             </div>
 
@@ -283,7 +300,12 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
                 Cancel
               </Button>
               <Button type="submit" disabled={isPending} className="gap-2">
-                {isPending && <SpinnerIcon className="size-4 animate-spin" aria-hidden="true" />}
+                {isPending && (
+                  <SpinnerIcon
+                    className="size-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
                 <span>Create Staff Account</span>
               </Button>
             </DialogFooter>
@@ -300,7 +322,8 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
           <DialogHeader>
             <DialogTitle>Reset Password</DialogTitle>
             <DialogDescription>
-              Set a new password for {resetModalUser?.name} ({resetModalUser?.email}). Active sessions will be terminated.
+              Set a new password for {resetModalUser?.name} (
+              {resetModalUser?.email}). Active sessions will be terminated.
             </DialogDescription>
           </DialogHeader>
 
@@ -329,7 +352,12 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
                 Cancel
               </Button>
               <Button type="submit" disabled={isPending} className="gap-2">
-                {isPending && <SpinnerIcon className="size-4 animate-spin" aria-hidden="true" />}
+                {isPending && (
+                  <SpinnerIcon
+                    className="size-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
                 <span>Update Password</span>
               </Button>
             </DialogFooter>

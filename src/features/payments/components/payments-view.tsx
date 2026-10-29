@@ -62,7 +62,9 @@ export function PaymentsView({
   isOwner,
 }: PaymentsViewProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"invoices" | "payments">("invoices");
+  const [activeTab, setActiveTab] = useState<"invoices" | "payments">(
+    "invoices"
+  );
 
   // Invoices filter state
   const [invoiceSearch, setInvoiceSearch] = useState("");
@@ -79,7 +81,8 @@ export function PaymentsView({
 
   // Filter Invoices
   const filteredInvoices = invoices.filter((inv) => {
-    if (invoiceStatusFilter !== "ALL" && inv.status !== invoiceStatusFilter) return false;
+    if (invoiceStatusFilter !== "ALL" && inv.status !== invoiceStatusFilter)
+      return false;
     if (invoiceSearch.trim()) {
       const q = invoiceSearch.toLowerCase().trim();
       const matchNo = inv.displayNo.toLowerCase().includes(q);
@@ -93,8 +96,10 @@ export function PaymentsView({
 
   // Filter Payments
   const filteredPayments = payments.filter((pmt) => {
-    if (paymentKindFilter !== "ALL" && pmt.kind !== paymentKindFilter) return false;
-    if (paymentModeFilter !== "ALL" && pmt.mode !== paymentModeFilter) return false;
+    if (paymentKindFilter !== "ALL" && pmt.kind !== paymentKindFilter)
+      return false;
+    if (paymentModeFilter !== "ALL" && pmt.mode !== paymentModeFilter)
+      return false;
     if (paymentSearch.trim()) {
       const q = paymentSearch.toLowerCase().trim();
       const matchRef = pmt.bookingRef.toLowerCase().includes(q);
@@ -137,7 +142,8 @@ export function PaymentsView({
             {formatINR(totalBilled)}
           </div>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {invoices.filter((i) => i.status === "ISSUED").length} active tax invoices
+            {invoices.filter((i) => i.status === "ISSUED").length} active tax
+            invoices
           </p>
         </Card>
 
@@ -176,7 +182,8 @@ export function PaymentsView({
             {formatINR(totalRefunded)}
           </div>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {payments.filter((p) => p.kind === "REFUND").length} refund transactions
+            {payments.filter((p) => p.kind === "REFUND").length} refund
+            transactions
           </p>
         </Card>
       </div>
@@ -280,7 +287,10 @@ export function PaymentsView({
                             {inv.displayNo}
                           </td>
                           <td className="px-4 py-3 font-mono font-semibold">
-                            <Link href={`/bookings/${inv.bookingId}`} className="hover:underline">
+                            <Link
+                              href={`/bookings/${inv.bookingId}`}
+                              className="hover:underline"
+                            >
                               {inv.bookingRef}
                             </Link>
                           </td>
@@ -298,7 +308,9 @@ export function PaymentsView({
                           </td>
                           <td
                             className={`px-4 py-3 text-right font-mono font-semibold ${
-                              inv.balance > 0 ? "text-red-600" : "text-emerald-600"
+                              inv.balance > 0
+                                ? "text-red-600"
+                                : "text-emerald-600"
                             }`}
                           >
                             {formatINR(inv.balance)}
@@ -309,7 +321,10 @@ export function PaymentsView({
                                 ISSUED
                               </Badge>
                             ) : (
-                              <Badge variant="destructive" className="text-[10px]">
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px]"
+                              >
                                 CANCELLED
                               </Badge>
                             )}
@@ -321,7 +336,10 @@ export function PaymentsView({
                                 target="_blank"
                                 rel="noreferrer"
                                 className={cn(
-                                  buttonVariants({ variant: "outline", size: "sm" }),
+                                  buttonVariants({
+                                    variant: "outline",
+                                    size: "sm",
+                                  }),
                                   "h-7 px-2 text-xs"
                                 )}
                               >
@@ -425,7 +443,10 @@ export function PaymentsView({
                             {formatISTDateTime(pmt.receivedAt)}
                           </td>
                           <td className="px-4 py-3 font-mono font-semibold">
-                            <Link href={`/bookings/${pmt.bookingId}`} className="hover:underline text-primary">
+                            <Link
+                              href={`/bookings/${pmt.bookingId}`}
+                              className="hover:underline text-primary"
+                            >
                               {pmt.bookingRef}
                             </Link>
                           </td>
@@ -437,7 +458,11 @@ export function PaymentsView({
                           </td>
                           <td className="px-4 py-3">
                             <Badge
-                              variant={pmt.kind === "REFUND" ? "destructive" : "secondary"}
+                              variant={
+                                pmt.kind === "REFUND"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
                               className="text-[10px]"
                             >
                               {pmt.kind}
@@ -456,7 +481,9 @@ export function PaymentsView({
                                 : "text-emerald-600 dark:text-emerald-400"
                             }`}
                           >
-                            {pmt.kind === "REFUND" ? `-${formatINR(pmt.amount)}` : formatINR(pmt.amount)}
+                            {pmt.kind === "REFUND"
+                              ? `-${formatINR(pmt.amount)}`
+                              : formatINR(pmt.amount)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             {pmt.invoiceId ? (

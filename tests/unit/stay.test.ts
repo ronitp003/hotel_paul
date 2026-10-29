@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { calculateStay, doIntervalsOverlap } from "@/server/services/billing.service";
+import {
+  calculateStay,
+  doIntervalsOverlap,
+} from "@/server/services/billing.service";
 import { evaluateRoomAvailability } from "@/server/services/room.service";
 import { AppError } from "@/lib/errors";
 import { BookingStatus, ProblemStatus } from "@prisma/client";
@@ -118,7 +121,11 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
     });
 
     it("handles string and timestamp inputs identically", () => {
-      const resStr = calculateStay("2026-11-01T10:00:00Z", "2026-11-02T10:00:00Z", 0);
+      const resStr = calculateStay(
+        "2026-11-01T10:00:00Z",
+        "2026-11-02T10:00:00Z",
+        0
+      );
       const resNum = calculateStay(
         new Date("2026-11-01T10:00:00Z").getTime(),
         new Date("2026-11-02T10:00:00Z").getTime(),
@@ -150,12 +157,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
     });
 
     it("throws VALIDATION_ERROR on invalid dates", () => {
-      expect(() => calculateStay("not-a-date", "2026-11-01T10:00:00Z")).toThrowError(
-        /Invalid check-in or check-out date/
-      );
-      expect(() => calculateStay("2026-11-01T10:00:00Z", "invalid")).toThrowError(
-        /Invalid check-in or check-out date/
-      );
+      expect(() =>
+        calculateStay("not-a-date", "2026-11-01T10:00:00Z")
+      ).toThrowError(/Invalid check-in or check-out date/);
+      expect(() =>
+        calculateStay("2026-11-01T10:00:00Z", "invalid")
+      ).toThrowError(/Invalid check-in or check-out date/);
     });
   });
 
@@ -186,8 +193,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
       const innerStart = new Date("2026-11-01T10:00:00.000Z");
       const innerEnd = new Date("2026-11-01T12:00:00.000Z");
 
-      expect(doIntervalsOverlap(outerStart, outerEnd, innerStart, innerEnd)).toBe(true);
-      expect(doIntervalsOverlap(innerStart, innerEnd, outerStart, outerEnd)).toBe(true);
+      expect(
+        doIntervalsOverlap(outerStart, outerEnd, innerStart, innerEnd)
+      ).toBe(true);
+      expect(
+        doIntervalsOverlap(innerStart, innerEnd, outerStart, outerEnd)
+      ).toBe(true);
     });
 
     it("returns false for completely disjoint intervals", () => {
@@ -196,7 +207,9 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
       const lateStart = new Date("2026-11-01T15:00:00.000Z");
       const lateEnd = new Date("2026-11-01T18:00:00.000Z");
 
-      expect(doIntervalsOverlap(earlyStart, earlyEnd, lateStart, lateEnd)).toBe(false);
+      expect(doIntervalsOverlap(earlyStart, earlyEnd, lateStart, lateEnd)).toBe(
+        false
+      );
     });
   });
 
@@ -218,7 +231,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
     };
 
     it("marks an active room with no conflicts as available with correct stay calculation", () => {
-      const result = evaluateRoomAvailability(baseRoom, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        baseRoom,
+        checkIn,
+        checkOut,
+        stay
+      );
 
       expect(result.isAvailable).toBe(true);
       expect(result.unavailableType).toBeNull();
@@ -231,7 +249,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
 
     it("marks a disabled room as unavailable with DISABLED type", () => {
       const disabledRoom = { ...baseRoom, isActive: false };
-      const result = evaluateRoomAvailability(disabledRoom, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        disabledRoom,
+        checkIn,
+        checkOut,
+        stay
+      );
 
       expect(result.isAvailable).toBe(false);
       expect(result.unavailableType).toBe("DISABLED");
@@ -251,7 +274,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
         ],
       };
 
-      const result = evaluateRoomAvailability(roomWithMaint, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        roomWithMaint,
+        checkIn,
+        checkOut,
+        stay
+      );
 
       expect(result.isAvailable).toBe(false);
       expect(result.unavailableType).toBe("MAINTENANCE");
@@ -275,7 +303,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
         ],
       };
 
-      const result = evaluateRoomAvailability(roomWithBooking, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        roomWithBooking,
+        checkIn,
+        checkOut,
+        stay
+      );
 
       expect(result.isAvailable).toBe(false);
       expect(result.unavailableType).toBe("RESERVED");
@@ -299,7 +332,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
         ],
       };
 
-      const result = evaluateRoomAvailability(roomWithCheckedIn, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        roomWithCheckedIn,
+        checkIn,
+        checkOut,
+        stay
+      );
 
       expect(result.isAvailable).toBe(false);
       expect(result.unavailableType).toBe("BOOKED");
@@ -323,7 +361,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
         ],
       };
 
-      const result = evaluateRoomAvailability(roomWithPastBooking, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        roomWithPastBooking,
+        checkIn,
+        checkOut,
+        stay
+      );
       expect(result.isAvailable).toBe(true);
       expect(result.conflictingBooking).toBeNull();
     });
@@ -343,7 +386,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
         ],
       };
 
-      const result = evaluateRoomAvailability(roomWithCancelled, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        roomWithCancelled,
+        checkIn,
+        checkOut,
+        stay
+      );
       expect(result.isAvailable).toBe(true);
       expect(result.conflictingBooking).toBeNull();
     });
@@ -359,7 +407,12 @@ describe("Phase 1.4: Stay Calculation & Availability Logic (Unit)", () => {
         ],
       };
 
-      const result = evaluateRoomAvailability(roomWithProblem, checkIn, checkOut, stay);
+      const result = evaluateRoomAvailability(
+        roomWithProblem,
+        checkIn,
+        checkOut,
+        stay
+      );
 
       expect(result.isAvailable).toBe(true);
       expect(result.hasProblem).toBe(true);

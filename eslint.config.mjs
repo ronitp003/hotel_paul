@@ -21,13 +21,14 @@ const eslintConfig = defineConfig([
           paths: [
             {
               name: "lucide-react",
-              message: "Do not import from 'lucide-react'. Use 'react-icons/lu' or '@/lib/icons' instead."
-            }
-          ]
-        }
-      ]
-    }
-  }
+              message:
+                "Do not import from 'lucide-react'. Use 'react-icons/lu' or '@/lib/icons' instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

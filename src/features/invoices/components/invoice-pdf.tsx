@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import type { InvoiceSnapshot } from "@/server/services/invoice.service";
 import { formatINRPlain } from "@/lib/money";
 
@@ -242,28 +236,42 @@ const styles = StyleSheet.create({
   },
 });
 
-export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) {
-  const primaryGuest =
-    snapshot.guests.find((g) => g.isPrimary) || snapshot.guests[0] || { name: "Guest" };
+export function InvoicePdfDocument({
+  snapshot,
+}: {
+  snapshot: InvoiceSnapshot;
+}) {
+  const primaryGuest = snapshot.guests.find((g) => g.isPrimary) ||
+    snapshot.guests[0] || { name: "Guest" };
 
   return (
-    <Document title={`Invoice-${snapshot.invoice.displayNo}`} author="Hotel Paul">
+    <Document
+      title={`Invoice-${snapshot.invoice.displayNo}`}
+      author="Hotel Paul"
+    >
       <Page size="A4" style={styles.page}>
         {/* Header Row */}
         <View style={styles.headerRow}>
           <View style={styles.hotelBlock}>
             <Text style={styles.hotelTitle}>{snapshot.hotel.name}</Text>
             <Text style={styles.hotelSubtitle}>{snapshot.hotel.address}</Text>
-            <Text style={styles.hotelSubtitle}>Phone: {snapshot.hotel.phone}</Text>
-            <Text style={styles.hotelSubtitle}>GSTIN: {snapshot.hotel.gstin}</Text>
+            <Text style={styles.hotelSubtitle}>
+              Phone: {snapshot.hotel.phone}
+            </Text>
+            <Text style={styles.hotelSubtitle}>
+              GSTIN: {snapshot.hotel.gstin}
+            </Text>
           </View>
           <View style={styles.invoiceMetaBlock}>
             <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
             <View style={styles.invoiceBadge}>
-              <Text style={styles.invoiceBadgeText}>{snapshot.invoice.displayNo}</Text>
+              <Text style={styles.invoiceBadgeText}>
+                {snapshot.invoice.displayNo}
+              </Text>
             </View>
             <Text style={styles.metaText}>
-              Date: {new Date(snapshot.invoice.issuedAt).toLocaleDateString("en-IN", {
+              Date:{" "}
+              {new Date(snapshot.invoice.issuedAt).toLocaleDateString("en-IN", {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
@@ -293,19 +301,25 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
             {snapshot.guests.length > 1 && (
               <View style={styles.boxRow}>
                 <Text style={styles.label}>Total Guests:</Text>
-                <Text style={styles.value}>{snapshot.guests.length} person(s)</Text>
+                <Text style={styles.value}>
+                  {snapshot.guests.length} person(s)
+                </Text>
               </View>
             )}
             {snapshot.booking.companyName && (
               <>
                 <View style={styles.boxRow}>
                   <Text style={styles.label}>Company:</Text>
-                  <Text style={styles.value}>{snapshot.booking.companyName}</Text>
+                  <Text style={styles.value}>
+                    {snapshot.booking.companyName}
+                  </Text>
                 </View>
                 {snapshot.booking.companyGstin && (
                   <View style={styles.boxRow}>
                     <Text style={styles.label}>Company GSTIN:</Text>
-                    <Text style={styles.value}>{snapshot.booking.companyGstin}</Text>
+                    <Text style={styles.value}>
+                      {snapshot.booking.companyGstin}
+                    </Text>
                   </View>
                 )}
               </>
@@ -324,7 +338,9 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
             <View style={styles.boxRow}>
               <Text style={styles.label}>Arrival:</Text>
               <Text style={styles.value}>
-                {new Date(snapshot.booking.actualCheckInAt || snapshot.booking.checkInAt).toLocaleString("en-IN", {
+                {new Date(
+                  snapshot.booking.actualCheckInAt || snapshot.booking.checkInAt
+                ).toLocaleString("en-IN", {
                   day: "2-digit",
                   month: "short",
                   hour: "2-digit",
@@ -335,7 +351,10 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
             <View style={styles.boxRow}>
               <Text style={styles.label}>Departure:</Text>
               <Text style={styles.value}>
-                {new Date(snapshot.booking.actualCheckOutAt || snapshot.booking.checkOutAt).toLocaleString("en-IN", {
+                {new Date(
+                  snapshot.booking.actualCheckOutAt ||
+                    snapshot.booking.checkOutAt
+                ).toLocaleString("en-IN", {
                   day: "2-digit",
                   month: "short",
                   hour: "2-digit",
@@ -345,7 +364,9 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
             </View>
             <View style={styles.boxRow}>
               <Text style={styles.label}>Billed Stay Days:</Text>
-              <Text style={styles.value}>{snapshot.booking.stayDays} day(s)</Text>
+              <Text style={styles.value}>
+                {snapshot.booking.stayDays} day(s)
+              </Text>
             </View>
           </View>
         </View>
@@ -353,46 +374,77 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
         {/* Itemized Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCol, styles.colDesc]}>Description</Text>
-            <Text style={[styles.tableHeaderCol, styles.colQty]}>Days / Qty</Text>
-            <Text style={[styles.tableHeaderCol, styles.colRate]}>Rate (₹)</Text>
-            <Text style={[styles.tableHeaderCol, styles.colTotal]}>Amount (₹)</Text>
+            <Text style={[styles.tableHeaderCol, styles.colDesc]}>
+              Description
+            </Text>
+            <Text style={[styles.tableHeaderCol, styles.colQty]}>
+              Days / Qty
+            </Text>
+            <Text style={[styles.tableHeaderCol, styles.colRate]}>
+              Rate (₹)
+            </Text>
+            <Text style={[styles.tableHeaderCol, styles.colTotal]}>
+              Amount (₹)
+            </Text>
           </View>
 
           {/* Room Tariff Row */}
           <View style={styles.tableRow}>
             <Text style={styles.colDesc}>
-              Room Accommodation (Room {snapshot.booking.roomNumber} - {snapshot.booking.roomTypeName})
+              Room Accommodation (Room {snapshot.booking.roomNumber} -{" "}
+              {snapshot.booking.roomTypeName})
             </Text>
             <Text style={styles.colQty}>{snapshot.booking.stayDays}</Text>
-            <Text style={styles.colRate}>{formatINRPlain(snapshot.booking.rateApplied)}</Text>
-            <Text style={styles.colTotal}>{formatINRPlain(snapshot.totals.roomCharges)}</Text>
+            <Text style={styles.colRate}>
+              {formatINRPlain(snapshot.booking.rateApplied)}
+            </Text>
+            <Text style={styles.colTotal}>
+              {formatINRPlain(snapshot.totals.roomCharges)}
+            </Text>
           </View>
 
           {/* Additional Charges Rows */}
           {snapshot.charges.map((charge, idx) => (
             <View
               key={idx}
-              style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowEven : {}]}
+              style={[
+                styles.tableRow,
+                idx % 2 === 1 ? styles.tableRowEven : {},
+              ]}
             >
               <Text style={styles.colDesc}>
-                {charge.description} {charge.isTaxable ? "(Taxable Service)" : "(Non-Taxable)"}
+                {charge.description}{" "}
+                {charge.isTaxable ? "(Taxable Service)" : "(Non-Taxable)"}
               </Text>
               <Text style={styles.colQty}>1</Text>
-              <Text style={styles.colRate}>{formatINRPlain(charge.amount)}</Text>
-              <Text style={styles.colTotal}>{formatINRPlain(charge.amount)}</Text>
+              <Text style={styles.colRate}>
+                {formatINRPlain(charge.amount)}
+              </Text>
+              <Text style={styles.colTotal}>
+                {formatINRPlain(charge.amount)}
+              </Text>
             </View>
           ))}
 
           {/* Discount Row (if any) */}
           {snapshot.totals.discount > 0 && (
             <View style={[styles.tableRow, { backgroundColor: "#FEF2F2" }]}>
-              <Text style={[styles.colDesc, { color: "#B91C1C", fontFamily: "Helvetica-Bold" }]}>
+              <Text
+                style={[
+                  styles.colDesc,
+                  { color: "#B91C1C", fontFamily: "Helvetica-Bold" },
+                ]}
+              >
                 Discount Applied
               </Text>
               <Text style={styles.colQty}>—</Text>
               <Text style={styles.colRate}>—</Text>
-              <Text style={[styles.colTotal, { color: "#B91C1C", fontFamily: "Helvetica-Bold" }]}>
+              <Text
+                style={[
+                  styles.colTotal,
+                  { color: "#B91C1C", fontFamily: "Helvetica-Bold" },
+                ]}
+              >
                 -{formatINRPlain(snapshot.totals.discount)}
               </Text>
             </View>
@@ -405,7 +457,9 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
             {/* Amount in Words */}
             <View style={styles.wordsBox}>
               <Text style={styles.wordsLabel}>Amount in Words (INR)</Text>
-              <Text style={styles.wordsText}>{snapshot.totals.amountInWords}</Text>
+              <Text style={styles.wordsText}>
+                {snapshot.totals.amountInWords}
+              </Text>
             </View>
 
             {/* Terms & Conditions */}
@@ -422,7 +476,9 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
           <View style={styles.totalsCol}>
             <View style={styles.totalRow}>
               <Text style={styles.label}>Taxable Value:</Text>
-              <Text style={styles.value}>₹{formatINRPlain(snapshot.totals.taxableAmount)}</Text>
+              <Text style={styles.value}>
+                ₹{formatINRPlain(snapshot.totals.taxableAmount)}
+              </Text>
             </View>
 
             {snapshot.totals.nonTaxableChargesTotal > 0 && (
@@ -435,30 +491,44 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
             )}
 
             <View style={styles.totalRow}>
-              <Text style={styles.label}>CGST ({snapshot.totals.gstPercent / 2}%):</Text>
-              <Text style={styles.value}>₹{formatINRPlain(snapshot.totals.cgst)}</Text>
+              <Text style={styles.label}>
+                CGST ({snapshot.totals.gstPercent / 2}%):
+              </Text>
+              <Text style={styles.value}>
+                ₹{formatINRPlain(snapshot.totals.cgst)}
+              </Text>
             </View>
 
             <View style={styles.totalRow}>
-              <Text style={styles.label}>SGST ({snapshot.totals.gstPercent / 2}%):</Text>
-              <Text style={styles.value}>₹{formatINRPlain(snapshot.totals.sgst)}</Text>
+              <Text style={styles.label}>
+                SGST ({snapshot.totals.gstPercent / 2}%):
+              </Text>
+              <Text style={styles.value}>
+                ₹{formatINRPlain(snapshot.totals.sgst)}
+              </Text>
             </View>
 
             {snapshot.totals.roundOff !== 0 && (
               <View style={styles.totalRow}>
                 <Text style={styles.label}>Round-Off:</Text>
-                <Text style={styles.value}>₹{formatINRPlain(snapshot.totals.roundOff)}</Text>
+                <Text style={styles.value}>
+                  ₹{formatINRPlain(snapshot.totals.roundOff)}
+                </Text>
               </View>
             )}
 
             <View style={styles.totalRowGrand}>
               <Text style={styles.grandText}>Total Bill Amount:</Text>
-              <Text style={styles.grandText}>₹{formatINRPlain(snapshot.totals.billAmount)}</Text>
+              <Text style={styles.grandText}>
+                ₹{formatINRPlain(snapshot.totals.billAmount)}
+              </Text>
             </View>
 
             <View style={styles.totalRow}>
               <Text style={styles.label}>Advance Paid:</Text>
-              <Text style={styles.value}>₹{formatINRPlain(snapshot.totals.advancePaid)}</Text>
+              <Text style={styles.value}>
+                ₹{formatINRPlain(snapshot.totals.advancePaid)}
+              </Text>
             </View>
 
             {snapshot.totals.subsequentPaid > 0 && (
@@ -490,14 +560,20 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
                 },
               ]}
             >
-              <Text style={[styles.label, { fontFamily: "Helvetica-Bold", color: "#111827" }]}>
+              <Text
+                style={[
+                  styles.label,
+                  { fontFamily: "Helvetica-Bold", color: "#111827" },
+                ]}
+              >
                 Balance Due:
               </Text>
               <Text
                 style={[
                   styles.value,
                   {
-                    color: snapshot.totals.balanceDue > 0 ? "#DC2626" : "#059669",
+                    color:
+                      snapshot.totals.balanceDue > 0 ? "#DC2626" : "#059669",
                     fontSize: 9,
                   },
                 ]}
@@ -515,13 +591,16 @@ export function InvoicePdfDocument({ snapshot }: { snapshot: InvoiceSnapshot }) 
               Issued by: {snapshot.invoice.issuedByName}
             </Text>
             <Text style={{ fontSize: 7, color: "#9CA3AF" }}>
-              Generated on {new Date(snapshot.invoice.issuedAt).toLocaleString("en-IN")}
+              Generated on{" "}
+              {new Date(snapshot.invoice.issuedAt).toLocaleString("en-IN")}
             </Text>
           </View>
           <View style={styles.signatoryBlock}>
             <View style={styles.signatoryLine} />
             <Text style={styles.signatoryText}>Authorized Signatory</Text>
-            <Text style={{ fontSize: 7, color: "#6B7280" }}>for {snapshot.hotel.name}</Text>
+            <Text style={{ fontSize: 7, color: "#6B7280" }}>
+              for {snapshot.hotel.name}
+            </Text>
           </View>
         </View>
       </Page>

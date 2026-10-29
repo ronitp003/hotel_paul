@@ -1,5 +1,13 @@
 import "dotenv/config";
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, BookingStatus, Role } from "@prisma/client";
@@ -8,7 +16,8 @@ import { ROLES } from "@/lib/constants";
 import { roomService } from "@/server/services/room.service";
 import { findAvailableRoomsAction } from "@/server/actions/room.actions";
 
-const connectionString = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 describe("Phase 1.4: Room Availability & Exclusion Constraints (Integration)", () => {
   let pool: Pool;
@@ -155,9 +164,13 @@ describe("Phase 1.4: Room Availability & Exclusion Constraints (Integration)", (
     });
 
     // 1. Query exact overlapping window
-    const resultExact = await roomService.findAvailableRooms(bkgCheckIn, bkgCheckOut, {
-      typeId: testTypeId,
-    });
+    const resultExact = await roomService.findAvailableRooms(
+      bkgCheckIn,
+      bkgCheckOut,
+      {
+        typeId: testTypeId,
+      }
+    );
     const r101Exact = resultExact.rooms.find((r) => r.id === room101Id);
 
     expect(r101Exact?.isAvailable).toBe(false);
@@ -169,9 +182,13 @@ describe("Phase 1.4: Room Availability & Exclusion Constraints (Integration)", (
     // 2. Query partial overlap inside window
     const insideStart = new Date("2026-11-11T08:00:00.000Z");
     const insideEnd = new Date("2026-11-11T16:00:00.000Z");
-    const resultInside = await roomService.findAvailableRooms(insideStart, insideEnd, {
-      typeId: testTypeId,
-    });
+    const resultInside = await roomService.findAvailableRooms(
+      insideStart,
+      insideEnd,
+      {
+        typeId: testTypeId,
+      }
+    );
     const r101Inside = resultInside.rooms.find((r) => r.id === room101Id);
     expect(r101Inside?.isAvailable).toBe(false);
     expect(r101Inside?.unavailableType).toBe("RESERVED");
@@ -183,18 +200,26 @@ describe("Phase 1.4: Room Availability & Exclusion Constraints (Integration)", (
     // 1. Prior stay: ends exactly at 2026-11-10T10:00:00Z
     const priorCheckIn = new Date("2026-11-08T10:00:00.000Z");
     const priorCheckOut = new Date("2026-11-10T10:00:00.000Z"); // Checkout matches checkin
-    const priorResult = await roomService.findAvailableRooms(priorCheckIn, priorCheckOut, {
-      typeId: testTypeId,
-    });
+    const priorResult = await roomService.findAvailableRooms(
+      priorCheckIn,
+      priorCheckOut,
+      {
+        typeId: testTypeId,
+      }
+    );
     const r101Prior = priorResult.rooms.find((r) => r.id === room101Id);
     expect(r101Prior?.isAvailable).toBe(true);
 
     // 2. Subsequent stay: begins exactly at 2026-11-12T10:00:00Z
     const nextCheckIn = new Date("2026-11-12T10:00:00.000Z"); // Checkin matches checkout
     const nextCheckOut = new Date("2026-11-14T10:00:00.000Z");
-    const nextResult = await roomService.findAvailableRooms(nextCheckIn, nextCheckOut, {
-      typeId: testTypeId,
-    });
+    const nextResult = await roomService.findAvailableRooms(
+      nextCheckIn,
+      nextCheckOut,
+      {
+        typeId: testTypeId,
+      }
+    );
     const r101Next = nextResult.rooms.find((r) => r.id === room101Id);
     expect(r101Next?.isAvailable).toBe(true);
   });

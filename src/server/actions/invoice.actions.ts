@@ -8,12 +8,21 @@ import {
   checkoutSchema,
   cancelInvoiceSchema,
 } from "@/features/payments/schemas";
-import { AppError, type ActionResult, errorResult, successResult } from "@/lib/errors";
+import {
+  AppError,
+  type ActionResult,
+  errorResult,
+  successResult,
+} from "@/lib/errors";
 import { ZodError } from "zod";
 
 export async function checkoutAction(
   input: unknown
-): Promise<ActionResult<Awaited<ReturnType<typeof invoiceService.checkoutAndIssueInvoice>>>> {
+): Promise<
+  ActionResult<
+    Awaited<ReturnType<typeof invoiceService.checkoutAndIssueInvoice>>
+  >
+> {
   try {
     const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const data = checkoutSchema.parse(input);
@@ -28,7 +37,8 @@ export async function checkoutAction(
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) return errorResult(err.code, err.message);
-    if (err instanceof ZodError) return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
+    if (err instanceof ZodError)
+      return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
     console.error("checkoutAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
@@ -36,7 +46,9 @@ export async function checkoutAction(
 
 export async function cancelInvoiceAction(
   input: unknown
-): Promise<ActionResult<Awaited<ReturnType<typeof invoiceService.cancelInvoice>>>> {
+): Promise<
+  ActionResult<Awaited<ReturnType<typeof invoiceService.cancelInvoice>>>
+> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = cancelInvoiceSchema.parse(input);
@@ -48,7 +60,8 @@ export async function cancelInvoiceAction(
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) return errorResult(err.code, err.message);
-    if (err instanceof ZodError) return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
+    if (err instanceof ZodError)
+      return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
     console.error("cancelInvoiceAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
@@ -56,7 +69,9 @@ export async function cancelInvoiceAction(
 
 export async function getInvoiceAction(
   invoiceId: string
-): Promise<ActionResult<Awaited<ReturnType<typeof invoiceService.getInvoice>>>> {
+): Promise<
+  ActionResult<Awaited<ReturnType<typeof invoiceService.getInvoice>>>
+> {
   try {
     await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const result = await invoiceService.getInvoice(invoiceId);

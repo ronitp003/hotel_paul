@@ -23,7 +23,10 @@ export async function requireSession(): Promise<{ actor: Actor }> {
   const session = await getSession();
 
   if (!session || !session.user) {
-    throw new AppError("UNAUTHORIZED", "You must be logged in to perform this action");
+    throw new AppError(
+      "UNAUTHORIZED",
+      "You must be logged in to perform this action"
+    );
   }
 
   const user = session.user as typeof session.user & {

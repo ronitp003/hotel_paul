@@ -41,10 +41,15 @@ export function MobileNav({
             <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
               <RoomIcon className="size-4" aria-hidden="true" />
             </div>
-            <SheetTitle className="text-base font-semibold">Hotel Desk</SheetTitle>
+            <SheetTitle className="text-base font-semibold">
+              Hotel Desk
+            </SheetTitle>
           </SheetHeader>
 
-          <nav className="flex-1 overflow-y-auto p-3 space-y-1" aria-label="Mobile Navigation">
+          <nav
+            className="flex-1 overflow-y-auto p-3 space-y-1"
+            aria-label="Mobile Navigation"
+          >
             {filteredItems.map((item) => {
               const Icon = item.icon;
               const isActive = isNavItemActive(pathname, item.href);
@@ -59,8 +64,8 @@ export function MobileNav({
                     isActive
                       ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                       : item.highlight
-                      ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                        ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   )}
                 >
                   <Icon
@@ -69,8 +74,8 @@ export function MobileNav({
                       isActive
                         ? "text-primary-foreground"
                         : item.highlight
-                        ? "text-primary"
-                        : "text-muted-foreground"
+                          ? "text-primary"
+                          : "text-muted-foreground"
                     )}
                     aria-hidden="true"
                   />

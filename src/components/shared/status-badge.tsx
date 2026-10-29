@@ -17,7 +17,8 @@ export type StatusType =
   | "UNAVAILABLE"
   | "CHECKED_IN"
   | "CHECKED_OUT"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "NO_SHOW";
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -34,33 +35,40 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
     case "OCCUPIED":
     case "CHECKED_IN":
       displayLabel = displayLabel || "Occupied";
-      bgClass = "bg-status-occupied/15 text-status-occupied border-status-occupied/30";
+      bgClass =
+        "bg-status-occupied/15 text-status-occupied border-status-occupied/30";
       Icon = RoomIcon;
       break;
     case "AVAILABLE":
       displayLabel = displayLabel || "Available";
-      bgClass = "bg-status-available/15 text-status-available border-status-available/30";
+      bgClass =
+        "bg-status-available/15 text-status-available border-status-available/30";
       Icon = CheckIcon;
       break;
     case "RESERVED":
       displayLabel = displayLabel || "Reserved";
-      bgClass = "bg-status-reserved/15 text-status-reserved border-status-reserved/30";
+      bgClass =
+        "bg-status-reserved/15 text-status-reserved border-status-reserved/30";
       Icon = CalendarIcon;
       break;
     case "MAINTENANCE":
       displayLabel = displayLabel || "Under Maintenance";
-      bgClass = "bg-status-maintenance/15 text-status-maintenance border-status-maintenance/30";
+      bgClass =
+        "bg-status-maintenance/15 text-status-maintenance border-status-maintenance/30";
       Icon = MaintenanceIcon;
       break;
     case "PROBLEM":
       displayLabel = displayLabel || "Open Problem";
-      bgClass = "bg-status-problem/15 text-status-problem border-status-problem/30";
+      bgClass =
+        "bg-status-problem/15 text-status-problem border-status-problem/30";
       Icon = ProblemIcon;
       break;
     case "UNAVAILABLE":
     case "CANCELLED":
-      displayLabel = displayLabel || "Unavailable";
-      bgClass = "bg-status-unavailable/15 text-status-unavailable border-status-unavailable/30";
+    case "NO_SHOW":
+      displayLabel = displayLabel || (status === "NO_SHOW" ? "No Show" : status === "CANCELLED" ? "Cancelled" : "Unavailable");
+      bgClass =
+        "bg-status-unavailable/15 text-status-unavailable border-status-unavailable/30";
       Icon = CloseIcon;
       break;
     case "CHECKED_OUT":

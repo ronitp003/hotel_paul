@@ -70,7 +70,10 @@ export interface BillCalculationResult {
 export function validateGstSlabsContinuity(slabs: GstSlabLike[]): void {
   const activeSlabs = slabs.filter((s) => s.isActive !== false);
   if (activeSlabs.length === 0) {
-    throw new AppError("VALIDATION_ERROR", "At least one active GST slab is required.");
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "At least one active GST slab is required."
+    );
   }
 
   // Sort by minRate ascending
@@ -95,7 +98,10 @@ export function validateGstSlabsContinuity(slabs: GstSlabLike[]): void {
       throw new AppError("VALIDATION_ERROR", "Min rate cannot be negative.");
     }
     if (pct.isNegative() || pct.greaterThan(100)) {
-      throw new AppError("VALIDATION_ERROR", "GST percent must be between 0 and 100.");
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "GST percent must be between 0 and 100."
+      );
     }
 
     if (current.maxRate !== null && current.maxRate !== undefined) {
@@ -196,7 +202,9 @@ export function findGstSlab<T extends GstSlabLike>(
  * Pure function to calculate a stay bill using Decimal arithmetic,
  * GST slabs, optional override, additional charges, payments, and rounding.
  */
-export function calculateBill(input: CalculateBillInput): BillCalculationResult {
+export function calculateBill(
+  input: CalculateBillInput
+): BillCalculationResult {
   const rateApplied = new Decimal(input.rateApplied || 0);
   const days = Math.max(1, input.days || 1);
   const roomCharges = rateApplied.times(days);
@@ -207,7 +215,8 @@ export function calculateBill(input: CalculateBillInput): BillCalculationResult 
   for (const c of input.charges || []) {
     const amt = new Decimal(c.amount || 0);
     const isTaxable =
-      c.isTaxable === true || (input.gstOnOtherCharges === true && c.isTaxable !== false);
+      c.isTaxable === true ||
+      (input.gstOnOtherCharges === true && c.isTaxable !== false);
     if (isTaxable) {
       taxableChargesTotal = taxableChargesTotal.plus(amt);
     } else {
@@ -224,11 +233,16 @@ export function calculateBill(input: CalculateBillInput): BillCalculationResult 
 
   // Determine GST percentage
   let gstPercent: Decimal;
-  if (input.gstPercentOverride !== undefined && input.gstPercentOverride !== null) {
+  if (
+    input.gstPercentOverride !== undefined &&
+    input.gstPercentOverride !== null
+  ) {
     gstPercent = new Decimal(input.gstPercentOverride);
   } else {
     const matchedSlab = findGstSlab(input.gstSlabs, rateApplied);
-    gstPercent = matchedSlab ? new Decimal(matchedSlab.percent) : new Decimal(0);
+    gstPercent = matchedSlab
+      ? new Decimal(matchedSlab.percent)
+      : new Decimal(0);
   }
 
   // CGST and SGST split

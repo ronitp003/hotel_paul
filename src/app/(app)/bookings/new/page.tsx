@@ -27,7 +27,10 @@ export default async function NewBookingPage({ searchParams }: PageProps) {
   const checkIn = new Date();
   const checkOut = new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
 
-  const initialAvailability = await roomService.findAvailableRooms(checkIn, checkOut);
+  const initialAvailability = await roomService.findAvailableRooms(
+    checkIn,
+    checkOut
+  );
 
   return (
     <div className="py-2">

@@ -1,8 +1,21 @@
 import "dotenv/config";
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, Role, BookingStatus, InvoiceStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  Role,
+  BookingStatus,
+  InvoiceStatus,
+} from "@prisma/client";
 import * as sessionModule from "@/server/auth/session";
 import { ROLES } from "@/lib/constants";
 import { billingService } from "@/server/services/billing.service";
@@ -11,7 +24,8 @@ import { bookingService } from "@/server/services/booking.service";
 import { checkoutAction } from "@/server/actions/invoice.actions";
 import { addChargeAction } from "@/server/actions/billing.actions";
 
-const connectionString = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 describe("Phase 1.6: Check-out, Payments & GST Billing (Integration)", () => {
   let pool: Pool;
@@ -164,10 +178,15 @@ describe("Phase 1.6: Check-out, Payments & GST Billing (Integration)", () => {
     expect(audit?.actorId).toBe(receptionistActor.id);
 
     // 5. Delete charge2
-    const delRes = await billingService.deleteCharge(receptionistActor, charge2.id);
+    const delRes = await billingService.deleteCharge(
+      receptionistActor,
+      charge2.id
+    );
     expect(delRes.success).toBe(true);
 
-    const checkDel = await prisma.charge.findUnique({ where: { id: charge2.id } });
+    const checkDel = await prisma.charge.findUnique({
+      where: { id: charge2.id },
+    });
     expect(checkDel).toBeNull();
   });
 
@@ -284,12 +303,15 @@ describe("Phase 1.6: Check-out, Payments & GST Billing (Integration)", () => {
     });
 
     // Settle the remaining balance (Bill = 2000 + 5% = 2100. Advance = 1000. Balance = 1100)
-    const checkoutResult = await invoiceService.checkoutAndIssueInvoice(receptionistActor, {
-      bookingId: booking.id,
-      paymentAmount: 1100,
-      paymentMode: "CASH",
-      paymentNote: "Final cash settlement at desk",
-    });
+    const checkoutResult = await invoiceService.checkoutAndIssueInvoice(
+      receptionistActor,
+      {
+        bookingId: booking.id,
+        paymentAmount: 1100,
+        paymentMode: "CASH",
+        paymentNote: "Final cash settlement at desk",
+      }
+    );
 
     expect(checkoutResult.success).toBe(true);
     expect(checkoutResult.displayNo).toMatch(/^HP-\d+|^INV-\d+/);
@@ -312,7 +334,9 @@ describe("Phase 1.6: Check-out, Payments & GST Billing (Integration)", () => {
     expect(invoice.snapshot.totals.billAmount).toBe(2100);
     expect(invoice.snapshot.totals.advancePaid).toBe(1000);
     expect(invoice.snapshot.totals.subsequentPaid).toBe(1100);
-    expect(invoice.snapshot.totals.amountInWords).toContain("Two Thousand One Hundred Rupees Only");
+    expect(invoice.snapshot.totals.amountInWords).toContain(
+      "Two Thousand One Hundred Rupees Only"
+    );
     expect(invoice.snapshot.guests).toHaveLength(2);
     expect(invoice.snapshot.guests[0].name).toBe("Rahul Verma");
 
@@ -339,9 +363,12 @@ describe("Phase 1.6: Check-out, Payments & GST Billing (Integration)", () => {
       guests: [{ name: "Tanmoy Das", isPrimary: true }],
     });
 
-    const checkout = await invoiceService.checkoutAndIssueInvoice(receptionistActor, {
-      bookingId: booking.id,
-    });
+    const checkout = await invoiceService.checkoutAndIssueInvoice(
+      receptionistActor,
+      {
+        bookingId: booking.id,
+      }
+    );
 
     // 1. Receptionist attempting to cancel invoice is rejected
     await expect(

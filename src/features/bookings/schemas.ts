@@ -58,7 +58,11 @@ export const newBookingSchema = z
 
     // Financials
     rateApplied: z.number().min(0, "Room rate cannot be negative"),
-    discount: z.number().min(0, "Discount cannot be negative").default(0).optional(),
+    discount: z
+      .number()
+      .min(0, "Discount cannot be negative")
+      .default(0)
+      .optional(),
     gstPercentOverride: z
       .number()
       .min(0, "GST % cannot be negative")
@@ -96,3 +100,16 @@ export const newBookingSchema = z
 
 export type GuestInput = z.infer<typeof guestSchema>;
 export type NewBookingInput = z.infer<typeof newBookingSchema>;
+
+export const checkInBookingSchema = z.object({
+  bookingId: z.string().min(1, "Booking ID is required"),
+});
+
+export type CheckInBookingInput = z.infer<typeof checkInBookingSchema>;
+
+export const cancelBookingSchema = z.object({
+  bookingId: z.string().min(1, "Booking ID is required"),
+  reason: z.string().trim().optional(),
+});
+
+export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;

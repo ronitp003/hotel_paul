@@ -4,11 +4,20 @@ import { prisma } from "@/server/db";
 import { AppError } from "@/lib/errors";
 import { type RoomInput, type BulkRoomsInput } from "@/features/rooms/schemas";
 import { type Actor, settingsService } from "./settings.service";
-import { calculateStay, doIntervalsOverlap, type StayCalculationResult } from "./billing.service";
+import {
+  calculateStay,
+  doIntervalsOverlap,
+  type StayCalculationResult,
+} from "./billing.service";
 import { formatIST, formatISTDate, formatISTTime } from "@/lib/datetime";
-import { type BookingStatus, type ProblemStatus, type Severity } from "@prisma/client";
+import {
+  type BookingStatus,
+  type ProblemStatus,
+  type Severity,
+} from "@prisma/client";
 
-export type DerivedRoomStatus = "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "RESERVED";
+export type DerivedRoomStatus =
+  "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "RESERVED";
 
 export interface ConflictingBookingInfo {
   id: string;
@@ -141,14 +150,17 @@ export function calculateRoomStatus(
   const activeBooking = room.bookings?.find((b) => {
     if (b.status !== "CHECKED_IN") return false;
 
-    const start = b.actualCheckInAt ? new Date(b.actualCheckInAt) : new Date(b.checkInAt);
+    const start = b.actualCheckInAt
+      ? new Date(b.actualCheckInAt)
+      : new Date(b.checkInAt);
     if (start > now) return false;
 
     if (b.actualCheckOutAt) {
       return new Date(b.actualCheckOutAt) > now;
     }
 
-    return new Date(b.checkOutAt) >= now;
+    // A checked-in guest occupies the room until actualCheckOutAt is recorded
+    return true;
   });
 
   if (activeBooking) {
@@ -175,7 +187,10 @@ export function calculateRoomStatus(
   // 3. Reserved check (RESERVED booking where checkOutAt >= now)
   const reservedBooking = room.bookings
     ?.filter((b) => b.status === "RESERVED" && new Date(b.checkOutAt) >= now)
-    ?.sort((a, b) => new Date(a.checkInAt).getTime() - new Date(b.checkInAt).getTime())[0];
+    ?.sort(
+      (a, b) =>
+        new Date(a.checkInAt).getTime() - new Date(b.checkInAt).getTime()
+    )[0];
 
   if (reservedBooking) {
     const primaryGuest =
@@ -211,7 +226,10 @@ export function calculateRoomStatus(
 /**
  * Formats a friendly target time string in IST (e.g., "10:00 PM today", "10:00 PM tomorrow", "29 Oct, 10:00 PM").
  */
-export function formatFriendlyUntil(targetDate: Date, now: Date = new Date()): string {
+export function formatFriendlyUntil(
+  targetDate: Date,
+  now: Date = new Date()
+): string {
   const targetIST = formatISTDate(targetDate);
   const todayIST = formatISTDate(now);
   const tomorrowDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -276,7 +294,9 @@ export function evaluateRoomAvailability(
   const hasProblem = openProblems.length > 0;
   const openProblemsCount = openProblems.length;
   const pricePerNight = Number(room.pricePerNight);
-  const estimatedTotal = new Decimal(room.pricePerNight).mul(stay.days).toNumber();
+  const estimatedTotal = new Decimal(room.pricePerNight)
+    .mul(stay.days)
+    .toNumber();
 
   // 1. Inactive room check
   if (!room.isActive) {
@@ -302,7 +322,9 @@ export function evaluateRoomAvailability(
   // 2. Overlapping maintenance check [startsAt, endsAt)
   const overlappingMaintenance = (room.maintenance ?? [])
     .filter((m) => doIntervalsOverlap(m.startsAt, m.endsAt, checkIn, checkOut))
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+    );
 
   if (overlappingMaintenance.length > 0) {
     const firstMaint = overlappingMaintenance[0];
@@ -348,7 +370,10 @@ export function evaluateRoomAvailability(
         (b.status === "RESERVED" || b.status === "CHECKED_IN") &&
         doIntervalsOverlap(b.checkInAt, b.checkOutAt, checkIn, checkOut)
     )
-    .sort((a, b) => new Date(a.checkInAt).getTime() - new Date(b.checkInAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.checkInAt).getTime() - new Date(b.checkInAt).getTime()
+    );
 
   if (overlappingBookings.length > 0) {
     const firstBooking = overlappingBookings[0];
@@ -431,8 +456,16 @@ export const roomService = {
         },
         bookings: {
           where: {
-            status: { in: ["CHECKED_IN", "RESERVED"] },
-            checkOutAt: { gte: now },
+            OR: [
+              {
+                status: "CHECKED_IN",
+                actualCheckOutAt: null,
+              },
+              {
+                status: "RESERVED",
+                checkOutAt: { gte: now },
+              },
+            ],
           },
           include: {
             guests: true,
@@ -485,8 +518,16 @@ export const roomService = {
         },
         bookings: {
           where: {
-            status: { in: ["CHECKED_IN", "RESERVED"] },
-            checkOutAt: { gte: now },
+            OR: [
+              {
+                status: "CHECKED_IN",
+                actualCheckOutAt: null,
+              },
+              {
+                status: "RESERVED",
+                checkOutAt: { gte: now },
+              },
+            ],
           },
           include: {
             guests: true,
@@ -530,7 +571,10 @@ export const roomService = {
     return await prisma.$transaction(async (tx) => {
       const type = await tx.roomType.findUnique({ where: { id: data.typeId } });
       if (!type) {
-        throw new AppError("VALIDATION_ERROR", "Selected room type does not exist.");
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Selected room type does not exist."
+        );
       }
 
       const existing = await tx.room.findFirst({
@@ -543,7 +587,10 @@ export const roomService = {
       });
 
       if (existing) {
-        throw new AppError("VALIDATION_ERROR", `Room "${trimmedNumber}" already exists.`);
+        throw new AppError(
+          "VALIDATION_ERROR",
+          `Room "${trimmedNumber}" already exists.`
+        );
       }
 
       const created = await tx.room.create({
@@ -598,7 +645,10 @@ export const roomService = {
     return await prisma.$transaction(async (tx) => {
       const type = await tx.roomType.findUnique({ where: { id: data.typeId } });
       if (!type) {
-        throw new AppError("VALIDATION_ERROR", "Selected room type does not exist.");
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Selected room type does not exist."
+        );
       }
 
       // Check for colliding room numbers
@@ -670,7 +720,10 @@ export const roomService = {
 
       const type = await tx.roomType.findUnique({ where: { id: data.typeId } });
       if (!type) {
-        throw new AppError("VALIDATION_ERROR", "Selected room type does not exist.");
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Selected room type does not exist."
+        );
       }
 
       const collision = await tx.room.findFirst({
@@ -684,7 +737,10 @@ export const roomService = {
       });
 
       if (collision) {
-        throw new AppError("VALIDATION_ERROR", `Room "${trimmedNumber}" already exists.`);
+        throw new AppError(
+          "VALIDATION_ERROR",
+          `Room "${trimmedNumber}" already exists.`
+        );
       }
 
       const updated = await tx.room.update({
@@ -798,7 +854,8 @@ export const roomService = {
       if (bookings > 0 || maintenance > 0 || problems > 0) {
         const reasons: string[] = [];
         if (bookings > 0) reasons.push(`${bookings} booking(s)`);
-        if (maintenance > 0) reasons.push(`${maintenance} maintenance record(s)`);
+        if (maintenance > 0)
+          reasons.push(`${maintenance} maintenance record(s)`);
         if (problems > 0) reasons.push(`${problems} reported problem(s)`);
 
         throw new AppError(
@@ -842,11 +899,16 @@ export const roomService = {
       excludeBookingId?: string;
     }
   ): Promise<FindAvailableRoomsResponse> {
-    const checkIn = checkInInput instanceof Date ? checkInInput : new Date(checkInInput);
-    const checkOut = checkOutInput instanceof Date ? checkOutInput : new Date(checkOutInput);
+    const checkIn =
+      checkInInput instanceof Date ? checkInInput : new Date(checkInInput);
+    const checkOut =
+      checkOutInput instanceof Date ? checkOutInput : new Date(checkOutInput);
 
     if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-      throw new AppError("VALIDATION_ERROR", "Invalid check-in or check-out date.");
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Invalid check-in or check-out date."
+      );
     }
 
     if (checkOut.getTime() <= checkIn.getTime()) {
@@ -885,7 +947,9 @@ export const roomService = {
             status: { in: ["RESERVED", "CHECKED_IN"] },
             checkInAt: { lt: checkOut },
             checkOutAt: { gt: checkIn },
-            ...(options?.excludeBookingId ? { id: { not: options.excludeBookingId } } : {}),
+            ...(options?.excludeBookingId
+              ? { id: { not: options.excludeBookingId } }
+              : {}),
           },
           include: {
             guests: true,

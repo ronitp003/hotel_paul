@@ -98,7 +98,9 @@ export function endOfISTDay(date: Date | string | number = new Date()): Date {
 /**
  * Returns a UTC Date representing the start of the month in IST.
  */
-export function startOfISTMonth(date: Date | string | number = new Date()): Date {
+export function startOfISTMonth(
+  date: Date | string | number = new Date()
+): Date {
   const zoned = toZonedTime(ensureDate(date), IST_TIMEZONE);
   const start = startOfMonth(zoned);
   return fromZonedTime(start, IST_TIMEZONE);

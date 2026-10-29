@@ -16,12 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  CheckOutIcon,
-  SpinnerIcon,
-  CheckIcon,
-  ProblemIcon,
-} from "@/lib/icons";
+import { CheckOutIcon, SpinnerIcon, CheckIcon, ProblemIcon } from "@/lib/icons";
 
 export interface BookingBillData {
   booking: {
@@ -98,9 +93,12 @@ export function CheckoutDialog({
 
   // Settlement Form State
   const [paymentAmount, setPaymentAmount] = useState<string>("");
-  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD" | "BANK_TRANSFER">("UPI");
+  const [paymentMode, setPaymentMode] = useState<
+    "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
+  >("UPI");
   const [paymentNote, setPaymentNote] = useState<string>("");
-  const [allowZeroPaymentWithBalance, setAllowZeroPaymentWithBalance] = useState(false);
+  const [allowZeroPaymentWithBalance, setAllowZeroPaymentWithBalance] =
+    useState(false);
 
   const isLoadingBill = open && !billData && !loadError;
 
@@ -178,7 +176,8 @@ export function CheckoutDialog({
         {
           action: {
             label: "View PDF",
-            onClick: () => window.open(`/api/invoices/${result.invoiceId}/pdf`, "_blank"),
+            onClick: () =>
+              window.open(`/api/invoices/${result.invoiceId}/pdf`, "_blank"),
           },
           duration: 8000,
         }
@@ -213,30 +212,42 @@ export function CheckoutDialog({
             Check-out & Issue Invoice — Room {roomNumber}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Review final stay charges, settle any pending balance, and generate an immutable gapless GST Tax Invoice for booking{" "}
-            <span className="font-mono font-semibold text-foreground">{bookingRef}</span>.
+            Review final stay charges, settle any pending balance, and generate
+            an immutable gapless GST Tax Invoice for booking{" "}
+            <span className="font-mono font-semibold text-foreground">
+              {bookingRef}
+            </span>
+            .
           </DialogDescription>
         </DialogHeader>
 
         {isLoadingBill ? (
           <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <SpinnerIcon className="size-6 animate-spin text-primary" />
-            <span className="text-xs">Computing 24-hour stay and GST calculations...</span>
+            <span className="text-xs">
+              Computing 24-hour stay and GST calculations...
+            </span>
           </div>
         ) : billData ? (
           <div className="space-y-4 py-2 text-xs">
             {/* Stay & Room Summary Box */}
             <div className="bg-muted/40 p-3 rounded-lg border border-border/80 flex items-center justify-between">
               <div>
-                <span className="text-muted-foreground block text-[11px]">Primary Guest</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Primary Guest
+                </span>
                 <span className="font-semibold text-foreground text-sm">
                   {billData.booking.primaryGuest?.name || "Guest"}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-muted-foreground block text-[11px]">Billed Duration</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Billed Duration
+                </span>
                 <span className="font-semibold text-foreground font-mono">
-                  {billData.stay.days} {billData.stay.days === 1 ? "day" : "days"} ({billData.stay.hours}h)
+                  {billData.stay.days}{" "}
+                  {billData.stay.days === 1 ? "day" : "days"} (
+                  {billData.stay.hours}h)
                 </span>
               </div>
             </div>
@@ -249,9 +260,12 @@ export function CheckoutDialog({
 
               <div className="flex justify-between items-center py-0.5">
                 <span className="text-muted-foreground">
-                  Room Tariff ({formatINRPlain(billData.bill.rateApplied)} × {billData.stay.days} days)
+                  Room Tariff ({formatINRPlain(billData.bill.rateApplied)} ×{" "}
+                  {billData.stay.days} days)
                 </span>
-                <span className="font-mono font-medium">{formatINR(billData.bill.roomCharges)}</span>
+                <span className="font-mono font-medium">
+                  {formatINR(billData.bill.roomCharges)}
+                </span>
               </div>
 
               {billData.charges.length > 0 && (
@@ -260,8 +274,13 @@ export function CheckoutDialog({
                     Additional Services / Charges:
                   </span>
                   {billData.charges.map((c) => (
-                    <div key={c.id} className="flex justify-between items-center text-[11px] pl-2 text-muted-foreground">
-                      <span>• {c.description} {c.isTaxable ? "(Taxable)" : ""}</span>
+                    <div
+                      key={c.id}
+                      className="flex justify-between items-center text-[11px] pl-2 text-muted-foreground"
+                    >
+                      <span>
+                        • {c.description} {c.isTaxable ? "(Taxable)" : ""}
+                      </span>
                       <span className="font-mono">{formatINR(c.amount)}</span>
                     </div>
                   ))}
@@ -271,33 +290,44 @@ export function CheckoutDialog({
               {billData.bill.discount > 0 && (
                 <div className="flex justify-between items-center text-red-600 dark:text-red-400 py-0.5 font-medium">
                   <span>Discount</span>
-                  <span className="font-mono">-{formatINR(billData.bill.discount)}</span>
+                  <span className="font-mono">
+                    -{formatINR(billData.bill.discount)}
+                  </span>
                 </div>
               )}
 
               <div className="flex justify-between items-center pt-1.5 border-t border-border">
                 <span className="text-muted-foreground">Taxable Value</span>
-                <span className="font-mono font-medium">{formatINR(billData.bill.taxableAmount)}</span>
+                <span className="font-mono font-medium">
+                  {formatINR(billData.bill.taxableAmount)}
+                </span>
               </div>
 
               <div className="flex justify-between items-center py-0.5 text-muted-foreground">
                 <span>
-                  GST ({billData.bill.gstPercent}% — CGST {billData.bill.gstPercent / 2}%, SGST{" "}
+                  GST ({billData.bill.gstPercent}% — CGST{" "}
+                  {billData.bill.gstPercent / 2}%, SGST{" "}
                   {billData.bill.gstPercent / 2}%)
                 </span>
-                <span className="font-mono font-medium">{formatINR(billData.bill.totalGst)}</span>
+                <span className="font-mono font-medium">
+                  {formatINR(billData.bill.totalGst)}
+                </span>
               </div>
 
               {billData.bill.roundOff !== 0 && (
                 <div className="flex justify-between items-center py-0.5 text-muted-foreground">
                   <span>Round-off</span>
-                  <span className="font-mono">{formatINR(billData.bill.roundOff)}</span>
+                  <span className="font-mono">
+                    {formatINR(billData.bill.roundOff)}
+                  </span>
                 </div>
               )}
 
               <div className="flex justify-between items-center pt-2 border-t-2 border-primary/20 text-sm font-bold text-foreground">
                 <span>Total Bill Amount</span>
-                <span className="font-mono text-primary text-base">{formatINR(billData.bill.billAmount)}</span>
+                <span className="font-mono text-primary text-base">
+                  {formatINR(billData.bill.billAmount)}
+                </span>
               </div>
 
               {/* Payments & Balance */}
@@ -333,7 +363,10 @@ export function CheckoutDialog({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="checkout-payment-amount" className="text-xs">
+                    <Label
+                      htmlFor="checkout-payment-amount"
+                      className="text-xs"
+                    >
                       Payment Amount (₹)
                     </Label>
                     <Input
@@ -358,10 +391,7 @@ export function CheckoutDialog({
                       onChange={(e) =>
                         setPaymentMode(
                           e.target.value as
-                            | "CASH"
-                            | "UPI"
-                            | "CARD"
-                            | "BANK_TRANSFER"
+                            "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
                         )
                       }
                       className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"
@@ -369,7 +399,9 @@ export function CheckoutDialog({
                       <option value="UPI">UPI / QR Code</option>
                       <option value="CASH">Cash</option>
                       <option value="CARD">Credit / Debit Card</option>
-                      <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
+                      <option value="BANK_TRANSFER">
+                        Bank Transfer / NEFT
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -393,11 +425,17 @@ export function CheckoutDialog({
                       type="checkbox"
                       id="allow-unsettled-balance"
                       checked={allowZeroPaymentWithBalance}
-                      onChange={(e) => setAllowZeroPaymentWithBalance(e.target.checked)}
+                      onChange={(e) =>
+                        setAllowZeroPaymentWithBalance(e.target.checked)
+                      }
                       className="size-4 rounded border-border text-primary cursor-pointer"
                     />
-                    <label htmlFor="allow-unsettled-balance" className="text-[11px] text-muted-foreground cursor-pointer">
-                      Confirm check-out with pending balance (₹{formatINRPlain(netRemainingAfterPayment)})
+                    <label
+                      htmlFor="allow-unsettled-balance"
+                      className="text-[11px] text-muted-foreground cursor-pointer"
+                    >
+                      Confirm check-out with pending balance (₹
+                      {formatINRPlain(netRemainingAfterPayment)})
                     </label>
                   </div>
                 )}
@@ -408,7 +446,10 @@ export function CheckoutDialog({
             {currentBalance <= 0 && (
               <div className="border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-200 text-xs">
                 <CheckIcon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                <span className="font-medium">Stay is fully settled (₹0.00 balance due). Ready to issue Tax Invoice.</span>
+                <span className="font-medium">
+                  Stay is fully settled (₹0.00 balance due). Ready to issue Tax
+                  Invoice.
+                </span>
               </div>
             )}
           </div>
@@ -447,7 +488,9 @@ export function CheckoutDialog({
               isPending ||
               isLoadingBill ||
               !billData ||
-              (currentBalance > 0 && payAmt < currentBalance && !allowZeroPaymentWithBalance)
+              (currentBalance > 0 &&
+                payAmt < currentBalance &&
+                !allowZeroPaymentWithBalance)
             }
             className="font-semibold"
           >

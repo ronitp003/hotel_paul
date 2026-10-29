@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 // Indian GSTIN standard format (15 characters) or empty string
-export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+export const GSTIN_REGEX =
+  /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
 // Phone: 10 digits with optional +91 or +91- or spaces
 export const PHONE_REGEX = /^(?:\+91[\-\s]?)?[0-9]{10}$/;
@@ -69,13 +70,8 @@ export type InvoiceSettingsInput = z.infer<typeof invoiceSettingsSchema>;
 export const gstSlabItemSchema = z
   .object({
     id: z.string().optional(),
-    minRate: z
-      .number()
-      .min(0, "Min rate cannot be negative"),
-    maxRate: z
-      .number()
-      .nullable()
-      .optional(),
+    minRate: z.number().min(0, "Min rate cannot be negative"),
+    maxRate: z.number().nullable().optional(),
     percent: z
       .number()
       .min(0, "GST percent cannot be negative")

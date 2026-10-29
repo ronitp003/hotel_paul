@@ -18,10 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoaderIcon, CircleAlertIcon, InfoIcon } from "@/lib/icons";
-import {
-  invoiceSettingsSchema,
-  billingSettingsSchema,
-} from "../schemas";
+import { invoiceSettingsSchema, billingSettingsSchema } from "../schemas";
 import {
   updateInvoiceSettingsAction,
   updateBillingSettingsAction,
@@ -44,8 +41,12 @@ export function InvoiceBillingForm({
   initialInvoice,
   initialBilling,
 }: InvoiceBillingFormProps) {
-  const [invoiceServerError, setInvoiceServerError] = useState<string | null>(null);
-  const [billingServerError, setBillingServerError] = useState<string | null>(null);
+  const [invoiceServerError, setInvoiceServerError] = useState<string | null>(
+    null
+  );
+  const [billingServerError, setBillingServerError] = useState<string | null>(
+    null
+  );
 
   const invoiceForm = useForm({
     defaultValues: {
@@ -60,7 +61,9 @@ export function InvoiceBillingForm({
       setInvoiceServerError(null);
       const res = await updateInvoiceSettingsAction(value);
       if (!res.ok) {
-        setInvoiceServerError(res.message || "Failed to update invoice settings.");
+        setInvoiceServerError(
+          res.message || "Failed to update invoice settings."
+        );
         return;
       }
       toast.success("Invoice series and notes updated successfully.");
@@ -80,7 +83,9 @@ export function InvoiceBillingForm({
       setBillingServerError(null);
       const res = await updateBillingSettingsAction(value);
       if (!res.ok) {
-        setBillingServerError(res.message || "Failed to update billing settings.");
+        setBillingServerError(
+          res.message || "Failed to update billing settings."
+        );
         return;
       }
       toast.success("Billing rules updated successfully.");
@@ -94,7 +99,8 @@ export function InvoiceBillingForm({
         <CardHeader>
           <CardTitle>Invoice Series & Formatting</CardTitle>
           <CardDescription>
-            Configure legal tax invoice prefixes, sequential counter, and footer notes.
+            Configure legal tax invoice prefixes, sequential counter, and footer
+            notes.
           </CardDescription>
         </CardHeader>
 
@@ -115,11 +121,14 @@ export function InvoiceBillingForm({
 
             <Alert className="bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200">
               <InfoIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <AlertTitle className="font-semibold">Sequential Numbering Notice</AlertTitle>
+              <AlertTitle className="font-semibold">
+                Sequential Numbering Notice
+              </AlertTitle>
               <AlertDescription className="text-xs">
-                Changing the next invoice number only affects future invoices. It will not alter
-                or renumber existing historical invoices. By law, the sequence cannot be set
-                lower than the highest issued invoice number + 1.
+                Changing the next invoice number only affects future invoices.
+                It will not alter or renumber existing historical invoices. By
+                law, the sequence cannot be set lower than the highest issued
+                invoice number + 1.
               </AlertDescription>
             </Alert>
 
@@ -139,10 +148,13 @@ export function InvoiceBillingForm({
                         aria-invalid={Boolean(error)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Prepended to the sequential invoice number (e.g. HP-1001).
+                        Prepended to the sequential invoice number (e.g.
+                        HP-1001).
                       </p>
                       {error && (
-                        <p className="text-sm font-medium text-destructive">{error}</p>
+                        <p className="text-sm font-medium text-destructive">
+                          {error}
+                        </p>
                       )}
                     </div>
                   );
@@ -168,10 +180,13 @@ export function InvoiceBillingForm({
                         aria-invalid={Boolean(error)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Allocated sequentially in a database transaction on checkout.
+                        Allocated sequentially in a database transaction on
+                        checkout.
                       </p>
                       {error && (
-                        <p className="text-sm font-medium text-destructive">{error}</p>
+                        <p className="text-sm font-medium text-destructive">
+                          {error}
+                        </p>
                       )}
                     </div>
                   );
@@ -184,7 +199,9 @@ export function InvoiceBillingForm({
                 const error = field.state.meta.errors[0]?.message;
                 return (
                   <div className="space-y-1.5">
-                    <Label htmlFor={field.name}>Invoice Footer / Policy Notes</Label>
+                    <Label htmlFor={field.name}>
+                      Invoice Footer / Policy Notes
+                    </Label>
                     <Textarea
                       id={field.name}
                       rows={3}
@@ -195,10 +212,13 @@ export function InvoiceBillingForm({
                       aria-invalid={Boolean(error)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Max 2000 characters. Printed at the bottom of customer invoices.
+                      Max 2000 characters. Printed at the bottom of customer
+                      invoices.
                     </p>
                     {error && (
-                      <p className="text-sm font-medium text-destructive">{error}</p>
+                      <p className="text-sm font-medium text-destructive">
+                        {error}
+                      </p>
                     )}
                   </div>
                 );
@@ -207,10 +227,14 @@ export function InvoiceBillingForm({
           </CardContent>
 
           <CardFooter className="flex justify-end border-t pt-4">
-            <invoiceForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            <invoiceForm.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
               {([canSubmit, isSubmitting]) => (
                 <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                  {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                  {isSubmitting && (
+                    <LoaderIcon className="h-4 w-4 animate-spin mr-2" />
+                  )}
                   Save Invoice Settings
                 </Button>
               )}
@@ -265,11 +289,13 @@ export function InvoiceBillingForm({
                       aria-invalid={Boolean(error)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Minutes allowed past the 24-hour cycle before an additional day is billed.
-                      (Default: 0 minutes).
+                      Minutes allowed past the 24-hour cycle before an
+                      additional day is billed. (Default: 0 minutes).
                     </p>
                     {error && (
-                      <p className="text-sm font-medium text-destructive">{error}</p>
+                      <p className="text-sm font-medium text-destructive">
+                        {error}
+                      </p>
                     )}
                   </div>
                 );
@@ -281,11 +307,15 @@ export function InvoiceBillingForm({
                 {(field) => (
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
-                      <Label htmlFor={field.name} className="text-sm font-medium">
+                      <Label
+                        htmlFor={field.name}
+                        className="text-sm font-medium"
+                      >
                         Round Final Bill to Nearest Rupee
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        When enabled, rounds fractional paisa totals to the nearest whole ₹.
+                        When enabled, rounds fractional paisa totals to the
+                        nearest whole ₹.
                       </p>
                     </div>
                     <Switch
@@ -301,11 +331,15 @@ export function InvoiceBillingForm({
                 {(field) => (
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
-                      <Label htmlFor={field.name} className="text-sm font-medium">
+                      <Label
+                        htmlFor={field.name}
+                        className="text-sm font-medium"
+                      >
                         Apply GST to Other Charges (Food, Laundry, Room Service)
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        Whether standard GST rate applies to non-room incidental charges.
+                        Whether standard GST rate applies to non-room incidental
+                        charges.
                       </p>
                     </div>
                     <Switch
@@ -320,10 +354,14 @@ export function InvoiceBillingForm({
           </CardContent>
 
           <CardFooter className="flex justify-end border-t pt-4">
-            <billingForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            <billingForm.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
               {([canSubmit, isSubmitting]) => (
                 <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                  {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                  {isSubmitting && (
+                    <LoaderIcon className="h-4 w-4 animate-spin mr-2" />
+                  )}
                   Save Billing Policies
                 </Button>
               )}

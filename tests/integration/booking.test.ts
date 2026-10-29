@@ -1,5 +1,13 @@
 import "dotenv/config";
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, BookingStatus, Role, PaymentKind } from "@prisma/client";
@@ -7,10 +15,15 @@ import * as sessionModule from "@/server/auth/session";
 import { ROLES } from "@/lib/constants";
 import { bookingService } from "@/server/services/booking.service";
 import { roomService } from "@/server/services/room.service";
-import { createBookingAction } from "@/server/actions/booking.actions";
+import {
+  createBookingAction,
+  checkInReservedBookingAction,
+  cancelBookingAction,
+} from "@/server/actions/booking.actions";
 import { AppError } from "@/lib/errors";
 
-const connectionString = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 describe("Phase 1.5: Booking & Check-in (Integration)", () => {
   let pool: Pool;
@@ -154,7 +167,11 @@ describe("Phase 1.5: Booking & Check-in (Integration)", () => {
     expect(roomStatus.currentBooking?.reference).toBe(booking.reference);
     expect(roomStatus.currentBooking?.guestName).toBe("Subhas Chandra Bose");
 
-    const availableRooms = await roomService.findAvailableRooms(checkIn, checkOut, { typeId: testTypeId });
+    const availableRooms = await roomService.findAvailableRooms(
+      checkIn,
+      checkOut,
+      { typeId: testTypeId }
+    );
     const targetRoom = availableRooms.rooms.find((r) => r.id === room201Id);
     expect(targetRoom?.isAvailable).toBe(false);
     expect(targetRoom?.unavailableType).toBe("RESERVED");
@@ -348,5 +365,105 @@ describe("Phase 1.5: Booking & Check-in (Integration)", () => {
     expect(result.data.status).toBe(BookingStatus.CHECKED_IN);
     expect(result.data.advancePaid).toBe(1000);
     expect(result.data.primaryGuestName).toBe("Amartya Sen");
+  });
+
+  it("checks in a RESERVED booking via checkInReservedBookingAction and updates stay status", async () => {
+    vi.spyOn(sessionModule, "requireSession").mockResolvedValue({
+      actor: receptionistActor,
+    });
+
+    // Create an isolated room for check-in test
+    const checkInRoom = await prisma.room.create({
+      data: {
+        number: `203_${Date.now()}`,
+        typeId: testTypeId,
+        pricePerNight: 2400,
+        isActive: true,
+      },
+    });
+
+    try {
+      const checkIn = new Date("2026-12-28T10:00:00.000Z");
+      const checkOut = new Date("2026-12-30T10:00:00.000Z");
+
+      const created = await bookingService.createBooking(testStaffUser, {
+        roomId: checkInRoom.id,
+        checkInAt: checkIn,
+        checkOutAt: checkOut,
+        action: "RESERVE",
+        source: "PHONE",
+        rateApplied: 2400,
+        advanceAmount: 2400,
+        advanceMode: "UPI",
+        guests: [{ name: "Reserved Guest", isPrimary: true }],
+      });
+
+      expect(created.status).toBe(BookingStatus.RESERVED);
+      expect(created.actualCheckInAt).toBeNull();
+
+      // Check in the reserved booking
+      const checkInRes = await checkInReservedBookingAction({
+        bookingId: created.id,
+      });
+
+      expect(checkInRes.ok).toBe(true);
+      expect(checkInRes.data?.status).toBe(BookingStatus.CHECKED_IN);
+
+      // Verify in DB
+      const dbBooking = await prisma.booking.findUnique({
+        where: { id: created.id },
+      });
+      expect(dbBooking?.status).toBe(BookingStatus.CHECKED_IN);
+      expect(dbBooking?.actualCheckInAt).not.toBeNull();
+
+      // Attempting to check in again must fail cleanly with VALIDATION_ERROR
+      const reCheckInRes = await checkInReservedBookingAction({
+        bookingId: created.id,
+      });
+      expect(reCheckInRes.ok).toBe(false);
+      expect(reCheckInRes.code).toBe("VALIDATION_ERROR");
+    } finally {
+      await prisma.payment.deleteMany({
+        where: { booking: { roomId: checkInRoom.id } },
+      });
+      await prisma.bookingGuest.deleteMany({
+        where: { booking: { roomId: checkInRoom.id } },
+      });
+      await prisma.booking.deleteMany({ where: { roomId: checkInRoom.id } });
+      await prisma.room.deleteMany({ where: { id: checkInRoom.id } });
+    }
+  });
+
+  it("cancels a RESERVED booking via cancelBookingAction", async () => {
+    vi.spyOn(sessionModule, "requireSession").mockResolvedValue({
+      actor: receptionistActor,
+    });
+
+    const checkIn = new Date("2026-12-31T10:00:00.000Z");
+    const checkOut = new Date("2027-01-02T10:00:00.000Z");
+
+    const created = await bookingService.createBooking(testStaffUser, {
+      roomId: room201Id,
+      checkInAt: checkIn,
+      checkOutAt: checkOut,
+      action: "RESERVE",
+      source: "WALK_IN",
+      rateApplied: 2400,
+      advanceAmount: 0,
+      guests: [{ name: "Cancel Test Guest", isPrimary: true }],
+    });
+
+    const cancelRes = await cancelBookingAction({
+      bookingId: created.id,
+      reason: "Guest requested cancellation over phone",
+    });
+
+    expect(cancelRes.ok).toBe(true);
+    expect(cancelRes.data?.status).toBe(BookingStatus.CANCELLED);
+
+    const dbBooking = await prisma.booking.findUnique({
+      where: { id: created.id },
+    });
+    expect(dbBooking?.status).toBe(BookingStatus.CANCELLED);
   });
 });

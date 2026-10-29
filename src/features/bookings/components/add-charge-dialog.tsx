@@ -80,7 +80,8 @@ export function AddChargeDialog({
               Add Charge — {bookingRef}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Add extra service charges (food, laundry, extra mattress) to this stay.
+              Add extra service charges (food, laundry, extra mattress) to this
+              stay.
             </DialogDescription>
           </DialogHeader>
 
@@ -124,7 +125,10 @@ export function AddChargeDialog({
                 onChange={(e) => setIsTaxable(e.target.checked)}
                 className="size-4 rounded border-border text-primary cursor-pointer"
               />
-              <label htmlFor="charge-is-taxable" className="text-xs text-foreground cursor-pointer">
+              <label
+                htmlFor="charge-is-taxable"
+                className="text-xs text-foreground cursor-pointer"
+              >
                 Subject to GST (Taxable service)
               </label>
             </div>

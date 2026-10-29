@@ -69,7 +69,9 @@ export function CancelInvoiceDialog({
               Cancel Invoice — {displayNo}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Cancelling an invoice is an immutable owner-level audit action. The original invoice record will be preserved with your reason and timestamp.
+              Cancelling an invoice is an immutable owner-level audit action.
+              The original invoice record will be preserved with your reason and
+              timestamp.
             </DialogDescription>
           </DialogHeader>
 

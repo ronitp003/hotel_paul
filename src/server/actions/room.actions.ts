@@ -5,7 +5,12 @@ import { requireRole } from "@/server/auth/permissions";
 import { ROLES } from "@/lib/constants";
 import { roomService } from "@/server/services/room.service";
 import { roomSchema, bulkRoomsSchema } from "@/features/rooms/schemas";
-import { AppError, type ActionResult, errorResult, successResult } from "@/lib/errors";
+import {
+  AppError,
+  type ActionResult,
+  errorResult,
+  successResult,
+} from "@/lib/errors";
 import { ZodError } from "zod";
 
 export async function createRoomAction(input: unknown): Promise<ActionResult> {
@@ -21,14 +26,19 @@ export async function createRoomAction(input: unknown): Promise<ActionResult> {
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("createRoomAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function bulkCreateRoomsAction(input: unknown): Promise<ActionResult> {
+export async function bulkCreateRoomsAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = bulkRoomsSchema.parse(input);
@@ -41,7 +51,10 @@ export async function bulkCreateRoomsAction(input: unknown): Promise<ActionResul
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("bulkCreateRoomsAction error:", err);
     return errorResult("INTERNAL_ERROR");
@@ -64,7 +77,10 @@ export async function updateRoomAction(
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("updateRoomAction error:", err);
     return errorResult("INTERNAL_ERROR");
@@ -114,10 +130,18 @@ export async function findAvailableRoomsAction(
     search?: string;
     excludeBookingId?: string;
   }
-): Promise<ActionResult<import("@/server/services/room.service").FindAvailableRoomsResponse>> {
+): Promise<
+  ActionResult<
+    import("@/server/services/room.service").FindAvailableRoomsResponse
+  >
+> {
   try {
     await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
-    const result = await roomService.findAvailableRooms(checkIn, checkOut, options);
+    const result = await roomService.findAvailableRooms(
+      checkIn,
+      checkOut,
+      options
+    );
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) {

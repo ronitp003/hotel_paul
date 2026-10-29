@@ -5,10 +5,17 @@ import { requireRole } from "@/server/auth/permissions";
 import { ROLES } from "@/lib/constants";
 import { roomTypeService } from "@/server/services/room-type.service";
 import { roomTypeSchema } from "@/features/rooms/schemas";
-import { AppError, type ActionResult, errorResult, successResult } from "@/lib/errors";
+import {
+  AppError,
+  type ActionResult,
+  errorResult,
+  successResult,
+} from "@/lib/errors";
 import { ZodError } from "zod";
 
-export async function createRoomTypeAction(input: unknown): Promise<ActionResult> {
+export async function createRoomTypeAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = roomTypeSchema.parse(input);
@@ -20,7 +27,10 @@ export async function createRoomTypeAction(input: unknown): Promise<ActionResult
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("createRoomTypeAction error:", err);
     return errorResult("INTERNAL_ERROR");
@@ -42,7 +52,10 @@ export async function updateRoomTypeAction(
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("updateRoomTypeAction error:", err);
     return errorResult("INTERNAL_ERROR");

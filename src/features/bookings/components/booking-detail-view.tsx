@@ -10,7 +10,9 @@ import {
   CalendarIcon,
   GuestIcon,
   RupeeIcon,
+  CheckInIcon,
   CheckOutIcon,
+  CloseIcon,
   AddIcon,
   DeleteIcon,
   DownloadIcon,
@@ -24,6 +26,8 @@ import { Card } from "@/components/ui/card";
 import { CheckoutDialog } from "./checkout-dialog";
 import { AddChargeDialog } from "./add-charge-dialog";
 import { AddPaymentDialog } from "./add-payment-dialog";
+import { CheckInConfirmDialog } from "./checkin-confirm-dialog";
+import { CancelBookingDialog } from "./cancel-booking-dialog";
 import { deleteChargeAction } from "@/server/actions/billing.actions";
 import { toast } from "sonner";
 
@@ -99,12 +103,20 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [chargeOpen, setChargeOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [paymentKind, setPaymentKind] = useState<"PAYMENT" | "REFUND" | "ADVANCE">("PAYMENT");
+  const [paymentKind, setPaymentKind] = useState<
+    "PAYMENT" | "REFUND" | "ADVANCE"
+  >("PAYMENT");
+  const [checkInConfirmOpen, setCheckInConfirmOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deletingChargeId, setDeletingChargeId] = useState<string | null>(null);
 
   const isCheckedIn = booking.status === "CHECKED_IN";
   const isCheckedOut = booking.status === "CHECKED_OUT";
   const isReserved = booking.status === "RESERVED";
+  const primaryGuestName =
+    booking.guests.find((g) => g.isPrimary)?.name ||
+    booking.guests[0]?.name ||
+    "Guest";
 
   const handleDeleteCharge = async (chargeId: string) => {
     if (!confirm("Are you sure you want to remove this charge?")) return;
@@ -127,13 +139,21 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "CHECKED_IN":
-        return <Badge className="bg-blue-600 text-white">Occupied / Checked-In</Badge>;
+        return (
+          <Badge className="bg-blue-600 text-white">
+            Occupied / Checked-In
+          </Badge>
+        );
       case "RESERVED":
         return <Badge className="bg-amber-500 text-white">Reserved</Badge>;
       case "CHECKED_OUT":
         return <Badge className="bg-slate-500 text-white">Checked Out</Badge>;
       case "CANCELLED":
-        return <Badge variant="outline" className="text-red-600 border-red-300">Cancelled</Badge>;
+        return (
+          <Badge variant="outline" className="text-red-600 border-red-300">
+            Cancelled
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -143,11 +163,16 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
     <div className="space-y-6 max-w-6xl mx-auto pb-16">
       {/* Breadcrumb & Navigation */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Link href="/bookings" className="hover:text-foreground transition-colors">
+        <Link
+          href="/bookings"
+          className="hover:text-foreground transition-colors"
+        >
           Bookings
         </Link>
         <ChevronRightIcon className="size-3" />
-        <span className="font-mono text-foreground font-semibold">{booking.reference}</span>
+        <span className="font-mono text-foreground font-semibold">
+          {booking.reference}
+        </span>
       </div>
 
       {/* Top Banner / Actions */}
@@ -160,10 +185,14 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
             {getStatusBadge(booking.status)}
           </div>
           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-            <span>Room <strong>{booking.roomNumber}</strong> ({booking.roomTypeName})</span>
+            <span>
+              Room <strong>{booking.roomNumber}</strong> ({booking.roomTypeName}
+              )
+            </span>
             <span>•</span>
             <span>
-              {formatISTDateTime(booking.checkInAt)} → {formatISTDateTime(booking.checkOutAt)}
+              {formatISTDateTime(booking.checkInAt)} →{" "}
+              {formatISTDateTime(booking.checkOutAt)}
             </span>
           </p>
         </div>
@@ -208,6 +237,15 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
           {isReserved && (
             <>
               <Button
+                variant="default"
+                size="sm"
+                onClick={() => setCheckInConfirmOpen(true)}
+                className="text-xs font-semibold"
+              >
+                <CheckInIcon className="size-3.5 mr-1.5" />
+                Check In Guest
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
@@ -219,6 +257,15 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                 <PaymentIcon className="size-3.5 mr-1.5" />
                 Record Advance
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCancelDialogOpen(true)}
+                className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <CloseIcon className="size-3.5 mr-1.5" />
+                Cancel Reservation
+              </Button>
             </>
           )}
 
@@ -227,7 +274,10 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
               href={`/api/invoices/${booking.invoice.id}/pdf`}
               target="_blank"
               rel="noreferrer"
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "text-xs font-semibold")}
+              className={cn(
+                buttonVariants({ variant: "default", size: "sm" }),
+                "text-xs font-semibold"
+              )}
             >
               <DownloadIcon className="size-3.5 mr-1.5" />
               Download Tax Invoice (PDF)
@@ -248,12 +298,20 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
             </h3>
             <div className="divide-y divide-border/60">
               {booking.guests.map((guest) => (
-                <div key={guest.id} className="py-2.5 flex items-center justify-between text-xs">
+                <div
+                  key={guest.id}
+                  className="py-2.5 flex items-center justify-between text-xs"
+                >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-foreground text-sm">{guest.name}</span>
+                      <span className="font-semibold text-foreground text-sm">
+                        {guest.name}
+                      </span>
                       {guest.isPrimary && (
-                        <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-primary/10 text-primary border-primary/30"
+                        >
                           Primary Guest
                         </Badge>
                       )}
@@ -275,10 +333,20 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
 
             {booking.companyName && (
               <div className="pt-3 border-t border-border/80 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground block mb-1">Corporate Details:</span>
-                <div>Company: <strong>{booking.companyName}</strong></div>
-                {booking.companyGstin && <div>GSTIN: <strong>{booking.companyGstin}</strong></div>}
-                {booking.companyAddress && <div>Address: {booking.companyAddress}</div>}
+                <span className="font-semibold text-foreground block mb-1">
+                  Corporate Details:
+                </span>
+                <div>
+                  Company: <strong>{booking.companyName}</strong>
+                </div>
+                {booking.companyGstin && (
+                  <div>
+                    GSTIN: <strong>{booking.companyGstin}</strong>
+                  </div>
+                )}
+                {booking.companyAddress && (
+                  <div>Address: {booking.companyAddress}</div>
+                )}
               </div>
             )}
           </Card>
@@ -291,38 +359,70 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60">
-                <span className="text-muted-foreground block text-[11px]">Room Number</span>
-                <span className="font-bold text-foreground text-base font-mono">{booking.roomNumber}</span>
-                <span className="text-[10px] text-muted-foreground block">{booking.roomTypeName}</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Room Number
+                </span>
+                <span className="font-bold text-foreground text-base font-mono">
+                  {booking.roomNumber}
+                </span>
+                <span className="text-[10px] text-muted-foreground block">
+                  {booking.roomTypeName}
+                </span>
               </div>
               <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60">
-                <span className="text-muted-foreground block text-[11px]">Billed Tariff</span>
-                <span className="font-bold text-foreground text-base font-mono">{formatINR(booking.rateApplied)}</span>
-                <span className="text-[10px] text-muted-foreground block">per 24-hour day</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Billed Tariff
+                </span>
+                <span className="font-bold text-foreground text-base font-mono">
+                  {formatINR(booking.rateApplied)}
+                </span>
+                <span className="text-[10px] text-muted-foreground block">
+                  per 24-hour day
+                </span>
               </div>
               <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60">
-                <span className="text-muted-foreground block text-[11px]">Total Stay</span>
-                <span className="font-bold text-foreground text-base font-mono">{booking.stayDays} days</span>
-                <span className="text-[10px] text-muted-foreground block">24-hour rule</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Total Stay
+                </span>
+                <span className="font-bold text-foreground text-base font-mono">
+                  {booking.stayDays} days
+                </span>
+                <span className="text-[10px] text-muted-foreground block">
+                  24-hour rule
+                </span>
               </div>
               <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60">
-                <span className="text-muted-foreground block text-[11px]">Booking Source</span>
-                <span className="font-bold text-foreground text-sm uppercase">{booking.source}</span>
-                <span className="text-[10px] text-muted-foreground block">Channel</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Booking Source
+                </span>
+                <span className="font-bold text-foreground text-sm uppercase">
+                  {booking.source}
+                </span>
+                <span className="text-[10px] text-muted-foreground block">
+                  Channel
+                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs font-mono">
               <div className="border border-border/60 p-2.5 rounded-lg">
-                <span className="text-muted-foreground block text-[11px]">Check-in Date & Time</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Check-in Date & Time
+                </span>
                 <span className="font-semibold text-foreground">
-                  {formatISTDateTime(booking.actualCheckInAt || booking.checkInAt)}
+                  {formatISTDateTime(
+                    booking.actualCheckInAt || booking.checkInAt
+                  )}
                 </span>
               </div>
               <div className="border border-border/60 p-2.5 rounded-lg">
-                <span className="text-muted-foreground block text-[11px]">Check-out Date & Time</span>
+                <span className="text-muted-foreground block text-[11px]">
+                  Check-out Date & Time
+                </span>
                 <span className="font-semibold text-foreground">
-                  {formatISTDateTime(booking.actualCheckOutAt || booking.checkOutAt)}
+                  {formatISTDateTime(
+                    booking.actualCheckOutAt || booking.checkOutAt
+                  )}
                 </span>
               </div>
             </div>
@@ -360,20 +460,29 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                       <th className="py-2">Description</th>
                       <th className="py-2">Taxable</th>
                       <th className="py-2 text-right">Amount</th>
-                      {!isCheckedOut && <th className="py-2 text-right">Action</th>}
+                      {!isCheckedOut && (
+                        <th className="py-2 text-right">Action</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
                     {booking.charges.map((charge) => (
                       <tr key={charge.id} className="hover:bg-muted/20">
-                        <td className="py-2 font-medium text-foreground">{charge.description}</td>
+                        <td className="py-2 font-medium text-foreground">
+                          {charge.description}
+                        </td>
                         <td className="py-2">
                           {charge.isTaxable ? (
-                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300"
+                            >
                               GST Taxable
                             </Badge>
                           ) : (
-                            <span className="text-muted-foreground text-[11px]">Non-taxable</span>
+                            <span className="text-muted-foreground text-[11px]">
+                              Non-taxable
+                            </span>
                           )}
                         </td>
                         <td className="py-2 text-right font-mono font-semibold">
@@ -460,14 +569,22 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                         </td>
                         <td className="py-2">
                           <Badge
-                            variant={pmt.kind === "REFUND" ? "destructive" : "secondary"}
+                            variant={
+                              pmt.kind === "REFUND"
+                                ? "destructive"
+                                : "secondary"
+                            }
                             className="text-[10px]"
                           >
                             {pmt.kind}
                           </Badge>
                         </td>
-                        <td className="py-2 font-mono text-[11px] font-medium">{pmt.mode}</td>
-                        <td className="py-2 text-muted-foreground text-[11px]">{pmt.note || "—"}</td>
+                        <td className="py-2 font-mono text-[11px] font-medium">
+                          {pmt.mode}
+                        </td>
+                        <td className="py-2 text-muted-foreground text-[11px]">
+                          {pmt.note || "—"}
+                        </td>
                         <td
                           className={`py-2 text-right font-mono font-semibold ${
                             pmt.kind === "REFUND"
@@ -475,7 +592,9 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                               : "text-emerald-600 dark:text-emerald-400"
                           }`}
                         >
-                          {pmt.kind === "REFUND" ? `-${formatINR(pmt.amount)}` : formatINR(pmt.amount)}
+                          {pmt.kind === "REFUND"
+                            ? `-${formatINR(pmt.amount)}`
+                            : formatINR(pmt.amount)}
                         </td>
                       </tr>
                     ))}
@@ -495,8 +614,13 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between items-center text-muted-foreground">
-                <span>Room Charges ({booking.stayDays}d × {formatINRPlain(booking.rateApplied)})</span>
-                <span className="font-mono font-medium text-foreground">{formatINR(booking.roomCharges)}</span>
+                <span>
+                  Room Charges ({booking.stayDays}d ×{" "}
+                  {formatINRPlain(booking.rateApplied)})
+                </span>
+                <span className="font-mono font-medium text-foreground">
+                  {formatINR(booking.roomCharges)}
+                </span>
               </div>
 
               {booking.charges.length > 0 && (
@@ -513,31 +637,41 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
               {booking.discount > 0 && (
                 <div className="flex justify-between items-center text-red-600 dark:text-red-400 font-medium">
                   <span>Discount</span>
-                  <span className="font-mono">-{formatINR(booking.discount)}</span>
+                  <span className="font-mono">
+                    -{formatINR(booking.discount)}
+                  </span>
                 </div>
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-border/60 text-muted-foreground">
                 <span>Taxable Amount</span>
-                <span className="font-mono font-medium text-foreground">{formatINR(booking.taxableAmount)}</span>
+                <span className="font-mono font-medium text-foreground">
+                  {formatINR(booking.taxableAmount)}
+                </span>
               </div>
 
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>
                   GST ({booking.effectiveGstPercent}% — CGST/SGST split)
                 </span>
-                <span className="font-mono font-medium text-foreground">{formatINR(booking.taxAmount)}</span>
+                <span className="font-mono font-medium text-foreground">
+                  {formatINR(booking.taxAmount)}
+                </span>
               </div>
 
               <div className="flex justify-between items-center pt-2.5 border-t-2 border-border text-base font-bold text-foreground">
                 <span>Total Bill</span>
-                <span className="font-mono text-primary text-lg">{formatINR(booking.totalAmount)}</span>
+                <span className="font-mono text-primary text-lg">
+                  {formatINR(booking.totalAmount)}
+                </span>
               </div>
 
               <div className="pt-2 border-t border-border/60 space-y-1.5">
                 <div className="flex justify-between items-center text-muted-foreground">
                   <span>Net Payments Received</span>
-                  <span className="font-mono text-emerald-600 font-semibold">{formatINR(booking.totalPaid)}</span>
+                  <span className="font-mono text-emerald-600 font-semibold">
+                    {formatINR(booking.totalPaid)}
+                  </span>
                 </div>
 
                 <div className="flex justify-between items-center pt-1 text-sm font-bold">
@@ -571,13 +705,20 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
               <div className="pt-3 border-t border-border/80 space-y-2">
                 <div className="bg-muted/40 p-3 rounded-lg border border-border/60 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-[11px]">Invoice Number</span>
-                    <Badge variant="outline" className="font-mono font-bold text-primary">
+                    <span className="text-muted-foreground text-[11px]">
+                      Invoice Number
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="font-mono font-bold text-primary"
+                    >
                       {booking.invoice.displayNo}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-[11px]">Issued At</span>
+                    <span className="text-muted-foreground text-[11px]">
+                      Issued At
+                    </span>
                     <span className="font-mono text-[11px] text-muted-foreground">
                       {formatISTDateTime(booking.invoice.issuedAt)}
                     </span>
@@ -588,7 +729,10 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                   href={`/api/invoices/${booking.invoice.id}/pdf`}
                   target="_blank"
                   rel="noreferrer"
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full text-xs font-semibold")}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "w-full text-xs font-semibold"
+                  )}
                 >
                   <PrintIcon className="size-3.5 mr-1.5" />
                   View / Print PDF
@@ -623,6 +767,32 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
         open={paymentOpen}
         onOpenChange={setPaymentOpen}
         defaultKind={paymentKind}
+        onSuccess={() => router.refresh()}
+      />
+
+      <CheckInConfirmDialog
+        open={checkInConfirmOpen}
+        onOpenChange={setCheckInConfirmOpen}
+        booking={{
+          id: booking.id,
+          reference: booking.reference,
+          roomNumber: booking.roomNumber,
+          roomTypeName: booking.roomTypeName,
+          guestName: primaryGuestName,
+        }}
+        onSuccess={() => router.refresh()}
+      />
+
+      <CancelBookingDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        booking={{
+          id: booking.id,
+          reference: booking.reference,
+          roomNumber: booking.roomNumber,
+          guestName: primaryGuestName,
+          totalPaid: booking.totalPaid,
+        }}
         onSuccess={() => router.refresh()}
       />
     </div>

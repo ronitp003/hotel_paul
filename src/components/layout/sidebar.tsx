@@ -61,7 +61,10 @@ export function Sidebar({ userRole = "OWNER" }: SidebarProps) {
       </div>
 
       {/* Nav List */}
-      <nav className="flex-1 overflow-y-auto p-2 lg:p-3 space-y-1.5" aria-label="Main Navigation">
+      <nav
+        className="flex-1 overflow-y-auto p-2 lg:p-3 space-y-1.5"
+        aria-label="Main Navigation"
+      >
         {filteredItems.map((item) => {
           const Icon = item.icon;
           const isActive = isNavItemActive(pathname, item.href);
@@ -76,8 +79,8 @@ export function Sidebar({ userRole = "OWNER" }: SidebarProps) {
                 isActive
                   ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                   : item.highlight
-                  ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                    ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
               )}
             >
               <Icon
@@ -86,8 +89,8 @@ export function Sidebar({ userRole = "OWNER" }: SidebarProps) {
                   isActive
                     ? "text-primary-foreground"
                     : item.highlight
-                    ? "text-primary"
-                    : "text-muted-foreground"
+                      ? "text-primary"
+                      : "text-muted-foreground"
                 )}
                 aria-hidden="true"
               />

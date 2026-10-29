@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { formatIST, formatISTDateTime, fromISTInput, toISTInputString } from "@/lib/datetime";
+import {
+  formatIST,
+  formatISTDateTime,
+  fromISTInput,
+  toISTInputString,
+} from "@/lib/datetime";
 import { formatINR } from "@/lib/money";
 import { createBookingAction } from "@/server/actions/booking.actions";
 import { findAvailableRoomsAction } from "@/server/actions/room.actions";
@@ -32,7 +37,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -71,14 +82,22 @@ export function NewBookingFlow({
   const [isSearchingRooms, setIsSearchingRooms] = useState(false);
 
   // Stepper state: 1 = Dates, 2 = Room, 3 = Guests, 4 = Payment & Review
-  const [currentStep, setCurrentStep] = useState<number>(preselectedRoomId ? 2 : 1);
+  const [currentStep, setCurrentStep] = useState<number>(
+    preselectedRoomId ? 2 : 1
+  );
 
   // ───────── Step 1: Dates & Duration ─────────
   const defaultCheckIn = new Date();
-  const defaultCheckOut = new Date(defaultCheckIn.getTime() + 24 * 60 * 60 * 1000);
+  const defaultCheckOut = new Date(
+    defaultCheckIn.getTime() + 24 * 60 * 60 * 1000
+  );
 
-  const [checkInStr, setCheckInStr] = useState<string>(() => toISTInputString(defaultCheckIn));
-  const [checkOutStr, setCheckOutStr] = useState<string>(() => toISTInputString(defaultCheckOut));
+  const [checkInStr, setCheckInStr] = useState<string>(() =>
+    toISTInputString(defaultCheckIn)
+  );
+  const [checkOutStr, setCheckOutStr] = useState<string>(() =>
+    toISTInputString(defaultCheckOut)
+  );
 
   // Calculated stay days
   const currentStay: StayCalculationResult = (() => {
@@ -103,7 +122,9 @@ export function NewBookingFlow({
 
   // ───────── Step 2: Available Rooms ─────────
   const [rooms, setRooms] = useState<AvailableRoomResult[]>(initialRooms);
-  const [selectedRoomId, setSelectedRoomId] = useState<string>(preselectedRoomId || "");
+  const [selectedRoomId, setSelectedRoomId] = useState<string>(
+    preselectedRoomId || ""
+  );
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [searchFilter, setSearchFilter] = useState<string>("");
 
@@ -137,13 +158,15 @@ export function NewBookingFlow({
   const [customRate, setCustomRate] = useState<string>("");
   const [discountStr, setDiscountStr] = useState<string>("0");
   const [advanceAmountStr, setAdvanceAmountStr] = useState<string>("0");
-  const [advanceMode, setAdvanceMode] = useState<"CASH" | "UPI" | "CARD" | "BANK_TRANSFER">("CASH");
+  const [advanceMode, setAdvanceMode] = useState<
+    "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
+  >("CASH");
 
   // Effective rate applied
   const effectiveRate =
     customRate !== "" && !isNaN(Number(customRate))
       ? Number(customRate)
-      : selectedRoom?.pricePerNight ?? 0;
+      : (selectedRoom?.pricePerNight ?? 0);
 
   const discount = Math.max(0, Number(discountStr) || 0);
   const advanceAmount = Math.max(0, Number(advanceAmountStr) || 0);
@@ -153,7 +176,8 @@ export function NewBookingFlow({
   const taxableAmount = Math.max(0, roomCharges - discount);
   // GST Slab: 5% up to ₹7,500/night; 18% above
   const gstPercent = effectiveRate > 7500 ? 18 : 5;
-  const cgstAmount = Math.round(((taxableAmount * gstPercent) / 200) * 100) / 100;
+  const cgstAmount =
+    Math.round(((taxableAmount * gstPercent) / 200) * 100) / 100;
   const sgstAmount = cgstAmount;
   const totalBill = Math.round(taxableAmount + cgstAmount + sgstAmount);
   const balanceDue = Math.max(0, totalBill - advanceAmount);
@@ -181,11 +205,16 @@ export function NewBookingFlow({
         return;
       }
 
-      const res = await findAvailableRoomsAction(start.toISOString(), end.toISOString());
+      const res = await findAvailableRoomsAction(
+        start.toISOString(),
+        end.toISOString()
+      );
       if (res.ok && res.data) {
         setRooms(res.data.rooms);
         // If selected room is no longer available in the new window, reset it
-        const stillAvail = res.data.rooms.find((r) => r.id === selectedRoomId && r.isAvailable);
+        const stillAvail = res.data.rooms.find(
+          (r) => r.id === selectedRoomId && r.isAvailable
+        );
         if (!stillAvail) {
           setSelectedRoomId("");
         }
@@ -229,7 +258,11 @@ export function NewBookingFlow({
     setGuests((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpdateGuest = (index: number, field: keyof GuestState, value: unknown) => {
+  const handleUpdateGuest = (
+    index: number,
+    field: keyof GuestState,
+    value: unknown
+  ) => {
     setGuests((prev) =>
       prev.map((g, i) => (i === index ? { ...g, [field]: value } : g))
     );
@@ -311,7 +344,10 @@ export function NewBookingFlow({
   // Filtered rooms
   const filteredRooms = rooms.filter((r) => {
     if (typeFilter !== "ALL" && r.typeId !== typeFilter) return false;
-    if (searchFilter && !r.number.toLowerCase().includes(searchFilter.toLowerCase().trim())) {
+    if (
+      searchFilter &&
+      !r.number.toLowerCase().includes(searchFilter.toLowerCase().trim())
+    ) {
       return false;
     }
     return true;
@@ -335,15 +371,22 @@ export function NewBookingFlow({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4 mb-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <CalendarIcon className="size-6 text-primary" aria-hidden="true" />
+              <CalendarIcon
+                className="size-6 text-primary"
+                aria-hidden="true"
+              />
               New Booking & Front Desk Check-in
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              Select stay window, pick an available room, register guest particulars, and collect advance.
+              Select stay window, pick an available room, register guest
+              particulars, and collect advance.
             </p>
           </div>
           {selectedRoom && (
-            <Badge variant="outline" className="self-start sm:self-auto bg-primary/10 text-primary border-primary/20 text-xs py-1 px-3">
+            <Badge
+              variant="outline"
+              className="self-start sm:self-auto bg-primary/10 text-primary border-primary/20 text-xs py-1 px-3"
+            >
               Room {selectedRoom.number} Selected ({selectedRoom.typeName})
             </Badge>
           )}
@@ -365,7 +408,10 @@ export function NewBookingFlow({
                 key={step}
                 type="button"
                 onClick={() => {
-                  if (step < currentStep || (step === 2 && checkInStr && checkOutStr)) {
+                  if (
+                    step < currentStep ||
+                    (step === 2 && checkInStr && checkOutStr)
+                  ) {
                     setCurrentStep(step);
                   }
                 }}
@@ -410,7 +456,8 @@ export function NewBookingFlow({
                 Step 1: Stay Window & 24h Calculation
               </h2>
               <p className="text-xs text-muted-foreground">
-                Set guest arrival and planned departure times. All stays are billed on 24-hour cycles.
+                Set guest arrival and planned departure times. All stays are
+                billed on 24-hour cycles.
               </p>
             </div>
           </div>
@@ -444,7 +491,9 @@ export function NewBookingFlow({
                 className="font-mono text-sm h-11"
               />
               <span className="text-xs text-muted-foreground">
-                {checkOutStr ? formatISTDateTime(fromISTInput(checkOutStr)) : ""}
+                {checkOutStr
+                  ? formatISTDateTime(fromISTInput(checkOutStr))
+                  : ""}
               </span>
             </div>
           </div>
@@ -496,13 +545,17 @@ export function NewBookingFlow({
                   {currentStay.days} {currentStay.days === 1 ? "Day" : "Days"}
                 </Badge>
                 {currentStay.isGracePeriodApplied && (
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs">
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs"
+                  >
                     Grace Absorbed ({graceMinutes}m)
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total elapsed: {currentStay.hours} hours ({currentStay.minutes} minutes). Grace period: {graceMinutes} mins.
+                Total elapsed: {currentStay.hours} hours ({currentStay.minutes}{" "}
+                minutes). Grace period: {graceMinutes} mins.
               </p>
             </div>
 
@@ -540,7 +593,8 @@ export function NewBookingFlow({
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Window: {formatIST(fromISTInput(checkInStr), "d MMM, h:mm a")} →{" "}
-                {formatIST(fromISTInput(checkOutStr), "d MMM, h:mm a")} ({currentStay.days} {currentStay.days === 1 ? "day" : "days"})
+                {formatIST(fromISTInput(checkOutStr), "d MMM, h:mm a")} (
+                {currentStay.days} {currentStay.days === 1 ? "day" : "days"})
               </p>
             </div>
             <Button
@@ -581,7 +635,10 @@ export function NewBookingFlow({
                         className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-xs hover:bg-muted/60 hover:border-border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <RoomIcon className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                          <RoomIcon
+                            className="size-4 text-muted-foreground shrink-0"
+                            aria-hidden="true"
+                          />
                           <span className="truncate text-sm font-medium">
                             {selectedTypeName}
                           </span>
@@ -625,7 +682,9 @@ export function NewBookingFlow({
                           <span className="truncate">All Room Types</span>
                         </div>
                         <Badge
-                          variant={typeFilter === "ALL" ? "default" : "secondary"}
+                          variant={
+                            typeFilter === "ALL" ? "default" : "secondary"
+                          }
                           className={cn(
                             "text-[11px] px-1.5 py-0 shrink-0 font-medium",
                             typeFilter === "ALL"
@@ -642,7 +701,9 @@ export function NewBookingFlow({
 
                     <DropdownMenuGroup>
                       {roomTypes.map((type) => {
-                        const count = rooms.filter((r) => r.typeId === type.id).length;
+                        const count = rooms.filter(
+                          (r) => r.typeId === type.id
+                        ).length;
                         const isSelected = typeFilter === type.id;
                         return (
                           <DropdownMenuItem
@@ -686,7 +747,11 @@ export function NewBookingFlow({
             {/* Availability Stats */}
             <div className="flex items-center justify-between sm:justify-end gap-3 text-xs shrink-0 px-1">
               <span className="text-muted-foreground">
-                Showing <strong className="text-foreground">{filteredRooms.length}</strong> of {rooms.length} rooms
+                Showing{" "}
+                <strong className="text-foreground">
+                  {filteredRooms.length}
+                </strong>{" "}
+                of {rooms.length} rooms
               </span>
               <Badge
                 variant="outline"
@@ -702,8 +767,13 @@ export function NewBookingFlow({
             {filteredRooms.length === 0 ? (
               <div className="p-8 text-center rounded-xl border border-dashed border-border text-muted-foreground space-y-2">
                 <RoomIcon className="size-8 mx-auto text-muted-foreground/50" />
-                <p className="text-sm font-medium">No rooms match your filter criteria.</p>
-                <p className="text-xs text-muted-foreground">Try clearing your search or switching back to &ldquo;All Room Types&rdquo;.</p>
+                <p className="text-sm font-medium">
+                  No rooms match your filter criteria.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Try clearing your search or switching back to &ldquo;All Room
+                  Types&rdquo;.
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -756,15 +826,15 @@ export function NewBookingFlow({
                                 isAvail
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
                                   : room.unavailableType === "RESERVED"
-                                  ? "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
-                                  : "bg-stone-100 text-stone-700 border-stone-300 dark:bg-stone-900 dark:text-stone-300"
+                                    ? "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+                                    : "bg-stone-100 text-stone-700 border-stone-300 dark:bg-stone-900 dark:text-stone-300"
                               )}
                             >
                               {isAvail
                                 ? "Available"
                                 : room.unavailableType === "RESERVED"
-                                ? "Reserved"
-                                : room.unavailableType || "Unavailable"}
+                                  ? "Reserved"
+                                  : room.unavailableType || "Unavailable"}
                             </Badge>
                             <span className="text-xs text-muted-foreground font-medium">
                               {room.typeName}
@@ -778,13 +848,17 @@ export function NewBookingFlow({
                             <span className="text-xl font-bold text-foreground">
                               {formatINR(room.pricePerNight)}
                             </span>
-                            <span className="text-xs text-muted-foreground">/ night</span>
+                            <span className="text-xs text-muted-foreground">
+                              / night
+                            </span>
                           </div>
                           {isAvail && (
                             <span className="text-xs text-muted-foreground">
                               Estimated total:{" "}
                               <strong className="text-foreground">
-                                {formatINR(room.pricePerNight * currentStay.days)}
+                                {formatINR(
+                                  room.pricePerNight * currentStay.days
+                                )}
                               </strong>{" "}
                               ({currentStay.days}d)
                             </span>
@@ -795,7 +869,9 @@ export function NewBookingFlow({
                         {room.hasProblem && (
                           <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 p-1.5 rounded-md border border-amber-200 dark:border-amber-900">
                             <ProblemIcon className="size-3.5 shrink-0" />
-                            <span>{room.openProblemsCount} open maintenance issue</span>
+                            <span>
+                              {room.openProblemsCount} open maintenance issue
+                            </span>
                           </div>
                         )}
 
@@ -876,8 +952,12 @@ export function NewBookingFlow({
                       <div className="text-left">
                         <div className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
                           <span>Room {selectedRoom.number}</span>
-                          <span className="text-muted-foreground font-normal">•</span>
-                          <span className="text-muted-foreground font-medium">{selectedRoom.typeName}</span>
+                          <span className="text-muted-foreground font-normal">
+                            •
+                          </span>
+                          <span className="text-muted-foreground font-medium">
+                            {selectedRoom.typeName}
+                          </span>
                         </div>
                         <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
                           Selected for check-in
@@ -889,16 +969,23 @@ export function NewBookingFlow({
 
                     <div className="flex items-center justify-center sm:justify-start gap-3 sm:gap-4 text-xs">
                       <div>
-                        <span className="text-muted-foreground block text-[11px]">Duration</span>
+                        <span className="text-muted-foreground block text-[11px]">
+                          Duration
+                        </span>
                         <strong className="text-foreground font-semibold">
-                          {currentStay.days} {currentStay.days === 1 ? "Day" : "Days"}
+                          {currentStay.days}{" "}
+                          {currentStay.days === 1 ? "Day" : "Days"}
                         </strong>
                       </div>
                       <div className="h-5 w-px bg-border/80" />
                       <div>
-                        <span className="text-muted-foreground block text-[11px]">Est. Total</span>
+                        <span className="text-muted-foreground block text-[11px]">
+                          Est. Total
+                        </span>
                         <span className="text-sm sm:text-base font-bold text-primary">
-                          {formatINR(selectedRoom.pricePerNight * currentStay.days)}
+                          {formatINR(
+                            selectedRoom.pricePerNight * currentStay.days
+                          )}
                         </span>
                       </div>
                     </div>
@@ -906,7 +993,9 @@ export function NewBookingFlow({
                 ) : (
                   <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-xs sm:text-sm py-1">
                     <InfoIcon className="size-4 shrink-0 text-muted-foreground/80" />
-                    <span>Please select an available room from the list to continue.</span>
+                    <span>
+                      Please select an available room from the list to continue.
+                    </span>
                   </div>
                 )}
               </div>
@@ -929,7 +1018,9 @@ export function NewBookingFlow({
                     if (selectedRoomId && selectedRoom?.isAvailable) {
                       setCurrentStep(3);
                     } else {
-                      toast.error("Please select an available room to proceed.");
+                      toast.error(
+                        "Please select an available room to proceed."
+                      );
                     }
                   }}
                   className={cn(
@@ -958,7 +1049,8 @@ export function NewBookingFlow({
                 Step 3: Guest Registration & Visit Details
               </h2>
               <p className="text-xs text-muted-foreground">
-                Enter primary guest particulars and add any accompanying occupants.
+                Enter primary guest particulars and add any accompanying
+                occupants.
               </p>
             </div>
           </div>
@@ -970,7 +1062,10 @@ export function NewBookingFlow({
                 <GuestIcon className="size-4" />
                 Primary Guest *
               </span>
-              <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+              <Badge
+                variant="outline"
+                className="text-xs bg-primary/5 text-primary border-primary/20"
+              >
                 Main Contact
               </Badge>
             </div>
@@ -978,47 +1073,65 @@ export function NewBookingFlow({
             <div className="p-4 rounded-xl border border-border bg-card space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="primary-name" className="text-xs font-semibold">
+                  <Label
+                    htmlFor="primary-name"
+                    className="text-xs font-semibold"
+                  >
                     Full Name *
                   </Label>
                   <Input
                     id="primary-name"
                     placeholder="e.g. Satyajit Ray"
                     value={guests[0].name}
-                    onChange={(e) => handleUpdateGuest(0, "name", e.target.value)}
+                    onChange={(e) =>
+                      handleUpdateGuest(0, "name", e.target.value)
+                    }
                     className="h-9"
                     autoFocus
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="primary-phone" className="text-xs font-semibold">
+                  <Label
+                    htmlFor="primary-phone"
+                    className="text-xs font-semibold"
+                  >
                     Mobile Number
                   </Label>
                   <Input
                     id="primary-phone"
                     placeholder="10-digit mobile"
                     value={guests[0].mobile}
-                    onChange={(e) => handleUpdateGuest(0, "mobile", e.target.value)}
+                    onChange={(e) =>
+                      handleUpdateGuest(0, "mobile", e.target.value)
+                    }
                     className="h-9 font-mono"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="primary-father" className="text-xs font-semibold">
+                  <Label
+                    htmlFor="primary-father"
+                    className="text-xs font-semibold"
+                  >
                     Father / Husband Name
                   </Label>
                   <Input
                     id="primary-father"
                     placeholder="Father/Husband name"
                     value={guests[0].fatherName}
-                    onChange={(e) => handleUpdateGuest(0, "fatherName", e.target.value)}
+                    onChange={(e) =>
+                      handleUpdateGuest(0, "fatherName", e.target.value)
+                    }
                     className="h-9"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="primary-age" className="text-xs font-semibold">
+                  <Label
+                    htmlFor="primary-age"
+                    className="text-xs font-semibold"
+                  >
                     Age
                   </Label>
                   <Input
@@ -1028,20 +1141,29 @@ export function NewBookingFlow({
                     max={120}
                     placeholder="Age"
                     value={guests[0].age}
-                    onChange={(e) => handleUpdateGuest(0, "age", e.target.value)}
+                    onChange={(e) =>
+                      handleUpdateGuest(0, "age", e.target.value)
+                    }
                     className="h-9 font-mono"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="primary-sex" className="text-xs font-semibold">
+                  <Label
+                    htmlFor="primary-sex"
+                    className="text-xs font-semibold"
+                  >
                     Gender
                   </Label>
                   <select
                     id="primary-sex"
                     value={guests[0].sex}
                     onChange={(e) =>
-                      handleUpdateGuest(0, "sex", e.target.value as "MALE" | "FEMALE" | "OTHER")
+                      handleUpdateGuest(
+                        0,
+                        "sex",
+                        e.target.value as "MALE" | "FEMALE" | "OTHER"
+                      )
                     }
                     className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
@@ -1101,7 +1223,9 @@ export function NewBookingFlow({
                       <Input
                         placeholder="Name"
                         value={guest.name}
-                        onChange={(e) => handleUpdateGuest(actualIdx, "name", e.target.value)}
+                        onChange={(e) =>
+                          handleUpdateGuest(actualIdx, "name", e.target.value)
+                        }
                         className="h-8 text-sm"
                       />
                     </div>
@@ -1112,7 +1236,9 @@ export function NewBookingFlow({
                         type="number"
                         placeholder="Age"
                         value={guest.age}
-                        onChange={(e) => handleUpdateGuest(actualIdx, "age", e.target.value)}
+                        onChange={(e) =>
+                          handleUpdateGuest(actualIdx, "age", e.target.value)
+                        }
                         className="h-8 text-sm font-mono"
                       />
                     </div>
@@ -1141,7 +1267,9 @@ export function NewBookingFlow({
                       <Input
                         placeholder="Mobile"
                         value={guest.mobile}
-                        onChange={(e) => handleUpdateGuest(actualIdx, "mobile", e.target.value)}
+                        onChange={(e) =>
+                          handleUpdateGuest(actualIdx, "mobile", e.target.value)
+                        }
                         className="h-8 text-sm font-mono"
                       />
                     </div>
@@ -1158,7 +1286,10 @@ export function NewBookingFlow({
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="booking-source" className="text-xs font-semibold">
+                <Label
+                  htmlFor="booking-source"
+                  className="text-xs font-semibold"
+                >
                   Booking Source
                 </Label>
                 <select
@@ -1166,7 +1297,8 @@ export function NewBookingFlow({
                   value={bookingSource}
                   onChange={(e) =>
                     setBookingSource(
-                      e.target.value as "WALK_IN" | "PHONE" | "ONLINE" | "CORPORATE" | "OTHER"
+                      e.target.value as
+                        "WALK_IN" | "PHONE" | "ONLINE" | "CORPORATE" | "OTHER"
                     )
                   }
                   className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs"
@@ -1180,7 +1312,10 @@ export function NewBookingFlow({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="arriving-from" className="text-xs font-semibold">
+                <Label
+                  htmlFor="arriving-from"
+                  className="text-xs font-semibold"
+                >
                   Arriving From
                 </Label>
                 <Input
@@ -1193,7 +1328,10 @@ export function NewBookingFlow({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="purpose-visit" className="text-xs font-semibold">
+                <Label
+                  htmlFor="purpose-visit"
+                  className="text-xs font-semibold"
+                >
                   Purpose of Visit
                 </Label>
                 <Input
@@ -1214,7 +1352,10 @@ export function NewBookingFlow({
               onClick={() => setShowCorporate(!showCorporate)}
               className="text-xs font-semibold text-primary hover:underline flex items-center gap-1.5"
             >
-              <span>{showCorporate ? "− Hide" : "+ Add"} Corporate / GSTIN Billing Details</span>
+              <span>
+                {showCorporate ? "− Hide" : "+ Add"} Corporate / GSTIN Billing
+                Details
+              </span>
             </button>
 
             {showCorporate && (
@@ -1239,7 +1380,9 @@ export function NewBookingFlow({
                     id="company-gstin"
                     placeholder="15-character GSTIN"
                     value={companyGstin}
-                    onChange={(e) => setCompanyGstin(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setCompanyGstin(e.target.value.toUpperCase())
+                    }
                     className="h-8 text-sm font-mono"
                   />
                 </div>
@@ -1299,7 +1442,8 @@ export function NewBookingFlow({
                   Step 4: Pricing, Discount & Advance
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Review room tariff, apply any agreed discounts, and record advance payment.
+                  Review room tariff, apply any agreed discounts, and record
+                  advance payment.
                 </p>
               </div>
 
@@ -1318,12 +1462,16 @@ export function NewBookingFlow({
                     className="h-10 font-mono text-base font-bold"
                   />
                   <span className="text-xs text-muted-foreground">
-                    Standard tariff: {formatINR(selectedRoom?.pricePerNight ?? 0)}/night
+                    Standard tariff:{" "}
+                    {formatINR(selectedRoom?.pricePerNight ?? 0)}/night
                   </span>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="discount-input" className="text-xs font-semibold">
+                  <Label
+                    htmlFor="discount-input"
+                    className="text-xs font-semibold"
+                  >
                     Special Discount (₹)
                   </Label>
                   <Input
@@ -1354,7 +1502,10 @@ export function NewBookingFlow({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="advance-amount" className="text-xs font-semibold">
+                    <Label
+                      htmlFor="advance-amount"
+                      className="text-xs font-semibold"
+                    >
                       Advance Amount (₹)
                     </Label>
                     <Input
@@ -1369,7 +1520,10 @@ export function NewBookingFlow({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="advance-mode" className="text-xs font-semibold">
+                    <Label
+                      htmlFor="advance-mode"
+                      className="text-xs font-semibold"
+                    >
                       Payment Mode
                     </Label>
                     <select
@@ -1378,7 +1532,8 @@ export function NewBookingFlow({
                       disabled={advanceAmount === 0}
                       onChange={(e) =>
                         setAdvanceMode(
-                          e.target.value as "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
+                          e.target.value as
+                            "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
                         )
                       }
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-xs disabled:opacity-50"
@@ -1386,7 +1541,9 @@ export function NewBookingFlow({
                       <option value="CASH">Cash</option>
                       <option value="UPI">UPI / QR Code</option>
                       <option value="CARD">Credit / Debit Card</option>
-                      <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
+                      <option value="BANK_TRANSFER">
+                        Bank Transfer / NEFT
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -1409,17 +1566,25 @@ export function NewBookingFlow({
           <div className="space-y-6">
             <Card className="p-6 space-y-4 bg-card border-border sticky top-6 shadow-sm">
               <div className="border-b border-border pb-3">
-                <h3 className="text-base font-bold text-foreground">Stay & Bill Breakdown</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  Stay & Bill Breakdown
+                </h3>
                 <span className="text-xs text-muted-foreground">
-                  Room {selectedRoom?.number} • {currentStay.days} {currentStay.days === 1 ? "day" : "days"}
+                  Room {selectedRoom?.number} • {currentStay.days}{" "}
+                  {currentStay.days === 1 ? "day" : "days"}
                 </span>
               </div>
 
               {/* Line items */}
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Room Charges ({currentStay.days}d × {formatINR(effectiveRate)})</span>
-                  <span className="font-mono text-foreground">{formatINR(roomCharges)}</span>
+                  <span>
+                    Room Charges ({currentStay.days}d ×{" "}
+                    {formatINR(effectiveRate)})
+                  </span>
+                  <span className="font-mono text-foreground">
+                    {formatINR(roomCharges)}
+                  </span>
                 </div>
 
                 {discount > 0 && (
@@ -1436,27 +1601,41 @@ export function NewBookingFlow({
 
                 <div className="flex justify-between text-muted-foreground pt-1">
                   <span>CGST ({gstPercent / 2}%)</span>
-                  <span className="font-mono text-foreground">{formatINR(cgstAmount)}</span>
+                  <span className="font-mono text-foreground">
+                    {formatINR(cgstAmount)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>SGST ({gstPercent / 2}%)</span>
-                  <span className="font-mono text-foreground">{formatINR(sgstAmount)}</span>
+                  <span className="font-mono text-foreground">
+                    {formatINR(sgstAmount)}
+                  </span>
                 </div>
 
                 <div className="flex justify-between text-sm font-bold pt-2 border-t border-border text-foreground">
                   <span>Estimated Total</span>
-                  <span className="font-mono text-base">{formatINR(totalBill)}</span>
+                  <span className="font-mono text-base">
+                    {formatINR(totalBill)}
+                  </span>
                 </div>
 
                 {advanceAmount > 0 && (
                   <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                     <span>Advance Collected ({advanceMode})</span>
-                    <span className="font-mono">−{formatINR(advanceAmount)}</span>
+                    <span className="font-mono">
+                      −{formatINR(advanceAmount)}
+                    </span>
                   </div>
                 )}
 
                 <div className="flex justify-between text-sm font-bold pt-2 border-t border-border">
-                  <span className={balanceDue > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600"}>
+                  <span
+                    className={
+                      balanceDue > 0
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-emerald-600"
+                    }
+                  >
                     Balance Due at Check-out
                   </span>
                   <span className="font-mono text-base text-foreground">
@@ -1501,7 +1680,8 @@ export function NewBookingFlow({
               <div className="p-2.5 rounded-lg bg-muted/40 border border-border text-[11px] text-muted-foreground flex items-start gap-2">
                 <InfoIcon className="size-3.5 shrink-0 text-muted-foreground mt-0.5" />
                 <span>
-                  Check-in activates the room state to Occupied immediately. Reservations hold the room until scheduled arrival.
+                  Check-in activates the room state to Occupied immediately.
+                  Reservations hold the room until scheduled arrival.
                 </span>
               </div>
             </Card>
@@ -1511,7 +1691,7 @@ export function NewBookingFlow({
 
       {/* ───────── SUCCESS CONFIRMATION MODAL ───────── */}
       {createdBooking && (
-        <Dialog open={true} onOpenChange={() => { }}>
+        <Dialog open={true} onOpenChange={() => {}}>
           <DialogContent className="sm:max-w-md p-6">
             <DialogHeader className="text-center sm:text-center space-y-2">
               <div className="size-12 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center mx-auto">
@@ -1523,25 +1703,33 @@ export function NewBookingFlow({
                   : "Reservation Confirmed!"}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                The room has been assigned and booking records are securely logged.
+                The room has been assigned and booking records are securely
+                logged.
               </DialogDescription>
             </DialogHeader>
 
             <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-3 text-xs my-2 font-mono">
               <div className="flex justify-between">
-                <span className="text-muted-foreground font-sans">Booking Reference</span>
+                <span className="text-muted-foreground font-sans">
+                  Booking Reference
+                </span>
                 <span className="font-bold text-primary text-sm">
                   {createdBooking.reference}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground font-sans">Room Assigned</span>
+                <span className="text-muted-foreground font-sans">
+                  Room Assigned
+                </span>
                 <span className="font-bold text-foreground">
-                  Room {createdBooking.roomNumber} ({createdBooking.roomTypeName})
+                  Room {createdBooking.roomNumber} (
+                  {createdBooking.roomTypeName})
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground font-sans">Primary Guest</span>
+                <span className="text-muted-foreground font-sans">
+                  Primary Guest
+                </span>
                 <span className="font-semibold text-foreground">
                   {createdBooking.primaryGuestName}
                 </span>
@@ -1554,7 +1742,9 @@ export function NewBookingFlow({
               )}
               <div className="flex justify-between pt-2 border-t border-border font-sans font-bold">
                 <span>Balance Due</span>
-                <span className="font-mono text-sm">{formatINR(createdBooking.balanceDue)}</span>
+                <span className="font-mono text-sm">
+                  {formatINR(createdBooking.balanceDue)}
+                </span>
               </div>
             </div>
 

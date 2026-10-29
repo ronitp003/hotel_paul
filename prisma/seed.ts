@@ -117,7 +117,9 @@ async function main() {
   console.log("✓ Room types and sample rooms seeded");
 
   // 5. Initial OWNER User Account
-  const ownerEmail = (process.env.OWNER_EMAIL || "owner@hotelpaul.in").toLowerCase().trim();
+  const ownerEmail = (process.env.OWNER_EMAIL || "owner@hotelpaul.in")
+    .toLowerCase()
+    .trim();
   const ownerPassword = process.env.OWNER_PASSWORD || "HotelPaul@Owner2026";
   const ownerName = "Property Owner";
   const hashedPassword = await hashPassword(ownerPassword);

@@ -27,7 +27,10 @@ export function serializeGstSlab(slab: {
   return {
     id: slab.id,
     minRate: Number(slab.minRate),
-    maxRate: slab.maxRate !== null && slab.maxRate !== undefined ? Number(slab.maxRate) : null,
+    maxRate:
+      slab.maxRate !== null && slab.maxRate !== undefined
+        ? Number(slab.maxRate)
+        : null,
     percent: Number(slab.percent),
     isActive: Boolean(slab.isActive),
   };
@@ -204,8 +207,12 @@ export const settingsService = {
         );
       }
 
-      const beforeHotel = await tx.hotelSettings.findUnique({ where: { id: 1 } });
-      const beforeSeq = await tx.invoiceSequence.findUnique({ where: { id: 1 } });
+      const beforeHotel = await tx.hotelSettings.findUnique({
+        where: { id: 1 },
+      });
+      const beforeSeq = await tx.invoiceSequence.findUnique({
+        where: { id: 1 },
+      });
 
       const updatedHotel = await tx.hotelSettings.update({
         where: { id: 1 },
@@ -268,7 +275,10 @@ export const settingsService = {
         })),
         {
           minRate: new Decimal(data.minRate),
-          maxRate: data.maxRate !== null && data.maxRate !== undefined ? new Decimal(data.maxRate) : null,
+          maxRate:
+            data.maxRate !== null && data.maxRate !== undefined
+              ? new Decimal(data.maxRate)
+              : null,
           percent: new Decimal(data.percent),
           isActive: data.isActive ?? true,
         },
@@ -294,7 +304,8 @@ export const settingsService = {
           metadata: {
             after: {
               minRate: Number(created.minRate),
-              maxRate: created.maxRate !== null ? Number(created.maxRate) : null,
+              maxRate:
+                created.maxRate !== null ? Number(created.maxRate) : null,
               percent: Number(created.percent),
               isActive: created.isActive,
             },
@@ -321,7 +332,10 @@ export const settingsService = {
         if (s.id === id) {
           return {
             minRate: new Decimal(data.minRate),
-            maxRate: data.maxRate !== null && data.maxRate !== undefined ? new Decimal(data.maxRate) : null,
+            maxRate:
+              data.maxRate !== null && data.maxRate !== undefined
+                ? new Decimal(data.maxRate)
+                : null,
             percent: new Decimal(data.percent),
             isActive: data.isActive ?? true,
           };
@@ -355,13 +369,15 @@ export const settingsService = {
           metadata: {
             before: {
               minRate: Number(existing.minRate),
-              maxRate: existing.maxRate !== null ? Number(existing.maxRate) : null,
+              maxRate:
+                existing.maxRate !== null ? Number(existing.maxRate) : null,
               percent: Number(existing.percent),
               isActive: existing.isActive,
             },
             after: {
               minRate: Number(updated.minRate),
-              maxRate: updated.maxRate !== null ? Number(updated.maxRate) : null,
+              maxRate:
+                updated.maxRate !== null ? Number(updated.maxRate) : null,
               percent: Number(updated.percent),
               isActive: updated.isActive,
             },
@@ -448,7 +464,8 @@ export const settingsService = {
           metadata: {
             before: {
               minRate: Number(existing.minRate),
-              maxRate: existing.maxRate !== null ? Number(existing.maxRate) : null,
+              maxRate:
+                existing.maxRate !== null ? Number(existing.maxRate) : null,
               percent: Number(existing.percent),
               isActive: existing.isActive,
             },

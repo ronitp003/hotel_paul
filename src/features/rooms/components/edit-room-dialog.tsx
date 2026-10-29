@@ -27,7 +27,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { roomSchema } from "../schemas";
-import { updateRoomAction, deleteRoomAction } from "@/server/actions/room.actions";
+import {
+  updateRoomAction,
+  deleteRoomAction,
+} from "@/server/actions/room.actions";
 import { CircleAlertIcon, LoaderIcon, RoomIcon, DeleteIcon } from "@/lib/icons";
 import type { RoomWithStatus } from "@/server/services/room.service";
 
@@ -112,7 +115,9 @@ export function EditRoomDialog({
               <RoomIcon className="size-5" aria-hidden="true" />
             </div>
             <div className="space-y-0.5">
-              <DialogTitle className="text-xl">Edit Room {room.number}</DialogTitle>
+              <DialogTitle className="text-xl">
+                Edit Room {room.number}
+              </DialogTitle>
               <DialogDescription>
                 Modify room number, assigned category, and standard pricing.
               </DialogDescription>
@@ -139,7 +144,10 @@ export function EditRoomDialog({
             <editForm.Field name="number">
               {(field) => (
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-room-number" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Label
+                    htmlFor="edit-room-number"
+                    className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
                     Room Number *
                   </Label>
                   <Input
@@ -156,7 +164,10 @@ export function EditRoomDialog({
             <editForm.Field name="typeId">
               {(field) => (
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-room-type" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Label
+                    htmlFor="edit-room-type"
+                    className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
                     Room Type *
                   </Label>
                   <select
@@ -180,7 +191,10 @@ export function EditRoomDialog({
           <editForm.Field name="pricePerNight">
             {(field) => (
               <div className="space-y-1.5">
-                <Label htmlFor="edit-room-price" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="edit-room-price"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
                   Base Price / Night (₹) *
                 </Label>
                 <Input
@@ -203,11 +217,15 @@ export function EditRoomDialog({
             {(field) => (
               <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3.5 transition-colors">
                 <div className="space-y-0.5 pr-4">
-                  <Label htmlFor="edit-room-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                  <Label
+                    htmlFor="edit-room-active"
+                    className="text-sm font-semibold text-foreground cursor-pointer"
+                  >
                     Active in Inventory
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    When active, this room is visible on the front desk and bookable for guests.
+                    When active, this room is visible on the front desk and
+                    bookable for guests.
                   </p>
                 </div>
                 <Switch
@@ -244,8 +262,14 @@ export function EditRoomDialog({
                 selector={(state) => [state.canSubmit, state.isSubmitting]}
               >
                 {([canSubmit, isSubmitting]) => (
-                  <Button type="submit" size="sm" disabled={!canSubmit || isSubmitting}>
-                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />}
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!canSubmit || isSubmitting}
+                  >
+                    {isSubmitting && (
+                      <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />
+                    )}
                     Save Changes
                   </Button>
                 )}
@@ -264,9 +288,11 @@ export function EditRoomDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Room {room.number}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete Room <strong>{room.number}</strong>?
-              This action permanently removes the room from inventory. Rooms with historical bookings,
-              maintenance records, or problems cannot be deleted and should be disabled instead.
+              Are you sure you want to delete Room{" "}
+              <strong>{room.number}</strong>? This action permanently removes
+              the room from inventory. Rooms with historical bookings,
+              maintenance records, or problems cannot be deleted and should be
+              disabled instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -276,7 +302,9 @@ export function EditRoomDialog({
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
-              {isDeleting && <LoaderIcon className="size-4 animate-spin mr-1.5" />}
+              {isDeleting && (
+                <LoaderIcon className="size-4 animate-spin mr-1.5" />
+              )}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>

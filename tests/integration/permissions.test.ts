@@ -36,10 +36,15 @@ describe("server/auth/permissions (Role-Based Access Control)", () => {
 
   it("rejects unauthenticated requests in requireRole", async () => {
     vi.spyOn(sessionModule, "requireSession").mockRejectedValueOnce(
-      new AppError("UNAUTHORIZED", "You must be logged in to perform this action")
+      new AppError(
+        "UNAUTHORIZED",
+        "You must be logged in to perform this action"
+      )
     );
 
-    await expect(requireRole([ROLES.OWNER])).rejects.toThrowError("You must be logged in");
+    await expect(requireRole([ROLES.OWNER])).rejects.toThrowError(
+      "You must be logged in"
+    );
   });
 
   it("blocks RECEPTIONIST when requireRole requires OWNER", async () => {
@@ -53,7 +58,9 @@ describe("server/auth/permissions (Role-Based Access Control)", () => {
       },
     });
 
-    await expect(requireRole([ROLES.OWNER])).rejects.toThrowError(/Access denied.*Required role: OWNER/);
+    await expect(requireRole([ROLES.OWNER])).rejects.toThrowError(
+      /Access denied.*Required role: OWNER/
+    );
   });
 
   it("succeeds when actor role matches allowed roles", async () => {
@@ -82,6 +89,8 @@ describe("server/auth/permissions (Role-Based Access Control)", () => {
       },
     });
 
-    await expect(requirePermission("users.create")).rejects.toThrowError(/Access denied/);
+    await expect(requirePermission("users.create")).rejects.toThrowError(
+      /Access denied/
+    );
   });
 });

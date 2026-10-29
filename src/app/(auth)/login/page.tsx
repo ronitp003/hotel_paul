@@ -96,7 +96,10 @@ function LoginForm() {
               className="flex items-start gap-2.5 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm"
               role="alert"
             >
-              <ProblemIcon className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
+              <ProblemIcon
+                className="size-4 shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -153,7 +156,9 @@ function LoginForm() {
             disabled={loading}
             className="w-full h-10 gap-2 font-semibold"
           >
-            {loading && <SpinnerIcon className="size-4 animate-spin" aria-hidden="true" />}
+            {loading && (
+              <SpinnerIcon className="size-4 animate-spin" aria-hidden="true" />
+            )}
             <span>{loading ? "Signing in..." : "Sign In to Hotel Desk"}</span>
           </Button>
         </CardFooter>

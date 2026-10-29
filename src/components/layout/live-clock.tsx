@@ -43,7 +43,11 @@ function getServerSnapshot(): string | null {
 }
 
 export function LiveClock() {
-  const isoTime = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const isoTime = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
 
   if (!isoTime) {
     return (

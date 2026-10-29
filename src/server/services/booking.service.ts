@@ -6,7 +6,12 @@ import { formatIST } from "@/lib/datetime";
 import { type Actor, settingsService } from "./settings.service";
 import { calculateStay } from "./billing.service";
 import { type NewBookingInput } from "@/features/bookings/schemas";
-import { BookingStatus, PaymentKind, PaymentMode, type Sex } from "@prisma/client";
+import {
+  BookingStatus,
+  PaymentKind,
+  PaymentMode,
+  type Sex,
+} from "@prisma/client";
 
 export interface BookingResponse {
   id: string;
@@ -38,12 +43,18 @@ export const bookingService = {
    * creates advance payment if provided, records audit logs, and handles
    * PostgreSQL exclusion constraints cleanly.
    */
-  async createBooking(actor: Actor, data: NewBookingInput): Promise<BookingResponse> {
+  async createBooking(
+    actor: Actor,
+    data: NewBookingInput
+  ): Promise<BookingResponse> {
     const checkIn = new Date(data.checkInAt);
     const checkOut = new Date(data.checkOutAt);
 
     if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-      throw new AppError("VALIDATION_ERROR", "Invalid check-in or check-out date.");
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Invalid check-in or check-out date."
+      );
     }
 
     if (checkOut.getTime() <= checkIn.getTime()) {
@@ -60,257 +71,279 @@ export const bookingService = {
     while (retries > 0) {
       try {
         return await prisma.$transaction(async (tx) => {
-      // 1. Verify Room exists and is active
-      const room = await tx.room.findUnique({
-        where: { id: data.roomId },
-        include: { type: true },
-      });
+          // 1. Verify Room exists and is active
+          const room = await tx.room.findUnique({
+            where: { id: data.roomId },
+            include: { type: true },
+          });
 
-      if (!room) {
-        throw new AppError("ROOM_NOT_FOUND", "The selected room does not exist.");
-      }
+          if (!room) {
+            throw new AppError(
+              "ROOM_NOT_FOUND",
+              "The selected room does not exist."
+            );
+          }
 
-      if (!room.isActive) {
-        throw new AppError(
-          "VALIDATION_ERROR",
-          `Room ${room.number} is currently disabled and cannot be booked.`
-        );
-      }
+          if (!room.isActive) {
+            throw new AppError(
+              "VALIDATION_ERROR",
+              `Room ${room.number} is currently disabled and cannot be booked.`
+            );
+          }
 
-      // 2. Pre-check maintenance collision [startsAt, endsAt)
-      const maintenanceConflict = await tx.roomMaintenance.findFirst({
-        where: {
-          roomId: data.roomId,
-          startsAt: { lt: checkOut },
-          endsAt: { gt: checkIn },
-        },
-      });
-
-      if (maintenanceConflict) {
-        throw new AppError(
-          "MAINTENANCE_OVERLAP",
-          `Room ${room.number} is scheduled for maintenance during this time period (${maintenanceConflict.reason}).`
-        );
-      }
-
-      // 3. Pre-check booking collision [checkInAt, checkOutAt)
-      const bookingConflict = await tx.booking.findFirst({
-        where: {
-          roomId: data.roomId,
-          status: { in: [BookingStatus.RESERVED, BookingStatus.CHECKED_IN] },
-          checkInAt: { lt: checkOut },
-          checkOutAt: { gt: checkIn },
-        },
-      });
-
-      if (bookingConflict) {
-        throw new AppError(
-          "ROOM_OVERLAP",
-          `Room ${room.number} is already booked or occupied for the selected dates.`
-        );
-      }
-
-      // 4. Generate sequential human-readable reference for today: BK-YYYYMMDD-001
-      const todayPrefix = `BK-${formatIST(new Date(), "yyyyMMdd")}-`;
-      const latestBookingToday = await tx.booking.findFirst({
-        where: { reference: { startsWith: todayPrefix } },
-        orderBy: { reference: "desc" },
-        select: { reference: true },
-      });
-
-      let nextSequence = 1;
-      if (latestBookingToday?.reference) {
-        const seqPart = latestBookingToday.reference.replace(todayPrefix, "");
-        const parsed = parseInt(seqPart, 10);
-        if (!isNaN(parsed)) {
-          nextSequence = parsed + 1;
-        }
-      }
-
-      const reference = `${todayPrefix}${String(nextSequence).padStart(3, "0")}`;
-
-      // 5. Determine initial status & check-in timestamps
-      const isCheckInNow = data.action === "CHECK_IN";
-      const status = isCheckInNow ? BookingStatus.CHECKED_IN : BookingStatus.RESERVED;
-      const actualCheckInAt = isCheckInNow ? new Date() : null;
-
-      const rateAppliedDecimal = new Decimal(data.rateApplied);
-      const discountDecimal = new Decimal(data.discount || 0);
-      const gstOverrideDecimal =
-        data.gstPercentOverride !== null && data.gstPercentOverride !== undefined
-          ? new Decimal(data.gstPercentOverride)
-          : null;
-
-      // 6. Create booking with guests
-      let booking;
-      try {
-        booking = await tx.booking.create({
-          data: {
-            reference,
-            roomId: data.roomId,
-            status,
-            source: data.source,
-            checkInAt: checkIn,
-            checkOutAt: checkOut,
-            actualCheckInAt,
-            arrivingFrom: data.arrivingFrom || null,
-            purposeOfVisit: data.purposeOfVisit || null,
-            companyName: data.companyName || null,
-            companyGstin: data.companyGstin || null,
-            companyAddress: data.companyAddress || null,
-            rateApplied: rateAppliedDecimal,
-            discount: discountDecimal,
-            gstPercentOverride: gstOverrideDecimal,
-            createdById: actor.id,
-            guests: {
-              create: data.guests.map((g) => ({
-                name: g.name.trim(),
-                fatherName: g.fatherName?.trim() || null,
-                age: g.age ?? null,
-                sex: (g.sex as Sex) ?? null,
-                mobile: g.mobile?.trim() || null,
-                isPrimary: Boolean(g.isPrimary),
-              })),
+          // 2. Pre-check maintenance collision [startsAt, endsAt)
+          const maintenanceConflict = await tx.roomMaintenance.findFirst({
+            where: {
+              roomId: data.roomId,
+              startsAt: { lt: checkOut },
+              endsAt: { gt: checkIn },
             },
-          },
-          include: {
-            room: { include: { type: true } },
-            guests: true,
-          },
-        });
-      } catch (err: unknown) {
-        const errorMsg = (err as Error)?.message || "";
-        if (
-          errorMsg.includes("23P01") ||
-          errorMsg.includes("booking_no_overlap") ||
-          errorMsg.includes("exclusion constraint")
-        ) {
-          throw new AppError(
-            "ROOM_OVERLAP",
-            `Room ${room.number} was just booked by another user for the selected dates. Please choose another room or time.`
-          );
-        }
-        throw err;
-      }
+          });
 
-      // 7. Record advance payment if provided (> 0)
-      let advanceAmount = 0;
-      if (data.advanceAmount && data.advanceAmount > 0) {
-        if (!data.advanceMode) {
-          throw new AppError(
-            "VALIDATION_ERROR",
-            "Payment mode is required for advance payment."
-          );
-        }
+          if (maintenanceConflict) {
+            throw new AppError(
+              "MAINTENANCE_OVERLAP",
+              `Room ${room.number} is scheduled for maintenance during this time period (${maintenanceConflict.reason}).`
+            );
+          }
 
-        const paymentDecimal = new Decimal(data.advanceAmount);
-        advanceAmount = paymentDecimal.toNumber();
+          // 3. Pre-check booking collision [checkInAt, checkOutAt)
+          const bookingConflict = await tx.booking.findFirst({
+            where: {
+              roomId: data.roomId,
+              status: {
+                in: [BookingStatus.RESERVED, BookingStatus.CHECKED_IN],
+              },
+              checkInAt: { lt: checkOut },
+              checkOutAt: { gt: checkIn },
+            },
+          });
 
-        await tx.payment.create({
-          data: {
-            bookingId: booking.id,
-            kind: PaymentKind.ADVANCE,
-            mode: data.advanceMode as PaymentMode,
-            amount: paymentDecimal,
-            note: "Advance payment collected at booking",
-            createdById: actor.id,
-          },
-        });
-      }
+          if (bookingConflict) {
+            throw new AppError(
+              "ROOM_OVERLAP",
+              `Room ${room.number} is already booked or occupied for the selected dates.`
+            );
+          }
 
-      // 8. Calculate estimated bill totals for response
-      const roomCharges = rateAppliedDecimal.mul(stay.days);
-      const taxableAmount = Decimal.max(0, roomCharges.sub(discountDecimal));
+          // 4. Generate sequential human-readable reference for today: BK-YYYYMMDD-001
+          const todayPrefix = `BK-${formatIST(new Date(), "yyyyMMdd")}-`;
+          const latestBookingToday = await tx.booking.findFirst({
+            where: { reference: { startsWith: todayPrefix } },
+            orderBy: { reference: "desc" },
+            select: { reference: true },
+          });
 
-      // Match GST slab percentage
-      let effectiveGstPercent = 0;
-      if (gstOverrideDecimal !== null) {
-        effectiveGstPercent = gstOverrideDecimal.toNumber();
-      } else {
-        const matchedSlab = settings.gstSlabs.find((s) => {
-          const min = new Decimal(s.minRate);
-          const max = s.maxRate ? new Decimal(s.maxRate) : null;
-          if (rateAppliedDecimal.greaterThanOrEqualTo(min)) {
-            if (!max || rateAppliedDecimal.lessThanOrEqualTo(max)) {
-              return true;
+          let nextSequence = 1;
+          if (latestBookingToday?.reference) {
+            const seqPart = latestBookingToday.reference.replace(
+              todayPrefix,
+              ""
+            );
+            const parsed = parseInt(seqPart, 10);
+            if (!isNaN(parsed)) {
+              nextSequence = parsed + 1;
             }
           }
-          return false;
-        });
-        effectiveGstPercent = matchedSlab ? Number(matchedSlab.percent) : 0;
-      }
 
-      const totalTax = taxableAmount.mul(effectiveGstPercent).div(100);
-      let estimatedTotal = taxableAmount.add(totalTax);
+          const reference = `${todayPrefix}${String(nextSequence).padStart(3, "0")}`;
 
-      if (settings.hotel.roundBillToRupee) {
-        estimatedTotal = estimatedTotal.round();
-      }
+          // 5. Determine initial status & check-in timestamps
+          const isCheckInNow = data.action === "CHECK_IN";
+          const status = isCheckInNow
+            ? BookingStatus.CHECKED_IN
+            : BookingStatus.RESERVED;
+          const actualCheckInAt = isCheckInNow ? new Date() : null;
 
-      const balanceDue = Decimal.max(
-        0,
-        estimatedTotal.sub(new Decimal(advanceAmount))
-      ).toNumber();
+          const rateAppliedDecimal = new Decimal(data.rateApplied);
+          const discountDecimal = new Decimal(data.discount || 0);
+          const gstOverrideDecimal =
+            data.gstPercentOverride !== null &&
+            data.gstPercentOverride !== undefined
+              ? new Decimal(data.gstPercentOverride)
+              : null;
 
-      // 9. Write audit log
-      const primaryGuest =
-        booking.guests.find((g) => g.isPrimary) || booking.guests[0];
+          // 6. Create booking with guests
+          let booking;
+          try {
+            booking = await tx.booking.create({
+              data: {
+                reference,
+                roomId: data.roomId,
+                status,
+                source: data.source,
+                checkInAt: checkIn,
+                checkOutAt: checkOut,
+                actualCheckInAt,
+                arrivingFrom: data.arrivingFrom || null,
+                purposeOfVisit: data.purposeOfVisit || null,
+                companyName: data.companyName || null,
+                companyGstin: data.companyGstin || null,
+                companyAddress: data.companyAddress || null,
+                rateApplied: rateAppliedDecimal,
+                discount: discountDecimal,
+                gstPercentOverride: gstOverrideDecimal,
+                createdById: actor.id,
+                guests: {
+                  create: data.guests.map((g) => ({
+                    name: g.name.trim(),
+                    fatherName: g.fatherName?.trim() || null,
+                    age: g.age ?? null,
+                    sex: (g.sex as Sex) ?? null,
+                    mobile: g.mobile?.trim() || null,
+                    isPrimary: Boolean(g.isPrimary),
+                  })),
+                },
+              },
+              include: {
+                room: { include: { type: true } },
+                guests: true,
+              },
+            });
+          } catch (err: unknown) {
+            const errorMsg = (err as Error)?.message || "";
+            if (
+              errorMsg.includes("23P01") ||
+              errorMsg.includes("booking_no_overlap") ||
+              errorMsg.includes("exclusion constraint")
+            ) {
+              throw new AppError(
+                "ROOM_OVERLAP",
+                `Room ${room.number} was just booked by another user for the selected dates. Please choose another room or time.`
+              );
+            }
+            throw err;
+          }
 
-      await tx.auditLog.create({
-        data: {
-          actorId: actor.id,
-          action: isCheckInNow ? "booking.checkIn" : "booking.create",
-          entity: "Booking",
-          entityId: booking.id,
-          metadata: {
+          // 7. Record advance payment if provided (> 0)
+          let advanceAmount = 0;
+          if (data.advanceAmount && data.advanceAmount > 0) {
+            if (!data.advanceMode) {
+              throw new AppError(
+                "VALIDATION_ERROR",
+                "Payment mode is required for advance payment."
+              );
+            }
+
+            const paymentDecimal = new Decimal(data.advanceAmount);
+            advanceAmount = paymentDecimal.toNumber();
+
+            await tx.payment.create({
+              data: {
+                bookingId: booking.id,
+                kind: PaymentKind.ADVANCE,
+                mode: data.advanceMode as PaymentMode,
+                amount: paymentDecimal,
+                note: "Advance payment collected at booking",
+                createdById: actor.id,
+              },
+            });
+          }
+
+          // 8. Calculate estimated bill totals for response
+          const roomCharges = rateAppliedDecimal.mul(stay.days);
+          const taxableAmount = Decimal.max(
+            0,
+            roomCharges.sub(discountDecimal)
+          );
+
+          // Match GST slab percentage
+          let effectiveGstPercent = 0;
+          if (gstOverrideDecimal !== null) {
+            effectiveGstPercent = gstOverrideDecimal.toNumber();
+          } else {
+            const matchedSlab = settings.gstSlabs.find((s) => {
+              const min = new Decimal(s.minRate);
+              const max = s.maxRate ? new Decimal(s.maxRate) : null;
+              if (rateAppliedDecimal.greaterThanOrEqualTo(min)) {
+                if (!max || rateAppliedDecimal.lessThanOrEqualTo(max)) {
+                  return true;
+                }
+              }
+              return false;
+            });
+            effectiveGstPercent = matchedSlab ? Number(matchedSlab.percent) : 0;
+          }
+
+          const totalTax = taxableAmount.mul(effectiveGstPercent).div(100);
+          let estimatedTotal = taxableAmount.add(totalTax);
+
+          if (settings.hotel.roundBillToRupee) {
+            estimatedTotal = estimatedTotal.round();
+          }
+
+          const balanceDue = Decimal.max(
+            0,
+            estimatedTotal.sub(new Decimal(advanceAmount))
+          ).toNumber();
+
+          // 9. Write audit log
+          const primaryGuest =
+            booking.guests.find((g) => g.isPrimary) || booking.guests[0];
+
+          await tx.auditLog.create({
+            data: {
+              actorId: actor.id,
+              action: isCheckInNow ? "booking.checkIn" : "booking.create",
+              entity: "Booking",
+              entityId: booking.id,
+              metadata: {
+                reference: booking.reference,
+                roomNumber: room.number,
+                status: booking.status,
+                stayDays: stay.days,
+                primaryGuest: primaryGuest?.name || "Guest",
+                advance: advanceAmount,
+                estimatedTotal: estimatedTotal.toNumber(),
+              },
+            },
+          });
+
+          return {
+            id: booking.id,
             reference: booking.reference,
+            roomId: booking.roomId,
             roomNumber: room.number,
+            roomTypeName: room.type.name,
             status: booking.status,
+            source: booking.source,
+            checkInAt: booking.checkInAt,
+            checkOutAt: booking.checkOutAt,
+            actualCheckInAt: booking.actualCheckInAt,
+            actualCheckOutAt: booking.actualCheckOutAt,
+            primaryGuestName: primaryGuest?.name || "Guest",
+            guestsCount: booking.guests.length,
+            rateApplied: rateAppliedDecimal.toNumber(),
+            discount: discountDecimal.toNumber(),
+            gstPercentOverride: gstOverrideDecimal
+              ? gstOverrideDecimal.toNumber()
+              : null,
+            advancePaid: advanceAmount,
             stayDays: stay.days,
-            primaryGuest: primaryGuest?.name || "Guest",
-            advance: advanceAmount,
             estimatedTotal: estimatedTotal.toNumber(),
-          },
-        },
-      });
-
-      return {
-        id: booking.id,
-        reference: booking.reference,
-        roomId: booking.roomId,
-        roomNumber: room.number,
-        roomTypeName: room.type.name,
-        status: booking.status,
-        source: booking.source,
-        checkInAt: booking.checkInAt,
-        checkOutAt: booking.checkOutAt,
-        actualCheckInAt: booking.actualCheckInAt,
-        actualCheckOutAt: booking.actualCheckOutAt,
-        primaryGuestName: primaryGuest?.name || "Guest",
-        guestsCount: booking.guests.length,
-        rateApplied: rateAppliedDecimal.toNumber(),
-        discount: discountDecimal.toNumber(),
-        gstPercentOverride: gstOverrideDecimal ? gstOverrideDecimal.toNumber() : null,
-        advancePaid: advanceAmount,
-        stayDays: stay.days,
-        estimatedTotal: estimatedTotal.toNumber(),
-        balanceDue,
-      };
-    });
+            balanceDue,
+          };
+        });
       } catch (err: unknown) {
         const errorMsg = (err as Error)?.message || "";
         if (
-          (errorMsg.includes("Booking_reference_key") || errorMsg.includes("P2002")) &&
+          (errorMsg.includes("Booking_reference_key") ||
+            errorMsg.includes("P2002")) &&
           retries > 1
         ) {
           retries--;
-          await new Promise((r) => setTimeout(r, Math.floor(Math.random() * 50) + 15));
+          await new Promise((r) =>
+            setTimeout(r, Math.floor(Math.random() * 50) + 15)
+          );
           continue;
         }
         throw err;
       }
     }
-    throw new AppError("INTERNAL_ERROR", "Failed to generate unique booking reference.");
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "Failed to generate unique booking reference."
+    );
   },
 
   /**
@@ -472,12 +505,27 @@ export const bookingService = {
       ...(options?.search
         ? {
             OR: [
-              { reference: { contains: options.search.trim(), mode: "insensitive" as const } },
-              { room: { number: { contains: options.search.trim(), mode: "insensitive" as const } } },
+              {
+                reference: {
+                  contains: options.search.trim(),
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                room: {
+                  number: {
+                    contains: options.search.trim(),
+                    mode: "insensitive" as const,
+                  },
+                },
+              },
               {
                 guests: {
                   some: {
-                    name: { contains: options.search.trim(), mode: "insensitive" as const },
+                    name: {
+                      contains: options.search.trim(),
+                      mode: "insensitive" as const,
+                    },
                   },
                 },
               },
@@ -530,5 +578,173 @@ export const bookingService = {
         };
       }),
     };
+  },
+
+  /**
+   * Checks in a guest for an existing RESERVED booking.
+   * Transitions status from RESERVED -> CHECKED_IN and sets actualCheckInAt = now.
+   */
+  async checkInReserved(actor: Actor, bookingId: string) {
+    return await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          room: true,
+          guests: true,
+        },
+      });
+
+      if (!booking) {
+        throw new AppError("BOOKING_NOT_FOUND", "Booking not found.");
+      }
+
+      if (booking.status === BookingStatus.CHECKED_IN) {
+        throw new AppError("VALIDATION_ERROR", "Guest is already checked in.");
+      }
+
+      if (booking.status === BookingStatus.CHECKED_OUT) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Cannot check in an already checked-out booking."
+        );
+      }
+
+      if (booking.status === BookingStatus.CANCELLED) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Cannot check in a cancelled reservation."
+        );
+      }
+
+      const now = new Date();
+
+      // Check if room is currently under maintenance
+      const activeMaintenance = await tx.roomMaintenance.findFirst({
+        where: {
+          roomId: booking.roomId,
+          startsAt: { lte: now },
+          endsAt: { gte: now },
+        },
+      });
+
+      if (activeMaintenance) {
+        throw new AppError(
+          "MAINTENANCE_OVERLAP",
+          `Cannot check in: Room ${booking.room.number} is currently under maintenance (${activeMaintenance.reason}).`
+        );
+      }
+
+      // Check if room is currently occupied by another active booking
+      const activeOtherBooking = await tx.booking.findFirst({
+        where: {
+          roomId: booking.roomId,
+          id: { not: booking.id },
+          status: BookingStatus.CHECKED_IN,
+          actualCheckOutAt: null,
+        },
+      });
+
+      if (activeOtherBooking) {
+        throw new AppError(
+          "ROOM_OVERLAP",
+          `Cannot check in: Room ${booking.room.number} is currently occupied by another guest (Booking ${activeOtherBooking.reference}).`
+        );
+      }
+
+      const updated = await tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: BookingStatus.CHECKED_IN,
+          actualCheckInAt: now,
+        },
+        include: {
+          room: { include: { type: true } },
+          guests: true,
+        },
+      });
+
+      const primaryGuest =
+        updated.guests.find((g) => g.isPrimary) || updated.guests[0];
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: "booking.checkInReserved",
+          entity: "Booking",
+          entityId: updated.id,
+          metadata: {
+            reference: updated.reference,
+            roomNumber: updated.room.number,
+            primaryGuest: primaryGuest?.name || "Guest",
+            actualCheckInAt: now.toISOString(),
+          },
+        },
+      });
+
+      return updated;
+    });
+  },
+
+  /**
+   * Cancels a booking (RESERVED or CHECKED_IN).
+   * Checked-out bookings cannot be cancelled.
+   */
+  async cancelBooking(
+    actor: Actor,
+    data: { bookingId: string; reason?: string }
+  ) {
+    return await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id: data.bookingId },
+        include: {
+          room: true,
+          guests: true,
+          payments: true,
+        },
+      });
+
+      if (!booking) {
+        throw new AppError("BOOKING_NOT_FOUND", "Booking not found.");
+      }
+
+      if (booking.status === BookingStatus.CHECKED_OUT) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Cannot cancel an already checked-out stay."
+        );
+      }
+
+      if (booking.status === BookingStatus.CANCELLED) {
+        throw new AppError("VALIDATION_ERROR", "Booking is already cancelled.");
+      }
+
+      const updated = await tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: BookingStatus.CANCELLED,
+        },
+      });
+
+      const primaryGuest =
+        booking.guests.find((g) => g.isPrimary) || booking.guests[0];
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: "booking.cancel",
+          entity: "Booking",
+          entityId: booking.id,
+          metadata: {
+            reference: booking.reference,
+            roomNumber: booking.room.number,
+            primaryGuest: primaryGuest?.name || "Guest",
+            reason: data.reason?.trim() || "Cancelled by front desk staff",
+            paymentsCount: booking.payments.length,
+          },
+        },
+      });
+
+      return updated;
+    });
   },
 };

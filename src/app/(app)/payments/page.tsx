@@ -6,7 +6,8 @@ import { PaymentIcon } from "@/lib/icons";
 
 export const metadata = {
   title: "Payments & Invoices | Hotel Paul",
-  description: "Track guest payments, advance deposits, refunds, and issued GST tax invoices",
+  description:
+    "Track guest payments, advance deposits, refunds, and issued GST tax invoices",
 };
 
 export default async function PaymentsPage() {
@@ -27,7 +28,8 @@ export default async function PaymentsPage() {
             Payments & Tax Invoices
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Track stay billing, advances, settlement transactions, and download official A4 GST invoices.
+            Track stay billing, advances, settlement transactions, and download
+            official A4 GST invoices.
           </p>
         </div>
       </div>

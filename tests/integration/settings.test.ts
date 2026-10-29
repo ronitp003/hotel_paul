@@ -1,5 +1,13 @@
 import "dotenv/config";
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, InvoiceStatus } from "@prisma/client";
@@ -20,7 +28,8 @@ import {
   deleteRoomTypeAction,
 } from "@/server/actions/room-type.actions";
 
-const connectionString = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 describe("Phase 1.2 Settings & Room Types (Integration)", () => {
   let pool: Pool;
@@ -153,7 +162,9 @@ describe("Phase 1.2 Settings & Room Types (Integration)", () => {
       expect(createRes.ok).toBe(false);
       expect(createRes.code).toBe("FORBIDDEN");
 
-      const updateRes = await updateRoomTypeAction("any-id", { name: "Renamed" });
+      const updateRes = await updateRoomTypeAction("any-id", {
+        name: "Renamed",
+      });
       expect(updateRes.ok).toBe(false);
       expect(updateRes.code).toBe("FORBIDDEN");
 
@@ -174,7 +185,11 @@ describe("Phase 1.2 Settings & Room Types (Integration)", () => {
         data: {
           number: `R-INV-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
           pricePerNight: 1000,
-          type: { create: { name: `Type-INV-${Date.now()}-${Math.floor(Math.random() * 10000)}` } },
+          type: {
+            create: {
+              name: `Type-INV-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+            },
+          },
         },
       });
 
@@ -189,10 +204,17 @@ describe("Phase 1.2 Settings & Room Types (Integration)", () => {
         },
       });
 
+      const highestExistingInvoice = await prisma.invoice.findFirst({
+        where: { status: "ISSUED" },
+        orderBy: { number: "desc" },
+        select: { number: true },
+      });
+      const testInvoiceNum = (highestExistingInvoice?.number ?? 1000) + 100;
+
       const testInvoice = await prisma.invoice.create({
         data: {
-          number: 2000,
-          displayNo: `HP-2000-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          number: testInvoiceNum,
+          displayNo: `HP-${testInvoiceNum}-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
           bookingId: testBooking.id,
           status: InvoiceStatus.ISSUED,
           issuedAt: new Date(),
@@ -208,22 +230,24 @@ describe("Phase 1.2 Settings & Room Types (Integration)", () => {
       });
 
       try {
-        // Attempting to set nextNo <= 2000 must fail
+        // Attempting to set nextNo <= testInvoiceNum must fail
         const res = await updateInvoiceSettingsAction({
           invoicePrefix: "HP-",
           invoiceNotes: "Thank you",
-          nextNo: 2000,
+          nextNo: testInvoiceNum,
         });
 
         expect(res.ok).toBe(false);
         expect(res.code).toBe("VALIDATION_ERROR");
-        expect(res.message).toMatch(/cannot be lower than 2001/);
+        expect(res.message).toMatch(
+          new RegExp(`cannot be lower than ${testInvoiceNum + 1}`)
+        );
 
-        // Attempting to set nextNo = 2001 must succeed
+        // Attempting to set nextNo = testInvoiceNum + 1 must succeed
         const validRes = await updateInvoiceSettingsAction({
           invoicePrefix: "HP-",
           invoiceNotes: "Thank you",
-          nextNo: 2001,
+          nextNo: testInvoiceNum + 1,
         });
         expect(validRes.ok).toBe(true);
       } finally {
@@ -264,12 +288,18 @@ describe("Phase 1.2 Settings & Room Types (Integration)", () => {
     });
 
     it("returns plain objects with number types (no Decimal instances) on mutations", async () => {
-      const slabs = await prisma.gstSlab.findMany({ orderBy: { minRate: "asc" } });
+      const slabs = await prisma.gstSlab.findMany({
+        orderBy: { minRate: "asc" },
+      });
       const topSlab = slabs[slabs.length - 1];
 
       const toggleRes = await toggleGstSlabAction(topSlab.id, topSlab.isActive);
       expect(toggleRes.ok).toBe(true);
-      const data = toggleRes.data as { minRate: unknown; maxRate: unknown; percent: unknown };
+      const data = toggleRes.data as {
+        minRate: unknown;
+        maxRate: unknown;
+        percent: unknown;
+      };
       expect(typeof data.minRate).toBe("number");
       expect(typeof data.percent).toBe("number");
       expect(data.minRate).not.toHaveProperty("d");
@@ -368,7 +398,9 @@ describe("Phase 1.2 Settings & Room Types (Integration)", () => {
 
       expect(latestAudit).not.toBeNull();
       expect(latestAudit?.actorId).toBe(ownerActor.id);
-      const meta = latestAudit?.metadata as { after?: { phone?: string } } | null;
+      const meta = latestAudit?.metadata as {
+        after?: { phone?: string };
+      } | null;
       expect(meta?.after?.phone).toBe(uniquePhone);
     });
   });

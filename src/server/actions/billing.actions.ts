@@ -10,10 +10,17 @@ import {
   addPaymentSchema,
   refundPaymentSchema,
 } from "@/features/payments/schemas";
-import { AppError, type ActionResult, errorResult, successResult } from "@/lib/errors";
+import {
+  AppError,
+  type ActionResult,
+  errorResult,
+  successResult,
+} from "@/lib/errors";
 import { ZodError } from "zod";
 
-export async function addChargeAction(input: unknown): Promise<ActionResult<unknown>> {
+export async function addChargeAction(
+  input: unknown
+): Promise<ActionResult<unknown>> {
   try {
     const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const data = addChargeSchema.parse(input);
@@ -26,13 +33,16 @@ export async function addChargeAction(input: unknown): Promise<ActionResult<unkn
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) return errorResult(err.code, err.message);
-    if (err instanceof ZodError) return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
+    if (err instanceof ZodError)
+      return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
     console.error("addChargeAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function deleteChargeAction(input: unknown): Promise<ActionResult<unknown>> {
+export async function deleteChargeAction(
+  input: unknown
+): Promise<ActionResult<unknown>> {
   try {
     const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const { chargeId } = deleteChargeSchema.parse(input);
@@ -44,13 +54,16 @@ export async function deleteChargeAction(input: unknown): Promise<ActionResult<u
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) return errorResult(err.code, err.message);
-    if (err instanceof ZodError) return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
+    if (err instanceof ZodError)
+      return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
     console.error("deleteChargeAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function addPaymentAction(input: unknown): Promise<ActionResult<unknown>> {
+export async function addPaymentAction(
+  input: unknown
+): Promise<ActionResult<unknown>> {
   try {
     const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const data = addPaymentSchema.parse(input);
@@ -63,13 +76,16 @@ export async function addPaymentAction(input: unknown): Promise<ActionResult<unk
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) return errorResult(err.code, err.message);
-    if (err instanceof ZodError) return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
+    if (err instanceof ZodError)
+      return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
     console.error("addPaymentAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function refundPaymentAction(input: unknown): Promise<ActionResult<unknown>> {
+export async function refundPaymentAction(
+  input: unknown
+): Promise<ActionResult<unknown>> {
   try {
     const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const data = refundPaymentSchema.parse(input);
@@ -82,13 +98,16 @@ export async function refundPaymentAction(input: unknown): Promise<ActionResult<
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) return errorResult(err.code, err.message);
-    if (err instanceof ZodError) return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
+    if (err instanceof ZodError)
+      return errorResult("VALIDATION_ERROR", err.issues[0]?.message);
     console.error("refundPaymentAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function getBookingBillAction(bookingId: string): Promise<ActionResult<unknown>> {
+export async function getBookingBillAction(
+  bookingId: string
+): Promise<ActionResult<unknown>> {
   try {
     await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const result = await billingService.getBookingBill(bookingId);

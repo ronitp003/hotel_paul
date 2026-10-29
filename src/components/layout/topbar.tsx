@@ -29,7 +29,11 @@ interface TopbarProps {
 
 export function Topbar({
   onMobileMenuOpen,
-  user = { name: "Front Desk Staff", email: "staff@hotelpaul.in", role: "OWNER" },
+  user = {
+    name: "Front Desk Staff",
+    email: "staff@hotelpaul.in",
+    role: "OWNER",
+  },
 }: TopbarProps) {
   const router = useRouter();
 
@@ -83,7 +87,9 @@ export function Topbar({
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col items-start text-left">
-                  <span className="text-xs font-semibold leading-none">{user.name}</span>
+                  <span className="text-xs font-semibold leading-none">
+                    {user.name}
+                  </span>
                   <span className="text-[10px] text-muted-foreground leading-tight">
                     {user.role}
                   </span>
@@ -99,7 +105,9 @@ export function Topbar({
                   {user.email}
                 </span>
                 <div className="pt-1">
-                  <Badge variant={user.role === "OWNER" ? "default" : "secondary"}>
+                  <Badge
+                    variant={user.role === "OWNER" ? "default" : "secondary"}
+                  >
                     {user.role}
                   </Badge>
                 </div>

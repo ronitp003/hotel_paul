@@ -111,7 +111,9 @@ export async function requireRole(allowedRoles: Role[]): Promise<Actor> {
 /**
  * Server-side guard: Verifies active session and checks action permission.
  */
-export async function requirePermission(action: PermissionAction): Promise<Actor> {
+export async function requirePermission(
+  action: PermissionAction
+): Promise<Actor> {
   const { actor } = await requireSession();
 
   if (!can(actor.role, action)) {

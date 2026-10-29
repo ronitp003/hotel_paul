@@ -9,7 +9,8 @@ import { NewBookingIcon, GuestIcon } from "@/lib/icons";
 
 export const metadata = {
   title: "Bookings | Hotel Paul",
-  description: "View and manage front desk guest bookings, reservations, and stays",
+  description:
+    "View and manage front desk guest bookings, reservations, and stays",
 };
 
 export default async function BookingsPage() {
@@ -27,7 +28,8 @@ export default async function BookingsPage() {
             Bookings & Reservations
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Overview of upcoming reservations, currently occupied rooms, and past stays.
+            Overview of upcoming reservations, currently occupied rooms, and
+            past stays.
           </p>
         </div>
 

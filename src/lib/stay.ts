@@ -34,11 +34,16 @@ export function calculateStay(
   checkOutInput: Date | string | number,
   graceMinutesInput: number = 0
 ): StayCalculationResult {
-  const checkIn = checkInInput instanceof Date ? checkInInput : new Date(checkInInput);
-  const checkOut = checkOutInput instanceof Date ? checkOutInput : new Date(checkOutInput);
+  const checkIn =
+    checkInInput instanceof Date ? checkInInput : new Date(checkInInput);
+  const checkOut =
+    checkOutInput instanceof Date ? checkOutInput : new Date(checkOutInput);
 
   if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-    throw new AppError("VALIDATION_ERROR", "Invalid check-in or check-out date.");
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Invalid check-in or check-out date."
+    );
   }
 
   const elapsedMs = checkOut.getTime() - checkIn.getTime();

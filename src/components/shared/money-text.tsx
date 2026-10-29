@@ -22,7 +22,9 @@ export function MoneyText({
   let colorClass = "text-foreground";
   if (variant === "balance") {
     // Balance due (> 0) is red, settled (0) is green
-    colorClass = dec.gt(0) ? "text-money-due font-semibold" : "text-money-ok font-medium";
+    colorClass = dec.gt(0)
+      ? "text-money-due font-semibold"
+      : "text-money-ok font-medium";
   } else if (variant === "positive") {
     colorClass = "text-money-ok";
   } else if (variant === "negative") {

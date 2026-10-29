@@ -18,7 +18,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { roomSchema, bulkRoomsSchema } from "../schemas";
-import { createRoomAction, bulkCreateRoomsAction } from "@/server/actions/room.actions";
+import {
+  createRoomAction,
+  bulkCreateRoomsAction,
+} from "@/server/actions/room.actions";
 import { formatINR } from "@/lib/money";
 import { CircleAlertIcon, LoaderIcon, RoomIcon } from "@/lib/icons";
 
@@ -117,7 +120,9 @@ export function AddRoomDialog({
               <RoomIcon className="size-5" aria-hidden="true" />
             </div>
             <div className="space-y-0.5">
-              <DialogTitle className="text-xl">Add Rooms to Inventory</DialogTitle>
+              <DialogTitle className="text-xl">
+                Add Rooms to Inventory
+              </DialogTitle>
               <DialogDescription>
                 Create an individual room or add an entire floor/range in bulk.
               </DialogDescription>
@@ -159,7 +164,10 @@ export function AddRoomDialog({
                 <singleForm.Field name="number">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="single-room-number" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="single-room-number"
+                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         Room Number *
                       </Label>
                       <Input
@@ -178,7 +186,10 @@ export function AddRoomDialog({
                 <singleForm.Field name="typeId">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="single-room-type" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="single-room-type"
+                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         Room Type *
                       </Label>
                       <select
@@ -202,7 +213,10 @@ export function AddRoomDialog({
               <singleForm.Field name="pricePerNight">
                 {(field) => (
                   <div className="space-y-1.5">
-                    <Label htmlFor="single-room-price" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Label
+                      htmlFor="single-room-price"
+                      className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                    >
                       Base Price / Night (₹) *
                     </Label>
                     <Input
@@ -225,11 +239,15 @@ export function AddRoomDialog({
                 {(field) => (
                   <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3.5 transition-colors">
                     <div className="space-y-0.5 pr-4">
-                      <Label htmlFor="single-room-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                      <Label
+                        htmlFor="single-room-active"
+                        className="text-sm font-semibold text-foreground cursor-pointer"
+                      >
                         Active for Booking
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        Make this room immediately available on the front desk for guest check-ins.
+                        Make this room immediately available on the front desk
+                        for guest check-ins.
                       </p>
                     </div>
                     <Switch
@@ -254,7 +272,9 @@ export function AddRoomDialog({
                 >
                   {([canSubmit, isSubmitting]) => (
                     <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                      {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />}
+                      {isSubmitting && (
+                        <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />
+                      )}
                       Create Room
                     </Button>
                   )}
@@ -277,7 +297,10 @@ export function AddRoomDialog({
                 <bulkForm.Field name="prefix">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-prefix" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="bulk-prefix"
+                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         Prefix (Optional)
                       </Label>
                       <Input
@@ -295,7 +318,10 @@ export function AddRoomDialog({
                 <bulkForm.Field name="startNumber">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-start" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="bulk-start"
+                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         Start No. *
                       </Label>
                       <Input
@@ -316,7 +342,10 @@ export function AddRoomDialog({
                 <bulkForm.Field name="endNumber">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-end" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="bulk-end"
+                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         End No. *
                       </Label>
                       <Input
@@ -339,7 +368,10 @@ export function AddRoomDialog({
                 <bulkForm.Field name="typeId">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-type" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="bulk-type"
+                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         Room Type *
                       </Label>
                       <select
@@ -362,7 +394,10 @@ export function AddRoomDialog({
                 <bulkForm.Field name="pricePerNight">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-price" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="bulk-price"
+                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         Price / Night (₹) *
                       </Label>
                       <Input
@@ -397,25 +432,40 @@ export function AddRoomDialog({
                   const count = e >= s ? e - s + 1 : 0;
                   const sampleList =
                     count > 0 && count <= 8
-                      ? Array.from({ length: count }, (_, i) => `${prefix || ""}${s + i}`).join(", ")
+                      ? Array.from(
+                          { length: count },
+                          (_, i) => `${prefix || ""}${s + i}`
+                        ).join(", ")
                       : count > 8
-                      ? `${prefix || ""}${s}, ${prefix || ""}${s + 1}, ... ${prefix || ""}${e}`
-                      : "";
+                        ? `${prefix || ""}${s}, ${prefix || ""}${s + 1}, ... ${prefix || ""}${e}`
+                        : "";
 
                   return (
                     <div className="rounded-xl bg-muted/40 border border-border p-3.5 text-xs space-y-1.5">
                       <div className="flex justify-between font-medium text-foreground">
-                        <span className="text-muted-foreground font-semibold">Batch Creation Preview:</span>
-                        <span className="font-bold text-primary">{count} Rooms will be created</span>
+                        <span className="text-muted-foreground font-semibold">
+                          Batch Creation Preview:
+                        </span>
+                        <span className="font-bold text-primary">
+                          {count} Rooms will be created
+                        </span>
                       </div>
                       {count > 0 ? (
                         <p className="text-muted-foreground leading-relaxed">
-                          Rooms: <span className="font-mono font-semibold text-foreground">{sampleList}</span>
-                          {" • "}Each configured at <span className="font-mono font-semibold text-foreground">{formatINR(price || 0)}</span>/night
+                          Rooms:{" "}
+                          <span className="font-mono font-semibold text-foreground">
+                            {sampleList}
+                          </span>
+                          {" • "}Each configured at{" "}
+                          <span className="font-mono font-semibold text-foreground">
+                            {formatINR(price || 0)}
+                          </span>
+                          /night
                         </p>
                       ) : (
                         <p className="text-destructive font-medium">
-                          End number must be greater than or equal to start number.
+                          End number must be greater than or equal to start
+                          number.
                         </p>
                       )}
                     </div>
@@ -436,7 +486,9 @@ export function AddRoomDialog({
                 >
                   {([canSubmit, isSubmitting]) => (
                     <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                      {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />}
+                      {isSubmitting && (
+                        <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />
+                      )}
                       Bulk Create Rooms
                     </Button>
                   )}

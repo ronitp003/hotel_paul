@@ -128,7 +128,8 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
         <div>
           <CardTitle>Room Categories & Types</CardTitle>
           <CardDescription>
-            Classification categories (e.g. Standard, Deluxe AC, Suite) used for pricing and inventory.
+            Classification categories (e.g. Standard, Deluxe AC, Suite) used for
+            pricing and inventory.
           </CardDescription>
         </div>
         <Button
@@ -165,7 +166,10 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
             <tbody className="divide-y divide-border">
               {types.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="p-6 text-center text-muted-foreground">
+                  <td
+                    colSpan={3}
+                    className="p-6 text-center text-muted-foreground"
+                  >
                     No room types configured. Add your first room type above.
                   </td>
                 </tr>
@@ -173,7 +177,10 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
                 types.map((type) => {
                   const roomCount = type._count?.rooms ?? 0;
                   return (
-                    <tr key={type.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={type.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="p-3 font-medium flex items-center gap-2">
                         <RoomIcon className="h-4 w-4 text-muted-foreground" />
                         <span>{type.name}</span>
@@ -227,7 +234,8 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
           <DialogHeader>
             <DialogTitle>Add Room Category</DialogTitle>
             <DialogDescription>
-              Enter a unique name for the room category (e.g. &quot;Standard Non-AC&quot;, &quot;Executive Suite&quot;).
+              Enter a unique name for the room category (e.g. &quot;Standard
+              Non-AC&quot;, &quot;Executive Suite&quot;).
             </DialogDescription>
           </DialogHeader>
 
@@ -263,7 +271,9 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
                       aria-invalid={Boolean(error)}
                     />
                     {error && (
-                      <p className="text-sm font-medium text-destructive">{error}</p>
+                      <p className="text-sm font-medium text-destructive">
+                        {error}
+                      </p>
                     )}
                   </div>
                 );
@@ -278,10 +288,14 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
               >
                 Cancel
               </Button>
-              <addForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+              <addForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
                 {([canSubmit, isSubmitting]) => (
                   <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                    {isSubmitting && (
+                      <LoaderIcon className="h-4 w-4 animate-spin mr-2" />
+                    )}
                     Create Room Type
                   </Button>
                 )}
@@ -335,7 +349,9 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
                       aria-invalid={Boolean(error)}
                     />
                     {error && (
-                      <p className="text-sm font-medium text-destructive">{error}</p>
+                      <p className="text-sm font-medium text-destructive">
+                        {error}
+                      </p>
                     )}
                   </div>
                 );
@@ -350,10 +366,14 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
               >
                 Cancel
               </Button>
-              <editForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+              <editForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
                 {([canSubmit, isSubmitting]) => (
                   <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                    {isSubmitting && (
+                      <LoaderIcon className="h-4 w-4 animate-spin mr-2" />
+                    )}
                     Save Changes
                   </Button>
                 )}
@@ -372,8 +392,9 @@ export function RoomTypesManager({ initialTypes }: RoomTypesManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Room Category?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete category &quot;{deletingType?.name}&quot;? This operation cannot
-              be undone. Categories with active rooms assigned cannot be deleted.
+              Are you sure you want to delete category &quot;
+              {deletingType?.name}&quot;? This operation cannot be undone.
+              Categories with active rooms assigned cannot be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

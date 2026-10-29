@@ -9,7 +9,12 @@ import {
   resetPasswordSchema,
   toggleActiveSchema,
 } from "@/features/users/schemas";
-import { AppError, type ActionResult, errorResult, successResult } from "@/lib/errors";
+import {
+  AppError,
+  type ActionResult,
+  errorResult,
+  successResult,
+} from "@/lib/errors";
 import { ZodError } from "zod";
 
 export async function createStaffAction(input: unknown): Promise<ActionResult> {
@@ -24,14 +29,19 @@ export async function createStaffAction(input: unknown): Promise<ActionResult> {
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("createStaffAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function toggleStaffActiveAction(input: unknown): Promise<ActionResult> {
+export async function toggleStaffActiveAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = toggleActiveSchema.parse(input);
@@ -43,14 +53,19 @@ export async function toggleStaffActiveAction(input: unknown): Promise<ActionRes
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("toggleStaffActiveAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function resetPasswordAction(input: unknown): Promise<ActionResult> {
+export async function resetPasswordAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = resetPasswordSchema.parse(input);
@@ -62,7 +77,10 @@ export async function resetPasswordAction(input: unknown): Promise<ActionResult>
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("resetPasswordAction error:", err);
     return errorResult("INTERNAL_ERROR");

@@ -51,7 +51,10 @@ export const billingService = {
       });
 
       if (!booking) {
-        throw new AppError("BOOKING_NOT_FOUND", "The requested booking does not exist.");
+        throw new AppError(
+          "BOOKING_NOT_FOUND",
+          "The requested booking does not exist."
+        );
       }
 
       if (booking.status === BookingStatus.CHECKED_OUT) {
@@ -117,7 +120,10 @@ export const billingService = {
       });
 
       if (!charge) {
-        throw new AppError("VALIDATION_ERROR", "The charge record does not exist.");
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "The charge record does not exist."
+        );
       }
 
       if (charge.booking.status === BookingStatus.CHECKED_OUT) {
@@ -161,7 +167,10 @@ export const billingService = {
       });
 
       if (!booking) {
-        throw new AppError("BOOKING_NOT_FOUND", "The requested booking does not exist.");
+        throw new AppError(
+          "BOOKING_NOT_FOUND",
+          "The requested booking does not exist."
+        );
       }
 
       if (booking.status === BookingStatus.CANCELLED) {
@@ -223,7 +232,10 @@ export const billingService = {
       });
 
       if (!booking) {
-        throw new AppError("BOOKING_NOT_FOUND", "The requested booking does not exist.");
+        throw new AppError(
+          "BOOKING_NOT_FOUND",
+          "The requested booking does not exist."
+        );
       }
 
       const totalPaid = booking.payments
@@ -299,7 +311,10 @@ export const billingService = {
     });
 
     if (!booking) {
-      throw new AppError("BOOKING_NOT_FOUND", "The requested booking does not exist.");
+      throw new AppError(
+        "BOOKING_NOT_FOUND",
+        "The requested booking does not exist."
+      );
     }
 
     const settings = await settingsService.getSettings();
@@ -356,7 +371,8 @@ export const billingService = {
         checkOutAt: booking.checkOutAt,
         actualCheckInAt: booking.actualCheckInAt,
         actualCheckOutAt: booking.actualCheckOutAt,
-        primaryGuest: booking.guests.find((g) => g.isPrimary) || booking.guests[0],
+        primaryGuest:
+          booking.guests.find((g) => g.isPrimary) || booking.guests[0],
         allGuests: booking.guests,
         companyName: booking.companyName,
         companyGstin: booking.companyGstin,

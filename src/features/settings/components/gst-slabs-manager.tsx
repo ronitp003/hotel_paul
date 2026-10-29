@@ -73,9 +73,10 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
   // Form for Add Slab
   const addForm = useForm({
     defaultValues: {
-      minRate: slabs.length > 0 && slabs[slabs.length - 1].maxRate !== null
-        ? slabs[slabs.length - 1].maxRate!
-        : 0,
+      minRate:
+        slabs.length > 0 && slabs[slabs.length - 1].maxRate !== null
+          ? slabs[slabs.length - 1].maxRate!
+          : 0,
       maxRate: null as number | null,
       percent: 18,
       isActive: true,
@@ -165,7 +166,8 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
         <div>
           <CardTitle>GST Rate Slabs</CardTitle>
           <CardDescription>
-            Configurable tax percentage tiers based on actual room rate charged per night.
+            Configurable tax percentage tiers based on actual room rate charged
+            per night.
           </CardDescription>
         </div>
         <Button
@@ -192,9 +194,11 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
         <Alert className="bg-muted/50 border-border text-foreground">
           <InfoIcon className="h-4 w-4 text-muted-foreground" />
           <AlertDescription className="text-xs">
-            <strong>Boundary Rule:</strong> Slabs cover <code>minRate &lt; rate &le; maxRate</code> (with the
-            first slab starting at ₹0 inclusive). Slabs must be continuous without overlaps or gaps.
-            For example: ₹0 to ₹7,500 is taxed at 5%, and ₹7,500.01+ is taxed at 18%.
+            <strong>Boundary Rule:</strong> Slabs cover{" "}
+            <code>minRate &lt; rate &le; maxRate</code> (with the first slab
+            starting at ₹0 inclusive). Slabs must be continuous without overlaps
+            or gaps. For example: ₹0 to ₹7,500 is taxed at 5%, and ₹7,500.01+ is
+            taxed at 18%.
           </AlertDescription>
         </Alert>
 
@@ -211,7 +215,10 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
             <tbody className="divide-y divide-border">
               {slabs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                  <td
+                    colSpan={4}
+                    className="p-6 text-center text-muted-foreground"
+                  >
                     No GST slabs configured.
                   </td>
                 </tr>
@@ -221,15 +228,22 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
                     slab.maxRate === null
                       ? `Above ${formatINR(slab.minRate)}`
                       : slab.minRate === 0
-                      ? `Up to ${formatINR(slab.maxRate)}`
-                      : `${formatINR(slab.minRate)} to ${formatINR(slab.maxRate)}`;
+                        ? `Up to ${formatINR(slab.maxRate)}`
+                        : `${formatINR(slab.minRate)} to ${formatINR(slab.maxRate)}`;
 
                   return (
-                    <tr key={slab.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={slab.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="p-3 font-medium">{rangeText}</td>
-                      <td className="p-3 font-mono font-semibold">{slab.percent}%</td>
+                      <td className="p-3 font-mono font-semibold">
+                        {slab.percent}%
+                      </td>
                       <td className="p-3">
-                        <Badge variant={slab.isActive ? "default" : "secondary"}>
+                        <Badge
+                          variant={slab.isActive ? "default" : "secondary"}
+                        >
                           {slab.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </td>
@@ -240,7 +254,10 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
                           title={slab.isActive ? "Deactivate" : "Activate"}
                           onClick={() => handleToggle(slab)}
                         >
-                          <Switch checked={slab.isActive} aria-label="Toggle active" />
+                          <Switch
+                            checked={slab.isActive}
+                            aria-label="Toggle active"
+                          />
                         </Button>
 
                         <Button
@@ -284,7 +301,8 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
           <DialogHeader>
             <DialogTitle>Add GST Rate Slab</DialogTitle>
             <DialogDescription>
-              Create a new tax rate tier. Slabs must be continuous with existing active slabs.
+              Create a new tax rate tier. Slabs must be continuous with existing
+              active slabs.
             </DialogDescription>
           </DialogHeader>
 
@@ -335,7 +353,9 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
                       onBlur={field.handleBlur}
                       onChange={(e) => {
                         const val = e.target.value.trim();
-                        field.handleChange(val === "" ? null : parseFloat(val) || 0);
+                        field.handleChange(
+                          val === "" ? null : parseFloat(val) || 0
+                        );
                       }}
                     />
                   </div>
@@ -371,10 +391,14 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
               >
                 Cancel
               </Button>
-              <addForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+              <addForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
                 {([canSubmit, isSubmitting]) => (
                   <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                    {isSubmitting && (
+                      <LoaderIcon className="h-4 w-4 animate-spin mr-2" />
+                    )}
                     Add GST Slab
                   </Button>
                 )}
@@ -393,7 +417,8 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
           <DialogHeader>
             <DialogTitle>Edit GST Rate Slab</DialogTitle>
             <DialogDescription>
-              Modify tier limits or GST percentage. Active slabs must remain continuous.
+              Modify tier limits or GST percentage. Active slabs must remain
+              continuous.
             </DialogDescription>
           </DialogHeader>
 
@@ -444,7 +469,9 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
                       onBlur={field.handleBlur}
                       onChange={(e) => {
                         const val = e.target.value.trim();
-                        field.handleChange(val === "" ? null : parseFloat(val) || 0);
+                        field.handleChange(
+                          val === "" ? null : parseFloat(val) || 0
+                        );
                       }}
                     />
                   </div>
@@ -480,10 +507,14 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
               >
                 Cancel
               </Button>
-              <editForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+              <editForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
                 {([canSubmit, isSubmitting]) => (
                   <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                    {isSubmitting && (
+                      <LoaderIcon className="h-4 w-4 animate-spin mr-2" />
+                    )}
                     Save Changes
                   </Button>
                 )}
@@ -502,9 +533,9 @@ export function GstSlabsManager({ initialSlabs }: GstSlabsManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete GST Rate Slab?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this GST rate slab? This action will fail if
-              removing it leaves a gap between the remaining active GST slabs. Prefer deactivating
-              instead of deleting where possible.
+              Are you sure you want to remove this GST rate slab? This action
+              will fail if removing it leaves a gap between the remaining active
+              GST slabs. Prefer deactivating instead of deleting where possible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

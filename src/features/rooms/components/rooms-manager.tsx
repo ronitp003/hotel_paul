@@ -32,7 +32,8 @@ interface RoomsManagerProps {
   userRole?: Role;
 }
 
-type StatusFilter = "ALL" | "AVAILABLE" | "OCCUPIED" | "RESERVED" | "MAINTENANCE" | "PROBLEMS";
+type StatusFilter =
+  "ALL" | "AVAILABLE" | "OCCUPIED" | "RESERVED" | "MAINTENANCE" | "PROBLEMS";
 
 export function RoomsManager({
   initialRooms,
@@ -139,7 +140,8 @@ export function RoomsManager({
             inactiveColorClass: "text-status-available",
             inactiveBorder: "border-border hover:border-status-available/40",
             inactiveBgHover: "hover:bg-status-available/10",
-            inactiveBadgeClass: "bg-status-available/15 text-status-available border-status-available/25",
+            inactiveBadgeClass:
+              "bg-status-available/15 text-status-available border-status-available/25",
           },
           {
             id: "OCCUPIED" as const,
@@ -149,7 +151,8 @@ export function RoomsManager({
             inactiveColorClass: "text-status-occupied",
             inactiveBorder: "border-border hover:border-status-occupied/40",
             inactiveBgHover: "hover:bg-status-occupied/10",
-            inactiveBadgeClass: "bg-status-occupied/15 text-status-occupied border-status-occupied/25",
+            inactiveBadgeClass:
+              "bg-status-occupied/15 text-status-occupied border-status-occupied/25",
           },
           {
             id: "RESERVED" as const,
@@ -159,7 +162,8 @@ export function RoomsManager({
             inactiveColorClass: "text-status-reserved",
             inactiveBorder: "border-border hover:border-status-reserved/40",
             inactiveBgHover: "hover:bg-status-reserved/10",
-            inactiveBadgeClass: "bg-status-reserved/15 text-status-reserved border-status-reserved/25",
+            inactiveBadgeClass:
+              "bg-status-reserved/15 text-status-reserved border-status-reserved/25",
           },
           {
             id: "MAINTENANCE" as const,
@@ -169,7 +173,8 @@ export function RoomsManager({
             inactiveColorClass: "text-status-maintenance",
             inactiveBorder: "border-border hover:border-status-maintenance/40",
             inactiveBgHover: "hover:bg-status-maintenance/10",
-            inactiveBadgeClass: "bg-status-maintenance/15 text-status-maintenance border-status-maintenance/25",
+            inactiveBadgeClass:
+              "bg-status-maintenance/15 text-status-maintenance border-status-maintenance/25",
           },
           ...(counts.problems > 0
             ? [
@@ -179,9 +184,11 @@ export function RoomsManager({
                   icon: ProblemIcon,
                   count: counts.problems,
                   inactiveColorClass: "text-status-problem",
-                  inactiveBorder: "border-status-problem/30 hover:border-status-problem/50",
+                  inactiveBorder:
+                    "border-status-problem/30 hover:border-status-problem/50",
                   inactiveBgHover: "hover:bg-status-problem/10",
-                  inactiveBadgeClass: "bg-status-problem/15 text-status-problem border-status-problem/25",
+                  inactiveBadgeClass:
+                    "bg-status-problem/15 text-status-problem border-status-problem/25",
                 },
               ]
             : []),
@@ -214,7 +221,12 @@ export function RoomsManager({
                 )}
                 aria-hidden="true"
               />
-              <span className={cn("transition-colors", isActive ? "text-white" : item.inactiveColorClass)}>
+              <span
+                className={cn(
+                  "transition-colors",
+                  isActive ? "text-white" : item.inactiveColorClass
+                )}
+              >
                 {item.label}
               </span>
               <Badge
@@ -237,7 +249,10 @@ export function RoomsManager({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border shadow-xs">
         <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div className="relative flex-1 max-w-sm">
-            <SearchIcon className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <SearchIcon
+              className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
               placeholder="Search room number..."
               value={search}
@@ -281,7 +296,9 @@ export function RoomsManager({
             <RoomIcon className="size-6" aria-hidden="true" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-semibold text-foreground">No Rooms Found</h3>
+            <h3 className="text-base font-semibold text-foreground">
+              No Rooms Found
+            </h3>
             <p className="text-xs text-muted-foreground max-w-sm mx-auto">
               {search || typeFilter !== "ALL" || statusFilter !== "ALL"
                 ? "No rooms match your filter criteria. Try clearing search or changing filters."

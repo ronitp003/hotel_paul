@@ -2,7 +2,13 @@ import "dotenv/config";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, BookingStatus, Role, PaymentKind, PaymentMode } from "@prisma/client";
+import {
+  PrismaClient,
+  BookingStatus,
+  Role,
+  PaymentKind,
+  PaymentMode,
+} from "@prisma/client";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -51,17 +57,29 @@ describe("PostgreSQL Constraints & Exclusion Verification (Real DB)", () => {
     testUserId = user.id;
 
     // Clean up any old test bookings for TEST-999
-    await prisma.invoice.deleteMany({ where: { booking: { roomId: testRoomId } } });
-    await prisma.payment.deleteMany({ where: { booking: { roomId: testRoomId } } });
-    await prisma.bookingGuest.deleteMany({ where: { booking: { roomId: testRoomId } } });
+    await prisma.invoice.deleteMany({
+      where: { booking: { roomId: testRoomId } },
+    });
+    await prisma.payment.deleteMany({
+      where: { booking: { roomId: testRoomId } },
+    });
+    await prisma.bookingGuest.deleteMany({
+      where: { booking: { roomId: testRoomId } },
+    });
     await prisma.booking.deleteMany({ where: { roomId: testRoomId } });
     await prisma.roomMaintenance.deleteMany({ where: { roomId: testRoomId } });
   });
 
   afterAll(async () => {
-    await prisma.invoice.deleteMany({ where: { booking: { roomId: testRoomId } } });
-    await prisma.payment.deleteMany({ where: { booking: { roomId: testRoomId } } });
-    await prisma.bookingGuest.deleteMany({ where: { booking: { roomId: testRoomId } } });
+    await prisma.invoice.deleteMany({
+      where: { booking: { roomId: testRoomId } },
+    });
+    await prisma.payment.deleteMany({
+      where: { booking: { roomId: testRoomId } },
+    });
+    await prisma.bookingGuest.deleteMany({
+      where: { booking: { roomId: testRoomId } },
+    });
     await prisma.booking.deleteMany({ where: { roomId: testRoomId } });
     await prisma.roomMaintenance.deleteMany({ where: { roomId: testRoomId } });
     await prisma.$disconnect();
@@ -103,7 +121,11 @@ describe("PostgreSQL Constraints & Exclusion Verification (Real DB)", () => {
       });
     } catch (err: unknown) {
       // Prisma wraps raw database errors; check code or message
-      const pgErr = err as { code?: string; meta?: { code?: string; message?: string }; message?: string };
+      const pgErr = err as {
+        code?: string;
+        meta?: { code?: string; message?: string };
+        message?: string;
+      };
       const msg = pgErr.message || "";
       expect(msg).toMatch(/23P01|exclusion constraint|booking_no_overlap/i);
     }

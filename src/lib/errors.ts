@@ -27,7 +27,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
     "A tax invoice has already been issued for this booking.",
   INVOICE_NOT_FOUND: "The requested invoice was not found.",
   INSUFFICIENT_STOCK: "Insufficient inventory stock for this transfer.",
-  VALIDATION_ERROR: "Invalid data provided. Please check the fields and try again.",
+  VALIDATION_ERROR:
+    "Invalid data provided. Please check the fields and try again.",
   INTERNAL_ERROR: "An unexpected system error occurred. Please try again.",
 };
 
@@ -50,7 +51,10 @@ export interface ActionResult<T = unknown> {
   message?: string;
 }
 
-export function errorResult(code: ErrorCode, customMessage?: string): ActionResult<never> {
+export function errorResult(
+  code: ErrorCode,
+  customMessage?: string
+): ActionResult<never> {
   return {
     ok: false,
     code,

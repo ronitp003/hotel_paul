@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { addPaymentAction, refundPaymentAction } from "@/server/actions/billing.actions";
+import {
+  addPaymentAction,
+  refundPaymentAction,
+} from "@/server/actions/billing.actions";
 import {
   Dialog,
   DialogContent,
@@ -34,8 +37,12 @@ export function AddPaymentDialog({
   onSuccess,
 }: AddPaymentDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [kind, setKind] = useState<"PAYMENT" | "REFUND" | "ADVANCE">(defaultKind);
-  const [mode, setMode] = useState<"CASH" | "UPI" | "CARD" | "BANK_TRANSFER">("UPI");
+  const [kind, setKind] = useState<"PAYMENT" | "REFUND" | "ADVANCE">(
+    defaultKind
+  );
+  const [mode, setMode] = useState<"CASH" | "UPI" | "CARD" | "BANK_TRANSFER">(
+    "UPI"
+  );
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
@@ -90,7 +97,8 @@ export function AddPaymentDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <PaymentIcon className="size-4 text-primary" />
-              {kind === "REFUND" ? "Issue Refund" : "Record Payment"} — {bookingRef}
+              {kind === "REFUND" ? "Issue Refund" : "Record Payment"} —{" "}
+              {bookingRef}
             </DialogTitle>
             <DialogDescription className="text-xs">
               Record a guest payment or refund transaction linked to this stay.
@@ -125,11 +133,7 @@ export function AddPaymentDialog({
                 value={mode}
                 onChange={(e) =>
                   setMode(
-                    e.target.value as
-                      | "CASH"
-                      | "UPI"
-                      | "CARD"
-                      | "BANK_TRANSFER"
+                    e.target.value as "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
                   )
                 }
                 className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"

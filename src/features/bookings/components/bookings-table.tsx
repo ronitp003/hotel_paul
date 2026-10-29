@@ -86,7 +86,10 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
         );
       case "CANCELLED":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 text-xs">
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 text-xs"
+          >
             Cancelled
           </Badge>
         );
@@ -137,7 +140,9 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
 
       {/* Count Indicator */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-        <span>Showing {filtered.length} of {total} record(s)</span>
+        <span>
+          Showing {filtered.length} of {total} record(s)
+        </span>
       </div>
 
       {/* Bookings List / Table */}
@@ -148,7 +153,9 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
               <CalendarIcon className="size-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-semibold text-foreground">No bookings found</h3>
+              <h3 className="text-base font-semibold text-foreground">
+                No bookings found
+              </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 {search || statusFilter !== "ALL"
                   ? "No bookings match the selected filters. Try clearing your search query."
@@ -198,12 +205,16 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                         <span className="font-bold text-foreground font-mono">
                           {b.roomNumber}
                         </span>
-                        <span className="text-muted-foreground">({b.roomTypeName})</span>
+                        <span className="text-muted-foreground">
+                          ({b.roomTypeName})
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{b.guestName}</span>
+                        <span className="font-medium text-foreground">
+                          {b.guestName}
+                        </span>
                         {b.guestMobile && (
                           <span className="text-[11px] text-muted-foreground font-mono">
                             {b.guestMobile}

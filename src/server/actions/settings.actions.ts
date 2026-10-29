@@ -10,10 +10,17 @@ import {
   invoiceSettingsSchema,
   gstSlabItemSchema,
 } from "@/features/settings/schemas";
-import { AppError, type ActionResult, errorResult, successResult } from "@/lib/errors";
+import {
+  AppError,
+  type ActionResult,
+  errorResult,
+  successResult,
+} from "@/lib/errors";
 import { ZodError } from "zod";
 
-export async function updateHotelDetailsAction(input: unknown): Promise<ActionResult> {
+export async function updateHotelDetailsAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = hotelDetailsSchema.parse(input);
@@ -25,14 +32,19 @@ export async function updateHotelDetailsAction(input: unknown): Promise<ActionRe
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("updateHotelDetailsAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function updateBillingSettingsAction(input: unknown): Promise<ActionResult> {
+export async function updateBillingSettingsAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = billingSettingsSchema.parse(input);
@@ -44,14 +56,19 @@ export async function updateBillingSettingsAction(input: unknown): Promise<Actio
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("updateBillingSettingsAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function updateInvoiceSettingsAction(input: unknown): Promise<ActionResult> {
+export async function updateInvoiceSettingsAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = invoiceSettingsSchema.parse(input);
@@ -63,14 +80,19 @@ export async function updateInvoiceSettingsAction(input: unknown): Promise<Actio
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("updateInvoiceSettingsAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }
 
-export async function createGstSlabAction(input: unknown): Promise<ActionResult> {
+export async function createGstSlabAction(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const actor = await requireRole([ROLES.OWNER]);
     const data = gstSlabItemSchema.parse(input);
@@ -82,7 +104,10 @@ export async function createGstSlabAction(input: unknown): Promise<ActionResult>
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("createGstSlabAction error:", err);
     return errorResult("INTERNAL_ERROR");
@@ -104,7 +129,10 @@ export async function updateGstSlabAction(
       return errorResult(err.code, err.message);
     }
     if (err instanceof ZodError) {
-      return errorResult("VALIDATION_ERROR", err.issues[0]?.message || "Validation failed");
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
     }
     console.error("updateGstSlabAction error:", err);
     return errorResult("INTERNAL_ERROR");

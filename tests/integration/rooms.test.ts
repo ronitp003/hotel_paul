@@ -1,5 +1,13 @@
 import "dotenv/config";
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -14,7 +22,8 @@ import {
 } from "@/server/actions/room.actions";
 import { roomService } from "@/server/services/room.service";
 
-const connectionString = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
   let pool: Pool;
@@ -142,7 +151,11 @@ describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
       });
 
       expect(res.ok).toBe(true);
-      const data = res.data as { id: string; number: string; pricePerNight: number };
+      const data = res.data as {
+        id: string;
+        number: string;
+        pricePerNight: number;
+      };
       expect(data.number).toBe(singleRoomNumber);
       expect(data.pricePerNight).toBe(2500);
       expect(typeof data.pricePerNight).toBe("number"); // Plain number verification
@@ -234,7 +247,9 @@ describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
         orderBy: { createdAt: "desc" },
       });
       expect(latestAudit).not.toBeNull();
-      const meta = latestAudit?.metadata as { after?: { pricePerNight?: number } };
+      const meta = latestAudit?.metadata as {
+        after?: { pricePerNight?: number };
+      };
       expect(meta?.after?.pricePerNight).toBe(3500);
     });
 
@@ -251,7 +266,9 @@ describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
     });
 
     it("lists rooms with derived status and verifies plain object numbers", async () => {
-      const list = await roomService.listRoomsWithStatus({ typeId: testTypeId });
+      const list = await roomService.listRoomsWithStatus({
+        typeId: testTypeId,
+      });
       expect(list.length).toBeGreaterThan(0);
 
       const target = list.find((r) => r.id === createdRoomId);
@@ -283,7 +300,9 @@ describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
       expect(deleteRes.ok).toBe(true);
 
       // Verify room no longer exists in database
-      const deletedRoom = await prisma.room.findUnique({ where: { id: roomId } });
+      const deletedRoom = await prisma.room.findUnique({
+        where: { id: roomId },
+      });
       expect(deletedRoom).toBeNull();
 
       // Verify audit log
@@ -314,9 +333,13 @@ describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
         const deleteRes = await deleteRoomAction(guardedRoom.id);
         expect(deleteRes.ok).toBe(false);
         expect(deleteRes.code).toBe("VALIDATION_ERROR");
-        expect(deleteRes.message).toMatch(/Cannot delete Room.*Disable the room instead/i);
+        expect(deleteRes.message).toMatch(
+          /Cannot delete Room.*Disable the room instead/i
+        );
       } finally {
-        await prisma.roomProblem.deleteMany({ where: { roomId: guardedRoom.id } });
+        await prisma.roomProblem.deleteMany({
+          where: { roomId: guardedRoom.id },
+        });
         await prisma.room.delete({ where: { id: guardedRoom.id } });
       }
     });

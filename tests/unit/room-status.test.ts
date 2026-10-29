@@ -183,4 +183,28 @@ describe("Room Status Calculation (calculateRoomStatus)", () => {
     expect(res.hasProblem).toBe(true);
     expect(res.openProblemsCount).toBe(1);
   });
+
+  it("derives OCCUPIED when a CHECKED_IN booking has not checked out even past scheduled checkOutAt", () => {
+    // Scheduled checkout was 2 hours ago, but actualCheckOutAt is null (overstaying)
+    const overstayTime = new Date("2026-10-30T12:00:00.000Z");
+    const res = calculateRoomStatus(
+      {
+        bookings: [
+          {
+            id: "b-overstay",
+            reference: "BK-OVERSTAY",
+            status: BookingStatus.CHECKED_IN,
+            checkInAt: new Date("2026-10-28T10:00:00.000Z"),
+            checkOutAt: new Date("2026-10-30T10:00:00.000Z"),
+            actualCheckOutAt: null,
+            guests: [{ name: "Bob Overstay", isPrimary: true }],
+          },
+        ],
+      },
+      overstayTime
+    );
+
+    expect(res.status).toBe("OCCUPIED");
+    expect(res.currentBooking?.guestName).toBe("Bob Overstay");
+  });
 });
