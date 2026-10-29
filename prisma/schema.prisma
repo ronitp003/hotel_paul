@@ -137,7 +137,6 @@ model HotelSettings {
   address           String
   phone             String
   gstin             String
-  logoUrl           String?
   invoicePrefix     String   @default("")
   invoiceNotes      String   @default("")
   graceMinutes      Int      @default(0)

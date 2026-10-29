@@ -59,7 +59,7 @@ async function main() {
           isActive: true,
         },
         {
-          minRate: 7500.01,
+          minRate: 7500.0,
           maxRate: null,
           percent: 18.0,
           isActive: true,

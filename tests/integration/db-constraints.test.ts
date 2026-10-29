@@ -51,6 +51,7 @@ describe("PostgreSQL Constraints & Exclusion Verification (Real DB)", () => {
     testUserId = user.id;
 
     // Clean up any old test bookings for TEST-999
+    await prisma.invoice.deleteMany({ where: { booking: { roomId: testRoomId } } });
     await prisma.payment.deleteMany({ where: { booking: { roomId: testRoomId } } });
     await prisma.bookingGuest.deleteMany({ where: { booking: { roomId: testRoomId } } });
     await prisma.booking.deleteMany({ where: { roomId: testRoomId } });
@@ -58,6 +59,7 @@ describe("PostgreSQL Constraints & Exclusion Verification (Real DB)", () => {
   });
 
   afterAll(async () => {
+    await prisma.invoice.deleteMany({ where: { booking: { roomId: testRoomId } } });
     await prisma.payment.deleteMany({ where: { booking: { roomId: testRoomId } } });
     await prisma.bookingGuest.deleteMany({ where: { booking: { roomId: testRoomId } } });
     await prisma.booking.deleteMany({ where: { roomId: testRoomId } });
