@@ -105,14 +105,14 @@ export function EditRoomDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <RoomIcon className="size-4" aria-hidden="true" />
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <RoomIcon className="size-5" aria-hidden="true" />
             </div>
-            <div>
-              <DialogTitle>Edit Room {room.number}</DialogTitle>
+            <div className="space-y-0.5">
+              <DialogTitle className="text-xl">Edit Room {room.number}</DialogTitle>
               <DialogDescription>
                 Modify room number, assigned category, and standard pricing.
               </DialogDescription>
@@ -133,18 +133,21 @@ export function EditRoomDialog({
             e.stopPropagation();
             editForm.handleSubmit();
           }}
-          className="space-y-4"
+          className="space-y-4 pt-1"
         >
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <editForm.Field name="number">
               {(field) => (
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-room-number">Room Number *</Label>
+                  <Label htmlFor="edit-room-number" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Room Number *
+                  </Label>
                   <Input
                     id="edit-room-number"
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    className="h-10 font-mono text-base font-bold"
                   />
                 </div>
               )}
@@ -153,10 +156,12 @@ export function EditRoomDialog({
             <editForm.Field name="typeId">
               {(field) => (
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-room-type">Room Type *</Label>
+                  <Label htmlFor="edit-room-type" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Room Type *
+                  </Label>
                   <select
                     id="edit-room-type"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -172,55 +177,61 @@ export function EditRoomDialog({
             </editForm.Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-center">
-            <editForm.Field name="pricePerNight">
-              {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-room-price">Base Price / Night (₹) *</Label>
-                  <Input
-                    id="edit-room-price"
-                    type="number"
-                    step="50"
-                    min="0"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) =>
-                      field.handleChange(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                </div>
-              )}
-            </editForm.Field>
+          <editForm.Field name="pricePerNight">
+            {(field) => (
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-room-price" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Base Price / Night (₹) *
+                </Label>
+                <Input
+                  id="edit-room-price"
+                  type="number"
+                  step="50"
+                  min="0"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) =>
+                    field.handleChange(parseFloat(e.target.value) || 0)
+                  }
+                  className="h-10 font-mono"
+                />
+              </div>
+            )}
+          </editForm.Field>
 
-            <editForm.Field name="isActive">
-              {(field) => (
-                <div className="flex items-center justify-between pt-6 pr-2">
-                  <Label htmlFor="edit-room-active" className="cursor-pointer">
-                    Active Status
+          <editForm.Field name="isActive">
+            {(field) => (
+              <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3.5 transition-colors">
+                <div className="space-y-0.5 pr-4">
+                  <Label htmlFor="edit-room-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                    Active in Inventory
                   </Label>
-                  <Switch
-                    id="edit-room-active"
-                    checked={field.state.value}
-                    onCheckedChange={field.handleChange}
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    When active, this room is visible on the front desk and bookable for guests.
+                  </p>
                 </div>
-              )}
-            </editForm.Field>
-          </div>
+                <Switch
+                  id="edit-room-active"
+                  checked={field.state.value}
+                  onCheckedChange={field.handleChange}
+                />
+              </div>
+            )}
+          </editForm.Field>
 
-          <DialogFooter className="pt-2 flex flex-row items-center justify-between gap-2 sm:justify-between">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5">
             <Button
               type="button"
               variant="destructive"
               size="sm"
-              className="gap-1.5"
+              className="gap-1.5 w-full sm:w-auto"
               onClick={() => setIsDeleteConfirmOpen(true)}
             >
               <DeleteIcon className="size-4" aria-hidden="true" />
               <span>Delete Room</span>
             </Button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
               <Button
                 type="button"
                 variant="outline"
@@ -234,7 +245,7 @@ export function EditRoomDialog({
               >
                 {([canSubmit, isSubmitting]) => (
                   <Button type="submit" size="sm" disabled={!canSubmit || isSubmitting}>
-                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />}
                     Save Changes
                   </Button>
                 )}

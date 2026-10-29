@@ -110,14 +110,14 @@ export function AddRoomDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <RoomIcon className="size-4" aria-hidden="true" />
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <RoomIcon className="size-5" aria-hidden="true" />
             </div>
-            <div>
-              <DialogTitle>Add Rooms to Inventory</DialogTitle>
+            <div className="space-y-0.5">
+              <DialogTitle className="text-xl">Add Rooms to Inventory</DialogTitle>
               <DialogDescription>
                 Create an individual room or add an entire floor/range in bulk.
               </DialogDescription>
@@ -155,17 +155,20 @@ export function AddRoomDialog({
               }}
               className="space-y-4"
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <singleForm.Field name="number">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="single-room-number">Room Number *</Label>
+                      <Label htmlFor="single-room-number" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Room Number *
+                      </Label>
                       <Input
                         id="single-room-number"
                         placeholder="e.g. 101, 204"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
+                        className="h-10 font-mono text-base font-bold"
                         autoFocus
                       />
                     </div>
@@ -175,10 +178,12 @@ export function AddRoomDialog({
                 <singleForm.Field name="typeId">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="single-room-type">Room Type *</Label>
+                      <Label htmlFor="single-room-type" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Room Type *
+                      </Label>
                       <select
                         id="single-room-type"
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -194,43 +199,49 @@ export function AddRoomDialog({
                 </singleForm.Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 items-center">
-                <singleForm.Field name="pricePerNight">
-                  {(field) => (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="single-room-price">Base Price / Night (₹) *</Label>
-                      <Input
-                        id="single-room-price"
-                        type="number"
-                        step="50"
-                        min="0"
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) =>
-                          field.handleChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </div>
-                  )}
-                </singleForm.Field>
+              <singleForm.Field name="pricePerNight">
+                {(field) => (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="single-room-price" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Base Price / Night (₹) *
+                    </Label>
+                    <Input
+                      id="single-room-price"
+                      type="number"
+                      step="50"
+                      min="0"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) =>
+                        field.handleChange(parseFloat(e.target.value) || 0)
+                      }
+                      className="h-10 font-mono"
+                    />
+                  </div>
+                )}
+              </singleForm.Field>
 
-                <singleForm.Field name="isActive">
-                  {(field) => (
-                    <div className="flex items-center justify-between pt-6 pr-2">
-                      <Label htmlFor="single-room-active" className="cursor-pointer">
+              <singleForm.Field name="isActive">
+                {(field) => (
+                  <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3.5 transition-colors">
+                    <div className="space-y-0.5 pr-4">
+                      <Label htmlFor="single-room-active" className="text-sm font-semibold text-foreground cursor-pointer">
                         Active for Booking
                       </Label>
-                      <Switch
-                        id="single-room-active"
-                        checked={field.state.value}
-                        onCheckedChange={field.handleChange}
-                      />
+                      <p className="text-xs text-muted-foreground">
+                        Make this room immediately available on the front desk for guest check-ins.
+                      </p>
                     </div>
-                  )}
-                </singleForm.Field>
-              </div>
+                    <Switch
+                      id="single-room-active"
+                      checked={field.state.value}
+                      onCheckedChange={field.handleChange}
+                    />
+                  </div>
+                )}
+              </singleForm.Field>
 
-              <DialogFooter className="pt-2">
+              <DialogFooter className="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -243,7 +254,7 @@ export function AddRoomDialog({
                 >
                   {([canSubmit, isSubmitting]) => (
                     <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                      {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                      {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />}
                       Create Room
                     </Button>
                   )}
@@ -262,17 +273,20 @@ export function AddRoomDialog({
               }}
               className="space-y-4"
             >
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <bulkForm.Field name="prefix">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-prefix">Prefix (Optional)</Label>
+                      <Label htmlFor="bulk-prefix" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Prefix (Optional)
+                      </Label>
                       <Input
                         id="bulk-prefix"
                         placeholder="e.g. R- or G"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
+                        className="h-10 font-mono"
                       />
                     </div>
                   )}
@@ -281,7 +295,9 @@ export function AddRoomDialog({
                 <bulkForm.Field name="startNumber">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-start">Start No. *</Label>
+                      <Label htmlFor="bulk-start" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Start No. *
+                      </Label>
                       <Input
                         id="bulk-start"
                         type="number"
@@ -291,6 +307,7 @@ export function AddRoomDialog({
                         onChange={(e) =>
                           field.handleChange(parseInt(e.target.value, 10) || 1)
                         }
+                        className="h-10 font-mono"
                       />
                     </div>
                   )}
@@ -299,7 +316,9 @@ export function AddRoomDialog({
                 <bulkForm.Field name="endNumber">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-end">End No. *</Label>
+                      <Label htmlFor="bulk-end" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        End No. *
+                      </Label>
                       <Input
                         id="bulk-end"
                         type="number"
@@ -309,20 +328,23 @@ export function AddRoomDialog({
                         onChange={(e) =>
                           field.handleChange(parseInt(e.target.value, 10) || 1)
                         }
+                        className="h-10 font-mono"
                       />
                     </div>
                   )}
                 </bulkForm.Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <bulkForm.Field name="typeId">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-type">Room Type *</Label>
+                      <Label htmlFor="bulk-type" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Room Type *
+                      </Label>
                       <select
                         id="bulk-type"
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -340,7 +362,9 @@ export function AddRoomDialog({
                 <bulkForm.Field name="pricePerNight">
                   {(field) => (
                     <div className="space-y-1.5">
-                      <Label htmlFor="bulk-price">Price / Night (₹) *</Label>
+                      <Label htmlFor="bulk-price" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Price / Night (₹) *
+                      </Label>
                       <Input
                         id="bulk-price"
                         type="number"
@@ -351,6 +375,7 @@ export function AddRoomDialog({
                         onChange={(e) =>
                           field.handleChange(parseFloat(e.target.value) || 0)
                         }
+                        className="h-10 font-mono"
                       />
                     </div>
                   )}
@@ -378,18 +403,18 @@ export function AddRoomDialog({
                       : "";
 
                   return (
-                    <div className="rounded-md bg-muted/60 border border-border p-3 text-xs space-y-1">
+                    <div className="rounded-xl bg-muted/40 border border-border p-3.5 text-xs space-y-1.5">
                       <div className="flex justify-between font-medium text-foreground">
-                        <span>Batch Creation Preview:</span>
-                        <span className="font-semibold text-primary">{count} Rooms</span>
+                        <span className="text-muted-foreground font-semibold">Batch Creation Preview:</span>
+                        <span className="font-bold text-primary">{count} Rooms will be created</span>
                       </div>
                       {count > 0 ? (
-                        <p className="text-muted-foreground">
-                          Rooms: <span className="font-mono font-medium text-foreground">{sampleList}</span>
-                          {" • "}Each at {formatINR(price || 0)}/night
+                        <p className="text-muted-foreground leading-relaxed">
+                          Rooms: <span className="font-mono font-semibold text-foreground">{sampleList}</span>
+                          {" • "}Each configured at <span className="font-mono font-semibold text-foreground">{formatINR(price || 0)}</span>/night
                         </p>
                       ) : (
-                        <p className="text-destructive">
+                        <p className="text-destructive font-medium">
                           End number must be greater than or equal to start number.
                         </p>
                       )}
@@ -398,7 +423,7 @@ export function AddRoomDialog({
                 }}
               </bulkForm.Subscribe>
 
-              <DialogFooter className="pt-2">
+              <DialogFooter className="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -411,7 +436,7 @@ export function AddRoomDialog({
                 >
                   {([canSubmit, isSubmitting]) => (
                     <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                      {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                      {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-1.5" />}
                       Bulk Create Rooms
                     </Button>
                   )}

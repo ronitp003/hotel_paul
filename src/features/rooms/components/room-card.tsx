@@ -42,7 +42,7 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
 
   // Left border accent based on derived status
   const borderAccentClass = !room.isActive
-    ? "border-l-4 border-l-muted-foreground/40 opacity-75"
+    ? "border-l-4 border-l-muted-foreground/40 opacity-80"
     : room.status === "OCCUPIED"
     ? "border-l-4 border-l-status-occupied"
     : room.status === "MAINTENANCE"
@@ -58,81 +58,106 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
           }
         }}
         className={cn(
-          "relative overflow-hidden transition-all hover:shadow-md cursor-pointer flex flex-col justify-between select-none group",
+          "relative overflow-hidden transition-all duration-150 ease-out cursor-pointer flex flex-col justify-between select-none group border rounded-xl hover:shadow-md hover:border-border/80 motion-reduce:transition-none bg-card py-0 gap-0",
           borderAccentClass
         )}
       >
-        <CardContent className="p-4 space-y-3">
-          {/* Header Row: Room Number & Status */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold tracking-tight text-foreground font-mono">
-                {room.number}
-              </span>
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider truncate max-w-[90px]">
-                {room.typeName}
-              </span>
-            </div>
+        <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
+          {/* Header Row: Room Number & Status Badge */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-2xl font-black tracking-tight text-foreground font-mono leading-none">
+              {room.number}
+            </span>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              {room.hasProblem && (
-                <span
-                  title={`${room.openProblemsCount} unresolved problem(s)`}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-status-problem/15 text-status-problem text-[11px] font-bold border border-status-problem/30"
-                >
-                  <ProblemIcon className="size-3" aria-hidden="true" />
-                  <span>{room.openProblemsCount}</span>
-                </span>
-              )}
-              <StatusBadge status={room.status} />
+            <div className="shrink-0">
+              <StatusBadge
+                status={room.status}
+                label={room.status === "MAINTENANCE" ? "Maintenance" : undefined}
+              />
             </div>
+          </div>
+
+          {/* Subheader Row: Category & Problem Alert */}
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span
+              className="text-xs font-semibold text-muted-foreground tracking-wide uppercase truncate"
+              title={room.typeName}
+            >
+              {room.typeName}
+            </span>
+
+            {room.hasProblem && (
+              <span
+                title={`${room.openProblemsCount} unresolved problem(s)`}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-status-problem/15 text-status-problem text-[11px] font-bold border border-status-problem/30 shrink-0"
+              >
+                <ProblemIcon className="size-3" aria-hidden="true" />
+                <span>{room.openProblemsCount} {room.openProblemsCount === 1 ? "issue" : "issues"}</span>
+              </span>
+            )}
           </div>
 
           {/* Pricing Row: Price / night */}
-          <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-foreground tabular-nums">
+          <div className="flex items-baseline gap-1 pt-0.5">
+            <span className="text-xl font-bold text-foreground tabular-nums tracking-tight">
               {formatINR(room.pricePerNight)}
             </span>
-            <span className="text-xs text-muted-foreground font-medium">/night</span>
+            <span className="text-xs text-muted-foreground font-medium">/ night</span>
           </div>
 
-          {/* Contextual Banner based on state */}
-          {room.status === "OCCUPIED" && room.currentBooking && (
-            <div className="rounded-md bg-status-occupied/10 border border-status-occupied/20 p-2 space-y-1 text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-status-occupied truncate">
-                <GuestIcon className="size-3.5 shrink-0" aria-hidden="true" />
-                <span className="truncate">{room.currentBooking.guestName}</span>
+          {/* Dynamic Context Banner */}
+          <div className="mt-auto pt-1">
+            {room.status === "OCCUPIED" && room.currentBooking && (
+              <div className="rounded-lg bg-status-occupied/10 border border-status-occupied/20 p-2.5 space-y-1 text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-status-occupied truncate">
+                  <GuestIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{room.currentBooking.guestName}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
+                  <span>Depart: {formatISTDate(new Date(room.currentBooking.checkOutAt))}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
-                <span>Until {formatISTDate(new Date(room.currentBooking.checkOutAt))}</span>
-              </div>
-            </div>
-          )}
+            )}
 
-          {room.status === "MAINTENANCE" && (
-            <div className="rounded-md bg-status-maintenance/10 border border-status-maintenance/20 p-2 space-y-0.5 text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-status-maintenance">
-                <MaintenanceIcon className="size-3.5 shrink-0" aria-hidden="true" />
-                <span>Maintenance</span>
+            {room.status === "MAINTENANCE" && (
+              <div className="rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 p-2.5 space-y-1 text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-status-maintenance">
+                  <MaintenanceIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span>Under Maintenance</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground line-clamp-1" title={room.maintenanceReason || "Scheduled repair work"}>
+                  {room.maintenanceReason || "Scheduled repair work"}
+                </p>
               </div>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {room.maintenanceReason || "Scheduled repair work"}
-              </p>
-            </div>
-          )}
+            )}
 
-          {!room.isActive && (
-            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <Badge variant="secondary" className="text-[10px]">Disabled from bookings</Badge>
-            </div>
-          )}
+            {!room.isActive && (
+              <div className="rounded-md bg-muted/60 border border-border px-2.5 py-1.5 text-xs flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-medium">Inactive in system</span>
+                <Badge variant="secondary" className="text-[10px] uppercase font-bold py-0">Disabled</Badge>
+              </div>
+            )}
+
+            {room.status === "AVAILABLE" && room.isActive && (
+              <div className="rounded-md bg-status-available/5 border border-status-available/15 px-2.5 py-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
+                <span className="size-2 rounded-full bg-status-available shrink-0 animate-pulse" />
+                <span className="font-medium text-foreground/80">Available for check-in</span>
+              </div>
+            )}
+          </div>
         </CardContent>
 
         {/* Card Footer Actions */}
-        <div className="px-4 py-2 border-t border-border bg-muted/20 flex items-center justify-between text-xs text-muted-foreground">
-          <span className="text-[11px]">
-            {room.status === "AVAILABLE" ? "Ready for guest" : "Click for details"}
+        <div className="px-3.5 py-2 border-t border-border/70 bg-muted/25 flex items-center justify-between text-xs text-muted-foreground">
+          <span className="text-[11px] font-medium">
+            {room.status === "OCCUPIED"
+              ? "Guest in room"
+              : room.status === "MAINTENANCE"
+              ? "Out of service"
+              : !room.isActive
+              ? "Not bookable"
+              : "Vacant clean"}
           </span>
 
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -140,19 +165,23 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="size-7 hover:bg-background hover:text-foreground text-muted-foreground transition-colors"
                 title="Edit room settings"
                 onClick={() => onEdit(room)}
               >
                 <EditIcon className="size-3.5" aria-hidden="true" />
+                <span className="sr-only">Edit room {room.number}</span>
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon-sm"
-              title="Open room info"
+              className="size-7 hover:bg-background hover:text-foreground text-muted-foreground transition-colors"
+              title="View room details"
               onClick={() => setIsDetailsOpen(true)}
             >
               <ChevronRightIcon className="size-3.5" aria-hidden="true" />
+              <span className="sr-only">View room {room.number} details</span>
             </Button>
           </div>
         </div>
@@ -160,14 +189,14 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
 
       {/* Quick Summary Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <RoomIcon className="size-4" aria-hidden="true" />
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <RoomIcon className="size-5" aria-hidden="true" />
               </div>
-              <div>
-                <DialogTitle className="text-lg">Room {room.number}</DialogTitle>
+              <div className="space-y-0.5">
+                <DialogTitle className="text-xl">Room {room.number}</DialogTitle>
                 <DialogDescription>
                   {room.typeName} • {formatINR(room.pricePerNight)} / night
                 </DialogDescription>
@@ -175,64 +204,86 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="flex items-center justify-between border-b border-border pb-2">
-              <span className="text-xs font-medium text-muted-foreground">Current Status</span>
-              <StatusBadge status={room.status} />
+          <div className="space-y-4 py-1">
+            {/* 2-Column Key Metrics Card */}
+            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-muted/30 border border-border">
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Current Status</span>
+                <div>
+                  <StatusBadge status={room.status} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Nightly Rate</span>
+                <div className="text-sm font-bold text-foreground font-mono">{formatINR(room.pricePerNight)}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Room Category</span>
+                <div className="text-sm font-semibold text-foreground truncate">{room.typeName}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Inventory State</span>
+                <div className="text-sm font-semibold text-foreground">
+                  {room.isActive ? "Active (Bookable)" : "Disabled (Archived)"}
+                </div>
+              </div>
             </div>
 
+            {/* Occupied Guest Details */}
             {room.status === "OCCUPIED" && room.currentBooking && (
-              <div className="rounded-lg bg-status-occupied/5 border border-status-occupied/20 p-3 space-y-2 text-sm">
-                <div className="flex items-center justify-between font-semibold">
-                  <span className="text-xs text-muted-foreground">Primary Guest</span>
-                  <span className="text-foreground">{room.currentBooking.guestName}</span>
+              <div className="rounded-xl bg-status-occupied/5 border border-status-occupied/20 p-4 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-status-occupied/15">
+                  <span className="text-xs font-bold uppercase tracking-wider text-status-occupied">Active Reservation</span>
+                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-status-occupied/15 text-status-occupied font-semibold">
+                    {room.currentBooking.reference}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Booking Reference</span>
-                  <span className="font-mono font-medium">{room.currentBooking.reference}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Checked In</span>
-                  <span>{formatISTDateTime(new Date(room.currentBooking.checkInAt))}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Scheduled Departure</span>
-                  <span>{formatISTDateTime(new Date(room.currentBooking.checkOutAt))}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Primary Guest</span>
+                    <span className="font-semibold text-foreground text-sm">{room.currentBooking.guestName}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Checked In</span>
+                    <span className="font-medium text-foreground">{formatISTDateTime(new Date(room.currentBooking.checkInAt))}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-muted-foreground block text-[11px]">Scheduled Check-Out</span>
+                    <span className="font-medium text-foreground">{formatISTDateTime(new Date(room.currentBooking.checkOutAt))}</span>
+                  </div>
                 </div>
               </div>
             )}
 
+            {/* Maintenance Reason */}
             {room.status === "MAINTENANCE" && (
-              <div className="rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 p-3 space-y-1 text-sm">
-                <span className="text-xs font-semibold text-status-maintenance">Maintenance Details</span>
-                <p className="text-xs text-foreground">
-                  {room.maintenanceReason || "Routine maintenance in progress."}
+              <div className="rounded-xl bg-status-maintenance/10 border border-status-maintenance/20 p-4 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-status-maintenance">
+                  <MaintenanceIcon className="size-4 shrink-0" aria-hidden="true" />
+                  <span>Maintenance Record</span>
+                </div>
+                <p className="text-xs text-foreground font-medium">
+                  {room.maintenanceReason || "Routine maintenance and inspection in progress."}
                 </p>
               </div>
             )}
 
+            {/* Open Problems */}
             {room.hasProblem && (
-              <div className="rounded-lg bg-status-problem/10 border border-status-problem/20 p-3 space-y-1 text-sm">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-status-problem">
+              <div className="rounded-xl bg-status-problem/10 border border-status-problem/20 p-4 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-status-problem">
                   <ProblemIcon className="size-4 shrink-0" aria-hidden="true" />
-                  <span>{room.openProblemsCount} Unresolved Problem(s)</span>
+                  <span>{room.openProblemsCount} Unresolved Issue(s)</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Staff should inspect this room before assigning to a new walk-in guest.
+                  Room requires front-desk or housekeeping inspection before assigning to a walk-in guest.
                 </p>
               </div>
             )}
-
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-              <span>Availability State</span>
-              <span className="font-medium text-foreground">
-                {room.isActive ? "Active (Available for booking)" : "Disabled (Archived/Inactive)"}
-              </span>
-            </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            {room.status === "OCCUPIED" && room.currentBooking && (
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5">
+            {room.status === "OCCUPIED" && room.currentBooking ? (
               <Link
                 href={`/bookings/${room.currentBooking.id}`}
                 className={buttonVariants({ variant: "default", size: "sm" })}
@@ -240,6 +291,8 @@ export function RoomCard({ room, userRole = "RECEPTIONIST", onEdit }: RoomCardPr
                 View Full Stay Details
                 <ChevronRightIcon className="size-3.5 ml-1.5" aria-hidden="true" />
               </Link>
+            ) : (
+              <div />
             )}
             <Button
               type="button"

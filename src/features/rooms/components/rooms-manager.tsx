@@ -182,20 +182,20 @@ export function RoomsManager({
 
       {/* Toolbar: Search, Type filter, Add Room */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border shadow-xs">
-        <div className="flex flex-1 items-center gap-2">
-          <div className="relative flex-1 max-w-xs">
+        <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="relative flex-1 max-w-sm">
             <SearchIcon className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
               placeholder="Search room number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9"
+              className="pl-9 h-9.5 bg-background"
             />
           </div>
 
-          <div className="w-44">
+          <div className="w-full sm:w-48">
             <select
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9.5 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             >
@@ -213,7 +213,7 @@ export function RoomsManager({
           <Button
             onClick={() => setIsAddOpen(true)}
             size="sm"
-            className="gap-1.5 shrink-0"
+            className="gap-1.5 shrink-0 shadow-xs"
           >
             <AddIcon className="size-4" aria-hidden="true" />
             <span>Add Rooms</span>
