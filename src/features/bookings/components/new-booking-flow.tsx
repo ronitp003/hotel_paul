@@ -24,6 +24,7 @@ import {
   SpinnerIcon,
   ProblemIcon,
   InfoIcon,
+  SearchIcon,
 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -332,10 +333,10 @@ export function NewBookingFlow({
         {/* Step Indicator Tabs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           {[
-            { step: 1, title: "1. Stay Dates" },
-            { step: 2, title: "2. Choose Room" },
-            { step: 3, title: "3. Guest Details" },
-            { step: 4, title: "4. Review & Payment" },
+            { step: 1, title: "Stay Dates" },
+            { step: 2, title: "Choose Room" },
+            { step: 3, title: "Guest Details" },
+            { step: 4, title: "Review & Payment" },
           ].map(({ step, title }) => {
             const isCompleted = currentStep > step;
             const isCurrent = currentStep === step;
@@ -355,8 +356,8 @@ export function NewBookingFlow({
                   isCurrent
                     ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
                     : isCompleted
-                    ? "bg-muted/60 text-foreground border-border hover:bg-muted cursor-pointer"
-                    : "bg-muted/20 text-muted-foreground border-transparent cursor-not-allowed opacity-60"
+                      ? "bg-muted/60 text-foreground border-border hover:bg-muted cursor-pointer"
+                      : "bg-muted/20 text-muted-foreground border-transparent cursor-not-allowed opacity-60"
                 )}
               >
                 <div
@@ -365,8 +366,8 @@ export function NewBookingFlow({
                     isCurrent
                       ? "bg-primary-foreground text-primary"
                       : isCompleted
-                      ? "bg-emerald-600 text-white"
-                      : "bg-muted text-muted-foreground"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-muted text-muted-foreground"
                   )}
                 >
                   {isCompleted ? <CheckIcon className="size-3.5" /> : step}
@@ -510,14 +511,15 @@ export function NewBookingFlow({
 
       {/* ───────── STEP 2: Choose Room ───────── */}
       {currentStep === 2 && (
-        <Card className="p-6 space-y-6">
+        <Card className="p-6 space-y-6 overflow-visible relative">
+          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
             <div>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <RoomIcon className="size-5 text-primary" />
                 Step 2: Select an Available Room
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Window: {formatIST(fromISTInput(checkInStr), "d MMM, h:mm a")} →{" "}
                 {formatIST(fromISTInput(checkOutStr), "d MMM, h:mm a")} ({currentStay.days} {currentStay.days === 1 ? "day" : "days"})
               </p>
@@ -527,67 +529,69 @@ export function NewBookingFlow({
               variant="outline"
               size="sm"
               onClick={() => setCurrentStep(1)}
-              className="text-xs self-start sm:self-auto"
+              className="text-xs self-start sm:self-auto h-8 px-3"
             >
               Change Dates
             </Button>
           </div>
 
-          {/* Filters Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 max-w-xs">
-              <Input
-                placeholder="Search room number..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="h-9 text-sm"
-              />
+          {/* Filters Row: Room Number Search + Room Type Dropdown + Availability Counts */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/30 p-3 rounded-lg border border-border/60">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1">
+              {/* Room Number Search */}
+              <div className="relative flex-1 sm:max-w-xs">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search room number..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="pl-9 h-9 text-sm bg-background"
+                />
+              </div>
+
+              {/* Room Type Dropdown */}
+              <div className="w-full sm:w-56">
+                <select
+                  id="room-type-filter"
+                  aria-label="Filter by Room Type"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground font-medium cursor-pointer"
+                >
+                  <option value="ALL">All Room Types ({rooms.length})</option>
+                  {roomTypes.map((type) => {
+                    const count = rooms.filter((r) => r.typeId === type.id).length;
+                    return (
+                      <option key={type.id} value={type.id}>
+                        {type.name} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-              <button
-                type="button"
-                onClick={() => setTypeFilter("ALL")}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
-                  typeFilter === "ALL"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-muted-foreground border-border hover:bg-muted"
-                )}
+            {/* Availability Stats */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 text-xs shrink-0 px-1">
+              <span className="text-muted-foreground">
+                Showing <strong className="text-foreground">{filteredRooms.length}</strong> of {rooms.length} rooms
+              </span>
+              <Badge
+                variant="outline"
+                className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 font-semibold text-xs"
               >
-                All ({rooms.length})
-              </button>
-              {roomTypes.map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => setTypeFilter(type.id)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors whitespace-nowrap",
-                    typeFilter === type.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-muted-foreground border-border hover:bg-muted"
-                  )}
-                >
-                  {type.name}
-                </button>
-              ))}
+                {availableCount} Available
+              </Badge>
             </div>
           </div>
 
-          {/* Rooms Grid */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-              <span>Showing {filteredRooms.length} room(s)</span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                {availableCount} Available
-              </span>
-            </div>
-
+          {/* Rooms Grid with bottom clearance so room cards are never obscured by sticky footer */}
+          <div className="space-y-3 pb-8">
             {filteredRooms.length === 0 ? (
               <div className="p-8 text-center rounded-xl border border-dashed border-border text-muted-foreground space-y-2">
                 <RoomIcon className="size-8 mx-auto text-muted-foreground/50" />
                 <p className="text-sm font-medium">No rooms match your filter criteria.</p>
+                <p className="text-xs text-muted-foreground">Try clearing your search or switching back to &ldquo;All Room Types&rdquo;.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -609,20 +613,27 @@ export function NewBookingFlow({
                           ? "cursor-pointer hover:border-primary/50 hover:shadow-xs bg-card"
                           : "opacity-60 bg-muted/40 cursor-not-allowed border-border/80",
                         isSelected && isAvail
-                          ? "border-primary ring-2 ring-primary/30 bg-primary/5 shadow-xs"
+                          ? "border-primary ring-2 ring-primary/25 bg-teal-50/70 dark:bg-teal-950/30 shadow-sm"
                           : ""
                       )}
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {/* Top info */}
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
                               Room
                             </span>
-                            <span className="text-2xl font-bold font-mono tracking-tight text-foreground">
-                              {room.number}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl font-bold font-mono tracking-tight text-foreground">
+                                {room.number}
+                              </span>
+                              {isSelected && isAvail && (
+                                <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold py-0 px-1.5 h-4.5">
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex flex-col items-end gap-1">
@@ -685,7 +696,12 @@ export function NewBookingFlow({
                             type="button"
                             variant={isSelected ? "default" : "outline"}
                             size="sm"
-                            className="w-full font-semibold text-xs h-8"
+                            className={cn(
+                              "w-full font-semibold text-xs h-8.5 transition-colors",
+                              isSelected
+                                ? "bg-primary text-primary-foreground shadow-xs"
+                                : "border-border hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                            )}
                           >
                             {isSelected ? (
                               <>
@@ -697,7 +713,7 @@ export function NewBookingFlow({
                             )}
                           </Button>
                         ) : (
-                          <span className="text-[11px] text-muted-foreground block text-center">
+                          <span className="text-[11px] text-muted-foreground block text-center py-1">
                             Not Available
                           </span>
                         )}
@@ -709,31 +725,100 @@ export function NewBookingFlow({
             )}
           </div>
 
-          {/* Footer Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCurrentStep(1)}
-            >
-              ← Back to Dates
-            </Button>
+          {/* ───────── STICKY BOOKING FOOTER ───────── */}
+          <div className="sticky bottom-0 z-20 -mx-6 -mb-6 p-4 sm:px-6 sm:py-4 bg-card/95 backdrop-blur-md border-t border-border rounded-b-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Left Action: Back to Dates (Desktop & Tablet) */}
+              <div className="hidden sm:block">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(1)}
+                  className="h-10 px-4 text-xs sm:text-sm font-medium border-border hover:bg-muted shrink-0"
+                >
+                  ← Back to Dates
+                </Button>
+              </div>
 
-            <Button
-              type="button"
-              disabled={!selectedRoomId}
-              onClick={() => {
-                if (selectedRoomId) {
-                  setCurrentStep(3);
-                } else {
-                  toast.error("Please select a room to proceed.");
-                }
-              }}
-              className="h-10 px-6 font-semibold"
-            >
-              Next: Guest Information
-              <ChevronRightIcon className="size-4 ml-1.5" />
-            </Button>
+              {/* Center: Selected Room Summary & Live Price */}
+              <div className="flex-1 sm:px-4">
+                {selectedRoom && selectedRoom.isAvailable ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-center gap-2 sm:gap-6 text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-2.5">
+                      <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground font-mono font-bold text-sm shadow-xs">
+                        {selectedRoom.number}
+                      </span>
+                      <div className="text-left">
+                        <div className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
+                          <span>Room {selectedRoom.number}</span>
+                          <span className="text-muted-foreground font-normal">•</span>
+                          <span className="text-muted-foreground font-medium">{selectedRoom.typeName}</span>
+                        </div>
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          Selected for check-in
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="hidden md:block h-8 w-px bg-border/80" />
+
+                    <div className="flex items-center justify-center sm:justify-start gap-3 sm:gap-4 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Duration</span>
+                        <strong className="text-foreground font-semibold">
+                          {currentStay.days} {currentStay.days === 1 ? "Day" : "Days"}
+                        </strong>
+                      </div>
+                      <div className="h-5 w-px bg-border/80" />
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Est. Total</span>
+                        <span className="text-sm sm:text-base font-bold text-primary">
+                          {formatINR(selectedRoom.pricePerNight * currentStay.days)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-xs sm:text-sm py-1">
+                    <InfoIcon className="size-4 shrink-0 text-muted-foreground/80" />
+                    <span>Please select an available room from the list to continue.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons: Mobile & Desktop */}
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(1)}
+                  className="sm:hidden flex-1 h-10 px-3 text-xs font-medium border-border"
+                >
+                  ← Dates
+                </Button>
+
+                <Button
+                  type="button"
+                  disabled={!selectedRoomId || !selectedRoom?.isAvailable}
+                  onClick={() => {
+                    if (selectedRoomId && selectedRoom?.isAvailable) {
+                      setCurrentStep(3);
+                    } else {
+                      toast.error("Please select an available room to proceed.");
+                    }
+                  }}
+                  className={cn(
+                    "flex-1 sm:flex-initial h-10 px-5 sm:px-6 font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-1.5",
+                    selectedRoomId && selectedRoom?.isAvailable
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  <span>Next: Guest Information</span>
+                  <ChevronRightIcon className="size-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </Card>
       )}
@@ -1301,7 +1386,7 @@ export function NewBookingFlow({
 
       {/* ───────── SUCCESS CONFIRMATION MODAL ───────── */}
       {createdBooking && (
-        <Dialog open={true} onOpenChange={() => {}}>
+        <Dialog open={true} onOpenChange={() => { }}>
           <DialogContent className="sm:max-w-md p-6">
             <DialogHeader className="text-center sm:text-center space-y-2">
               <div className="size-12 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center mx-auto">
