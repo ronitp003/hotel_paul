@@ -31,6 +31,7 @@ import {
   ProblemIcon,
   InfoIcon,
   SearchIcon,
+  CircleAlertIcon,
 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +99,7 @@ export function NewBookingFlow({
   const [checkOutStr, setCheckOutStr] = useState<string>(() =>
     toISTInputString(defaultCheckOut)
   );
+  const [activePreset, setActivePreset] = useState<number | null>(24);
 
   // Calculated stay days
   const currentStay: StayCalculationResult = (() => {
@@ -121,6 +123,14 @@ export function NewBookingFlow({
   })();
 
   // ───────── Step 2: Available Rooms ─────────
+  type RoomStatusFilter =
+    | "AVAILABLE"
+    | "OCCUPIED"
+    | "RESERVED"
+    | "MAINTENANCE"
+    | "ALL";
+  const [statusFilter, setStatusFilter] =
+    useState<RoomStatusFilter>("AVAILABLE");
   const [rooms, setRooms] = useState<AvailableRoomResult[]>(initialRooms);
   const [selectedRoomId, setSelectedRoomId] = useState<string>(
     preselectedRoomId || ""
@@ -144,7 +154,7 @@ export function NewBookingFlow({
   ]);
 
   const [bookingSource, setBookingSource] = useState<
-    "WALK_IN" | "PHONE" | "ONLINE" | "CORPORATE" | "OTHER"
+    "WALK_IN" | "PHONE" | "REFERRAL"
   >("WALK_IN");
   const [arrivingFrom, setArrivingFrom] = useState("");
   const [purposeOfVisit, setPurposeOfVisit] = useState("");
@@ -154,10 +164,43 @@ export function NewBookingFlow({
   const [companyGstin, setCompanyGstin] = useState("");
   const [companyAddress, setCompanyAddress] = useState("");
 
+  // Step-specific validation error states
+  const [step1Error, setStep1Error] = useState<string | null>(null);
+
+  interface Step3Errors {
+    primaryName?: string;
+    primaryPhone?: string;
+    primaryFatherName?: string;
+    primaryAge?: string;
+    primarySex?: string;
+    occupants?: Record<
+      number,
+      {
+        name?: string;
+        fatherName?: string;
+        age?: string;
+        sex?: string;
+        mobile?: string;
+      }
+    >;
+    arrivingFrom?: string;
+    purposeOfVisit?: string;
+    companyName?: string;
+    corporateGstin?: string;
+    companyAddress?: string;
+    banner?: string;
+  }
+  const [step3Errors, setStep3Errors] = useState<Step3Errors>({});
+
+  // Pre-confirmation verification modal state
+  const [verifyAction, setVerifyAction] = useState<
+    "RESERVE" | "CHECK_IN" | null
+  >(null);
+
   // ───────── Step 4: Financials ─────────
   const [customRate, setCustomRate] = useState<string>("");
   const [discountStr, setDiscountStr] = useState<string>("0");
-  const [advanceAmountStr, setAdvanceAmountStr] = useState<string>("0");
+  const [advanceAmountStr, setAdvanceAmountStr] = useState<string>("");
   const [advanceMode, setAdvanceMode] = useState<
     "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
   >("CASH");
@@ -201,9 +244,12 @@ export function NewBookingFlow({
       const end = fromISTInput(checkOutStr);
 
       if (end.getTime() <= start.getTime()) {
-        toast.error("Check-out time must be strictly after check-in time.");
+        const msg = "Check-out time must be strictly after check-in time.";
+        setStep1Error(msg);
+        toast.error(msg);
         return;
       }
+      setStep1Error(null);
 
       const res = await findAvailableRoomsAction(
         start.toISOString(),
@@ -229,13 +275,49 @@ export function NewBookingFlow({
     }
   };
 
+  // Split dates for Step 1
+  const checkInDate = checkInStr ? checkInStr.slice(0, 10) : "";
+  const checkInTime = checkInStr ? checkInStr.slice(11, 16) : "12:00";
+  const checkOutDate = checkOutStr ? checkOutStr.slice(0, 10) : "";
+  const checkOutTime = checkOutStr ? checkOutStr.slice(11, 16) : "12:00";
+
+  const handleCheckInDateChange = (newDate: string) => {
+    setActivePreset(null);
+    setStep1Error(null);
+    setCheckInStr(`${newDate}T${checkInTime || "12:00"}`);
+  };
+
+  const handleCheckInTimeChange = (newTime: string) => {
+    setActivePreset(null);
+    setStep1Error(null);
+    setCheckInStr(
+      `${checkInDate || toISTInputString(new Date()).slice(0, 10)}T${newTime}`
+    );
+  };
+
+  const handleCheckOutDateChange = (newDate: string) => {
+    setActivePreset(null);
+    setStep1Error(null);
+    setCheckOutStr(`${newDate}T${checkOutTime || "12:00"}`);
+  };
+
+  const handleCheckOutTimeChange = (newTime: string) => {
+    setActivePreset(null);
+    setStep1Error(null);
+    setCheckOutStr(
+      `${checkOutDate || toISTInputString(new Date()).slice(0, 10)}T${newTime}`
+    );
+  };
+
   // Preset dates helper
   const handleApplyPreset = (hoursOffset: number) => {
     const start = new Date();
     start.setMinutes(0, 0, 0); // clean hour
     const end = new Date(start.getTime() + hoursOffset * 60 * 60 * 1000);
+    setStep1Error(null);
     setCheckInStr(toISTInputString(start));
     setCheckOutStr(toISTInputString(end));
+    setActivePreset(hoursOffset);
   };
 
   // Guest repeater helpers
@@ -256,6 +338,16 @@ export function NewBookingFlow({
 
   const handleRemoveGuest = (index: number) => {
     setGuests((prev) => prev.filter((_, i) => i !== index));
+    setStep3Errors((prev) => {
+      if (!prev.occupants) return prev;
+      const occ = { ...prev.occupants };
+      delete occ[index];
+      return {
+        ...prev,
+        occupants: Object.keys(occ).length > 0 ? occ : undefined,
+        banner: undefined,
+      };
+    });
   };
 
   const handleUpdateGuest = (
@@ -266,6 +358,246 @@ export function NewBookingFlow({
     setGuests((prev) =>
       prev.map((g, i) => (i === index ? { ...g, [field]: value } : g))
     );
+
+    // Clear specific field error when edited
+    if (index === 0) {
+      if (field === "name" && step3Errors.primaryName) {
+        setStep3Errors((prev) => ({
+          ...prev,
+          primaryName: undefined,
+          banner: undefined,
+        }));
+      }
+      if (field === "mobile" && step3Errors.primaryPhone) {
+        setStep3Errors((prev) => ({
+          ...prev,
+          primaryPhone: undefined,
+          banner: undefined,
+        }));
+      }
+      if (field === "fatherName" && step3Errors.primaryFatherName) {
+        setStep3Errors((prev) => ({
+          ...prev,
+          primaryFatherName: undefined,
+          banner: undefined,
+        }));
+      }
+      if (field === "age" && step3Errors.primaryAge) {
+        setStep3Errors((prev) => ({
+          ...prev,
+          primaryAge: undefined,
+          banner: undefined,
+        }));
+      }
+      if (field === "sex" && step3Errors.primarySex) {
+        setStep3Errors((prev) => ({
+          ...prev,
+          primarySex: undefined,
+          banner: undefined,
+        }));
+      }
+    } else {
+      if (step3Errors.occupants?.[index]) {
+        setStep3Errors((prev) => {
+          const occ = { ...prev.occupants };
+          if (occ[index]) {
+            const updated = { ...occ[index] };
+            if (field === "name") delete updated.name;
+            if (field === "fatherName") delete updated.fatherName;
+            if (field === "mobile") delete updated.mobile;
+            if (field === "age") delete updated.age;
+            if (field === "sex") delete updated.sex;
+            if (Object.keys(updated).length === 0) {
+              delete occ[index];
+            } else {
+              occ[index] = updated;
+            }
+          }
+          return {
+            ...prev,
+            occupants: Object.keys(occ).length > 0 ? occ : undefined,
+            banner: undefined,
+          };
+        });
+      }
+    }
+  };
+
+  // Step 3 Validation Function
+  const validateStep3 = (): boolean => {
+    const errors: Step3Errors = {};
+    const occErrorsObj: Record<
+      number,
+      {
+        name?: string;
+        fatherName?: string;
+        age?: string;
+        sex?: string;
+        mobile?: string;
+      }
+    > = {};
+
+    const cleanDigits = (val: string) => val.replace(/\D/g, "");
+
+    // 1. Primary Guest Name (Mandatory)
+    if (!guests[0]?.name.trim()) {
+      errors.primaryName = "Primary guest full name is required";
+    } else if (guests[0].name.trim().length < 2) {
+      errors.primaryName = "Full name must be at least 2 characters";
+    }
+
+    // 2. Primary Guest Mobile (Mandatory)
+    if (!guests[0]?.mobile?.trim()) {
+      errors.primaryPhone = "Mobile number is required";
+    } else {
+      const digits = cleanDigits(guests[0].mobile);
+      if (digits.length < 10 || digits.length > 15) {
+        errors.primaryPhone = "Please enter a valid 10-digit mobile number";
+      }
+    }
+
+    // 3. Primary Guest Father / Husband Name (Mandatory)
+    if (!guests[0]?.fatherName?.trim()) {
+      errors.primaryFatherName = "Father / Husband name is required";
+    } else if (guests[0].fatherName.trim().length < 2) {
+      errors.primaryFatherName = "Name must be at least 2 characters";
+    }
+
+    // 4. Primary Guest Age (Mandatory)
+    if (!guests[0]?.age || guests[0].age.trim() === "") {
+      errors.primaryAge = "Age is required";
+    } else {
+      const ageNum = Number(guests[0].age);
+      if (isNaN(ageNum) || ageNum < 1 || ageNum > 125) {
+        errors.primaryAge = "Age must be between 1 and 125";
+      }
+    }
+
+    // 5. Primary Guest Gender (Mandatory)
+    if (!guests[0]?.sex) {
+      errors.primarySex = "Gender is required";
+    }
+
+    // 6. Additional Occupants (if any added, all fields are Mandatory)
+    guests.slice(1).forEach((occ, idx) => {
+      const actualIdx = idx + 1;
+      const occErr: {
+        name?: string;
+        fatherName?: string;
+        age?: string;
+        sex?: string;
+        mobile?: string;
+      } = {};
+
+      if (!occ.name.trim()) {
+        occErr.name = "Occupant full name is required";
+      } else if (occ.name.trim().length < 2) {
+        occErr.name = "Full name must be at least 2 characters";
+      }
+
+      if (!occ.fatherName?.trim()) {
+        occErr.fatherName = "Father / Husband name is required";
+      } else if (occ.fatherName.trim().length < 2) {
+        occErr.fatherName = "Name must be at least 2 characters";
+      }
+
+      if (!occ.age || occ.age.trim() === "") {
+        occErr.age = "Age is required";
+      } else {
+        const ageNum = Number(occ.age);
+        if (isNaN(ageNum) || ageNum < 0 || ageNum > 125) {
+          occErr.age = "Age must be between 0 and 125";
+        }
+      }
+
+      if (!occ.sex) {
+        occErr.sex = "Gender is required";
+      }
+
+      if (!occ.mobile?.trim()) {
+        occErr.mobile = "Mobile number is required";
+      } else {
+        const digits = cleanDigits(occ.mobile);
+        if (digits.length < 10 || digits.length > 15) {
+          occErr.mobile = "Please enter a valid 10-digit mobile number";
+        }
+      }
+
+      if (Object.keys(occErr).length > 0) {
+        occErrorsObj[actualIdx] = occErr;
+      }
+    });
+
+    if (Object.keys(occErrorsObj).length > 0) {
+      errors.occupants = occErrorsObj;
+    }
+
+    // 7. Arriving From (Mandatory)
+    if (!arrivingFrom.trim()) {
+      errors.arrivingFrom = "Arriving from is required";
+    }
+
+    // 8. Purpose of Visit (Mandatory)
+    if (!purposeOfVisit.trim()) {
+      errors.purposeOfVisit = "Purpose of visit is required";
+    }
+
+    // 9. Corporate Details (Mandatory when enabled)
+    if (showCorporate) {
+      if (!companyName.trim()) {
+        errors.companyName = "Company name is required";
+      }
+      if (!companyGstin.trim()) {
+        errors.corporateGstin = "Company GSTIN is required";
+      } else {
+        const gstinRegex =
+          /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i;
+        if (!gstinRegex.test(companyGstin.trim())) {
+          errors.corporateGstin =
+            "Invalid GSTIN format (e.g. 22AAAAA0000A1Z5)";
+        }
+      }
+      if (!companyAddress.trim()) {
+        errors.companyAddress = "Company address is required";
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      errors.banner =
+        "Please fill in all mandatory guest and visit details marked with * before proceeding.";
+      setStep3Errors(errors);
+      return false;
+    }
+
+    setStep3Errors({});
+    return true;
+  };
+
+  // Open Verification Modal from Step 4
+  const handleOpenVerifyModal = (action: "RESERVE" | "CHECK_IN") => {
+    if (!selectedRoomId || !selectedRoom?.isAvailable) {
+      toast.error("Please select an available room.");
+      setCurrentStep(2);
+      return;
+    }
+
+    if (!validateStep3()) {
+      toast.error("Please complete all required guest details.");
+      setCurrentStep(3);
+      return;
+    }
+
+    if (advanceAmount > 0 && !advanceMode) {
+      toast.error("Please select a payment mode for the advance payment.");
+      return;
+    }
+
+    if (discount > roomCharges) {
+      toast.error("Discount cannot exceed total room charges.");
+      return;
+    }
+
+    setVerifyAction(action);
   };
 
   // Submit Booking / Check-in
@@ -323,6 +655,7 @@ export function NewBookingFlow({
               : `Reservation confirmed! Reference: ${res.data.reference}`
           );
 
+          setVerifyAction(null);
           setCreatedBooking({
             reference: res.data.reference,
             status: res.data.status,
@@ -341,6 +674,53 @@ export function NewBookingFlow({
     });
   };
 
+  // Counts by status
+  const availableRoomsCount = rooms.filter((r) => r.isAvailable).length;
+  const occupiedRoomsCount = rooms.filter(
+    (r) => !r.isAvailable && r.unavailableType === "BOOKED"
+  ).length;
+  const reservedRoomsCount = rooms.filter(
+    (r) => !r.isAvailable && r.unavailableType === "RESERVED"
+  ).length;
+  const maintenanceRoomsCount = rooms.filter(
+    (r) => !r.isAvailable && r.unavailableType === "MAINTENANCE"
+  ).length;
+
+  const statusFilterConfig: Record<
+    RoomStatusFilter,
+    { label: string; count: number; badgeClass: string }
+  > = {
+    AVAILABLE: {
+      label: "Available",
+      count: availableRoomsCount,
+      badgeClass:
+        "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
+    },
+    OCCUPIED: {
+      label: "Occupied",
+      count: occupiedRoomsCount,
+      badgeClass:
+        "bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+    },
+    RESERVED: {
+      label: "Reserved",
+      count: reservedRoomsCount,
+      badgeClass:
+        "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
+    },
+    MAINTENANCE: {
+      label: "Maintenance",
+      count: maintenanceRoomsCount,
+      badgeClass:
+        "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
+    },
+    ALL: {
+      label: "All Statuses",
+      count: rooms.length,
+      badgeClass: "bg-muted text-muted-foreground border-border/50",
+    },
+  };
+
   // Filtered rooms
   const filteredRooms = rooms.filter((r) => {
     if (typeFilter !== "ALL" && r.typeId !== typeFilter) return false;
@@ -349,6 +729,27 @@ export function NewBookingFlow({
       !r.number.toLowerCase().includes(searchFilter.toLowerCase().trim())
     ) {
       return false;
+    }
+    if (statusFilter !== "ALL") {
+      if (statusFilter === "AVAILABLE" && !r.isAvailable) return false;
+      if (
+        statusFilter === "OCCUPIED" &&
+        (r.isAvailable || r.unavailableType !== "BOOKED")
+      ) {
+        return false;
+      }
+      if (
+        statusFilter === "RESERVED" &&
+        (r.isAvailable || r.unavailableType !== "RESERVED")
+      ) {
+        return false;
+      }
+      if (
+        statusFilter === "MAINTENANCE" &&
+        (r.isAvailable || r.unavailableType !== "MAINTENANCE")
+      ) {
+        return false;
+      }
     }
     return true;
   });
@@ -408,14 +809,29 @@ export function NewBookingFlow({
                 key={step}
                 type="button"
                 onClick={() => {
+                  if (step === 4) {
+                    if (!validateStep3()) {
+                      toast.error(
+                        "Please complete all mandatory guest details before proceeding."
+                      );
+                      return;
+                    }
+                  }
                   if (
                     step < currentStep ||
-                    (step === 2 && checkInStr && checkOutStr)
+                    (step === 2 && checkInStr && checkOutStr) ||
+                    (step === 3 && selectedRoomId) ||
+                    (step === 4 && selectedRoomId && validateStep3())
                   ) {
                     setCurrentStep(step);
                   }
                 }}
-                disabled={step > currentStep && (step !== 2 || !selectedRoomId)}
+                disabled={
+                  step > currentStep &&
+                  ((step === 2 && (!checkInStr || !checkOutStr)) ||
+                    (step === 3 && !selectedRoomId) ||
+                    (step === 4 && (!selectedRoomId || currentStep < 3)))
+                }
                 className={cn(
                   "flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all",
                   isCurrent
@@ -463,38 +879,96 @@ export function NewBookingFlow({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="checkin-input" className="text-sm font-medium">
-                Check-in Date & Time (IST) *
-              </Label>
-              <Input
-                id="checkin-input"
-                type="datetime-local"
-                value={checkInStr}
-                onChange={(e) => setCheckInStr(e.target.value)}
-                className="font-mono text-sm h-11"
-              />
-              <span className="text-xs text-muted-foreground">
-                {checkInStr ? formatISTDateTime(fromISTInput(checkInStr)) : ""}
-              </span>
+            {/* Check-In Section: Separate Date & Time */}
+            <div className="p-4 rounded-xl border border-border/80 bg-card/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <ClockIcon className="size-4 text-primary" />
+                  Check-in (IST) *
+                </span>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {checkInStr ? formatISTDateTime(fromISTInput(checkInStr)) : ""}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="checkin-date"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Check-in Date
+                  </Label>
+                  <Input
+                    id="checkin-date"
+                    type="date"
+                    value={checkInDate}
+                    onChange={(e) => handleCheckInDateChange(e.target.value)}
+                    className="font-mono text-sm h-10 bg-background"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="checkin-time"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Check-in Time
+                  </Label>
+                  <Input
+                    id="checkin-time"
+                    type="time"
+                    value={checkInTime}
+                    onChange={(e) => handleCheckInTimeChange(e.target.value)}
+                    className="font-mono text-sm h-10 bg-background"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="checkout-input" className="text-sm font-medium">
-                Check-out Date & Time (IST) *
-              </Label>
-              <Input
-                id="checkout-input"
-                type="datetime-local"
-                value={checkOutStr}
-                onChange={(e) => setCheckOutStr(e.target.value)}
-                className="font-mono text-sm h-11"
-              />
-              <span className="text-xs text-muted-foreground">
-                {checkOutStr
-                  ? formatISTDateTime(fromISTInput(checkOutStr))
-                  : ""}
-              </span>
+            {/* Check-Out Section: Separate Date & Time */}
+            <div className="p-4 rounded-xl border border-border/80 bg-card/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <ClockIcon className="size-4 text-primary" />
+                  Check-out (IST) *
+                </span>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {checkOutStr
+                    ? formatISTDateTime(fromISTInput(checkOutStr))
+                    : ""}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="checkout-date"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Check-out Date
+                  </Label>
+                  <Input
+                    id="checkout-date"
+                    type="date"
+                    value={checkOutDate}
+                    onChange={(e) => handleCheckOutDateChange(e.target.value)}
+                    className="font-mono text-sm h-10 bg-background"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="checkout-time"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Check-out Time
+                  </Label>
+                  <Input
+                    id="checkout-time"
+                    type="time"
+                    value={checkOutTime}
+                    onChange={(e) => handleCheckOutTimeChange(e.target.value)}
+                    className="font-mono text-sm h-10 bg-background"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -503,36 +977,44 @@ export function NewBookingFlow({
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Quick Stay Presets
             </span>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleApplyPreset(24)}
-                className="text-xs"
-              >
-                1 Night (24 Hours)
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleApplyPreset(48)}
-                className="text-xs"
-              >
-                2 Nights (48 Hours)
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleApplyPreset(72)}
-                className="text-xs"
-              >
-                3 Nights (72 Hours)
-              </Button>
+            <div className="flex flex-wrap gap-2.5">
+              {[
+                { hours: 24, label: "1 Night (24 Hours)" },
+                { hours: 48, label: "2 Nights (48 Hours)" },
+                { hours: 72, label: "3 Nights (72 Hours)" },
+              ].map(({ hours, label }) => {
+                const isSelected = activePreset === hours;
+                return (
+                  <Button
+                    key={hours}
+                    type="button"
+                    variant={isSelected ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleApplyPreset(hours)}
+                    className={cn(
+                      "text-xs h-9 px-3.5 transition-all duration-200 cursor-pointer shadow-xs",
+                      isSelected
+                        ? "bg-primary text-primary-foreground font-semibold shadow-sm ring-2 ring-primary/30"
+                        : "hover:bg-primary/10 hover:border-primary/50 hover:text-foreground"
+                    )}
+                  >
+                    {isSelected && (
+                      <CheckIcon className="size-3.5 mr-1.5 stroke-[2.5]" />
+                    )}
+                    {label}
+                  </Button>
+                );
+              })}
             </div>
           </div>
+
+          {/* Inline Step 1 Error */}
+          {step1Error && (
+            <div className="p-3.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium flex items-center gap-2">
+              <CircleAlertIcon className="size-4 shrink-0 text-destructive" />
+              <span>{step1Error}</span>
+            </div>
+          )}
 
           {/* Live Stay Calculation Preview */}
           <div className="p-4 rounded-xl bg-muted/40 border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -742,6 +1224,94 @@ export function NewBookingFlow({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+
+              {/* Room Status Dropdown */}
+              <div className="w-full sm:w-52">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        id="room-status-filter"
+                        variant="outline"
+                        aria-label="Filter by Room Status"
+                        className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-xs hover:bg-muted/60 hover:border-border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="truncate text-sm font-medium">
+                            {statusFilterConfig[statusFilter].label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[10px] font-semibold px-1.5 py-0 rounded-full border",
+                              statusFilterConfig[statusFilter].badgeClass
+                            )}
+                          >
+                            {statusFilterConfig[statusFilter].count}
+                          </Badge>
+                          <ChevronDownIcon className="size-4 text-muted-foreground shrink-0 transition-transform duration-200" />
+                        </div>
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent
+                    align="start"
+                    sideOffset={6}
+                    className="w-(--anchor-width) min-w-[220px] p-1.5 shadow-lg border border-border bg-popover z-50 rounded-lg"
+                  >
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Filter by Room Status
+                      </DropdownMenuLabel>
+                      {(
+                        [
+                          "AVAILABLE",
+                          "OCCUPIED",
+                          "RESERVED",
+                          "MAINTENANCE",
+                          "ALL",
+                        ] as RoomStatusFilter[]
+                      ).map((key) => {
+                        const item = statusFilterConfig[key];
+                        const isSelected = statusFilter === key;
+                        return (
+                          <DropdownMenuItem
+                            key={key}
+                            onClick={() => setStatusFilter(key)}
+                            className={cn(
+                              "flex items-center justify-between gap-2 px-2.5 py-2 cursor-pointer text-sm rounded-md transition-colors",
+                              isSelected
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-foreground hover:bg-muted"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="size-4 flex items-center justify-center shrink-0">
+                                {isSelected && (
+                                  <CheckIcon className="size-3.5 text-primary stroke-[2.5]" />
+                                )}
+                              </div>
+                              <span className="truncate">{item.label}</span>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[11px] px-1.5 py-0 shrink-0 font-medium",
+                                item.badgeClass
+                              )}
+                            >
+                              {item.count}
+                            </Badge>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             {/* Availability Stats */}
@@ -827,14 +1397,22 @@ export function NewBookingFlow({
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
                                   : room.unavailableType === "RESERVED"
                                     ? "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
-                                    : "bg-stone-100 text-stone-700 border-stone-300 dark:bg-stone-900 dark:text-stone-300"
+                                    : room.unavailableType === "BOOKED"
+                                      ? "bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
+                                      : room.unavailableType === "MAINTENANCE"
+                                        ? "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800"
+                                        : "bg-stone-100 text-stone-700 border-stone-300 dark:bg-stone-900 dark:text-stone-300"
                               )}
                             >
                               {isAvail
                                 ? "Available"
                                 : room.unavailableType === "RESERVED"
                                   ? "Reserved"
-                                  : room.unavailableType || "Unavailable"}
+                                  : room.unavailableType === "BOOKED"
+                                    ? "Occupied"
+                                    : room.unavailableType === "MAINTENANCE"
+                                      ? "Maintenance"
+                                      : room.unavailableType || "Unavailable"}
                             </Badge>
                             <span className="text-xs text-muted-foreground font-medium">
                               {room.typeName}
@@ -1086,9 +1664,18 @@ export function NewBookingFlow({
                     onChange={(e) =>
                       handleUpdateGuest(0, "name", e.target.value)
                     }
-                    className="h-9"
+                    className={cn(
+                      "h-9",
+                      step3Errors.primaryName &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                     autoFocus
                   />
+                  {step3Errors.primaryName && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.primaryName}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -1096,7 +1683,7 @@ export function NewBookingFlow({
                     htmlFor="primary-phone"
                     className="text-xs font-semibold"
                   >
-                    Mobile Number
+                    Mobile Number *
                   </Label>
                   <Input
                     id="primary-phone"
@@ -1105,8 +1692,17 @@ export function NewBookingFlow({
                     onChange={(e) =>
                       handleUpdateGuest(0, "mobile", e.target.value)
                     }
-                    className="h-9 font-mono"
+                    className={cn(
+                      "h-9 font-mono",
+                      step3Errors.primaryPhone &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                   />
+                  {step3Errors.primaryPhone && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.primaryPhone}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -1114,7 +1710,7 @@ export function NewBookingFlow({
                     htmlFor="primary-father"
                     className="text-xs font-semibold"
                   >
-                    Father / Husband Name
+                    Father / Husband Name *
                   </Label>
                   <Input
                     id="primary-father"
@@ -1123,8 +1719,17 @@ export function NewBookingFlow({
                     onChange={(e) =>
                       handleUpdateGuest(0, "fatherName", e.target.value)
                     }
-                    className="h-9"
+                    className={cn(
+                      "h-9",
+                      step3Errors.primaryFatherName &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                   />
+                  {step3Errors.primaryFatherName && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.primaryFatherName}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -1132,20 +1737,29 @@ export function NewBookingFlow({
                     htmlFor="primary-age"
                     className="text-xs font-semibold"
                   >
-                    Age
+                    Age *
                   </Label>
                   <Input
                     id="primary-age"
                     type="number"
-                    min={0}
+                    min={1}
                     max={120}
                     placeholder="Age"
                     value={guests[0].age}
                     onChange={(e) =>
                       handleUpdateGuest(0, "age", e.target.value)
                     }
-                    className="h-9 font-mono"
+                    className={cn(
+                      "h-9 font-mono",
+                      step3Errors.primaryAge &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                   />
+                  {step3Errors.primaryAge && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.primaryAge}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -1153,7 +1767,7 @@ export function NewBookingFlow({
                     htmlFor="primary-sex"
                     className="text-xs font-semibold"
                   >
-                    Gender
+                    Gender *
                   </Label>
                   <select
                     id="primary-sex"
@@ -1165,12 +1779,21 @@ export function NewBookingFlow({
                         e.target.value as "MALE" | "FEMALE" | "OTHER"
                       )
                     }
-                    className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className={cn(
+                      "flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                      step3Errors.primarySex &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                   >
                     <option value="MALE">Male</option>
                     <option value="FEMALE">Female</option>
                     <option value="OTHER">Other</option>
                   </select>
+                  {step3Errors.primarySex && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.primarySex}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1196,82 +1819,196 @@ export function NewBookingFlow({
 
             {guests.slice(1).map((guest, idx) => {
               const actualIdx = idx + 1;
+              const occErr = step3Errors.occupants?.[actualIdx];
+
               return (
                 <div
                   key={guest.id}
-                  className="p-4 rounded-xl border border-border bg-muted/20 space-y-3 relative"
+                  className="p-4 sm:p-5 rounded-xl border border-border bg-card space-y-4 relative shadow-2xs"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Guest #{actualIdx + 1}
-                    </span>
+                  <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs font-semibold px-2 py-0.5"
+                      >
+                        Occupant #{actualIdx + 1}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Accompanying Guest
+                      </span>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveGuest(actualIdx)}
-                      className="text-destructive hover:bg-destructive/10 h-7 text-xs px-2"
+                      className="text-destructive hover:bg-destructive/10 h-7 text-xs px-2.5"
                     >
                       <DeleteIcon className="size-3.5 mr-1" />
-                      Remove
+                      Remove Occupant
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Full Name</Label>
-                      <Input
-                        placeholder="Name"
-                        value={guest.name}
-                        onChange={(e) =>
-                          handleUpdateGuest(actualIdx, "name", e.target.value)
-                        }
-                        className="h-8 text-sm"
-                      />
+                  {/* 2-Row Spacious Layout */}
+                  <div className="space-y-3.5">
+                    {/* Row 1: Full Name and Father/Husband Name */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor={`occ-name-${actualIdx}`}
+                          className="text-xs font-semibold"
+                        >
+                          Full Name *
+                        </Label>
+                        <Input
+                          id={`occ-name-${actualIdx}`}
+                          placeholder="Occupant's full name"
+                          value={guest.name}
+                          onChange={(e) =>
+                            handleUpdateGuest(actualIdx, "name", e.target.value)
+                          }
+                          className={cn(
+                            "h-9 text-sm",
+                            occErr?.name &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
+                        />
+                        {occErr?.name && (
+                          <p className="text-[11px] text-destructive font-medium">
+                            {occErr.name}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor={`occ-father-${actualIdx}`}
+                          className="text-xs font-semibold"
+                        >
+                          Father / Husband Name *
+                        </Label>
+                        <Input
+                          id={`occ-father-${actualIdx}`}
+                          placeholder="Father or husband name"
+                          value={guest.fatherName}
+                          onChange={(e) =>
+                            handleUpdateGuest(
+                              actualIdx,
+                              "fatherName",
+                              e.target.value
+                            )
+                          }
+                          className={cn(
+                            "h-9 text-sm",
+                            occErr?.fatherName &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
+                        />
+                        {occErr?.fatherName && (
+                          <p className="text-[11px] text-destructive font-medium">
+                            {occErr.fatherName}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Age</Label>
-                      <Input
-                        type="number"
-                        placeholder="Age"
-                        value={guest.age}
-                        onChange={(e) =>
-                          handleUpdateGuest(actualIdx, "age", e.target.value)
-                        }
-                        className="h-8 text-sm font-mono"
-                      />
-                    </div>
+                    {/* Row 2: Age, Gender, Mobile */}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+                      <div className="sm:col-span-3 space-y-1.5">
+                        <Label
+                          htmlFor={`occ-age-${actualIdx}`}
+                          className="text-xs font-semibold"
+                        >
+                          Age *
+                        </Label>
+                        <Input
+                          id={`occ-age-${actualIdx}`}
+                          type="number"
+                          min={0}
+                          max={120}
+                          placeholder="Age"
+                          value={guest.age}
+                          onChange={(e) =>
+                            handleUpdateGuest(actualIdx, "age", e.target.value)
+                          }
+                          className={cn(
+                            "h-9 text-sm font-mono",
+                            occErr?.age &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
+                        />
+                        {occErr?.age && (
+                          <p className="text-[11px] text-destructive font-medium">
+                            {occErr.age}
+                          </p>
+                        )}
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Gender</Label>
-                      <select
-                        value={guest.sex}
-                        onChange={(e) =>
-                          handleUpdateGuest(
-                            actualIdx,
-                            "sex",
-                            e.target.value as "MALE" | "FEMALE" | "OTHER"
-                          )
-                        }
-                        className="flex h-8 w-full rounded-md border border-input bg-card px-2 py-1 text-xs shadow-xs"
-                      >
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                    </div>
+                      <div className="sm:col-span-4 space-y-1.5">
+                        <Label
+                          htmlFor={`occ-gender-${actualIdx}`}
+                          className="text-xs font-semibold"
+                        >
+                          Gender *
+                        </Label>
+                        <select
+                          id={`occ-gender-${actualIdx}`}
+                          value={guest.sex}
+                          onChange={(e) =>
+                            handleUpdateGuest(
+                              actualIdx,
+                              "sex",
+                              e.target.value as "MALE" | "FEMALE" | "OTHER"
+                            )
+                          }
+                          className={cn(
+                            "flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                            occErr?.sex &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
+                        >
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                        {occErr?.sex && (
+                          <p className="text-[11px] text-destructive font-medium">
+                            {occErr.sex}
+                          </p>
+                        )}
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Mobile (Optional)</Label>
-                      <Input
-                        placeholder="Mobile"
-                        value={guest.mobile}
-                        onChange={(e) =>
-                          handleUpdateGuest(actualIdx, "mobile", e.target.value)
-                        }
-                        className="h-8 text-sm font-mono"
-                      />
+                      <div className="sm:col-span-5 space-y-1.5">
+                        <Label
+                          htmlFor={`occ-mobile-${actualIdx}`}
+                          className="text-xs font-semibold"
+                        >
+                          Mobile Number *
+                        </Label>
+                        <Input
+                          id={`occ-mobile-${actualIdx}`}
+                          placeholder="10-digit mobile"
+                          value={guest.mobile}
+                          onChange={(e) =>
+                            handleUpdateGuest(
+                              actualIdx,
+                              "mobile",
+                              e.target.value
+                            )
+                          }
+                          className={cn(
+                            "h-9 text-sm font-mono",
+                            occErr?.mobile &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
+                        />
+                        {occErr?.mobile && (
+                          <p className="text-[11px] text-destructive font-medium">
+                            {occErr.mobile}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1297,17 +2034,14 @@ export function NewBookingFlow({
                   value={bookingSource}
                   onChange={(e) =>
                     setBookingSource(
-                      e.target.value as
-                        "WALK_IN" | "PHONE" | "ONLINE" | "CORPORATE" | "OTHER"
+                      e.target.value as "WALK_IN" | "PHONE" | "REFERRAL"
                     )
                   }
                   className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs"
                 >
-                  <option value="WALK_IN">Walk-in</option>
+                  <option value="WALK_IN">Walk-In</option>
                   <option value="PHONE">Phone Reservation</option>
-                  <option value="ONLINE">Online Portal</option>
-                  <option value="CORPORATE">Corporate Tie-up</option>
-                  <option value="OTHER">Other</option>
+                  <option value="REFERRAL">Referral</option>
                 </select>
               </div>
 
@@ -1316,15 +2050,33 @@ export function NewBookingFlow({
                   htmlFor="arriving-from"
                   className="text-xs font-semibold"
                 >
-                  Arriving From
+                  Arriving From *
                 </Label>
                 <Input
                   id="arriving-from"
                   placeholder="e.g. Kolkata, Asansol"
                   value={arrivingFrom}
-                  onChange={(e) => setArrivingFrom(e.target.value)}
-                  className="h-9"
+                  onChange={(e) => {
+                    setArrivingFrom(e.target.value);
+                    if (step3Errors.arrivingFrom) {
+                      setStep3Errors((prev) => ({
+                        ...prev,
+                        arrivingFrom: undefined,
+                        banner: undefined,
+                      }));
+                    }
+                  }}
+                  className={cn(
+                    "h-9",
+                    step3Errors.arrivingFrom &&
+                      "border-destructive focus-visible:ring-destructive"
+                  )}
                 />
+                {step3Errors.arrivingFrom && (
+                  <p className="text-[11px] text-destructive font-medium">
+                    {step3Errors.arrivingFrom}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -1332,15 +2084,33 @@ export function NewBookingFlow({
                   htmlFor="purpose-visit"
                   className="text-xs font-semibold"
                 >
-                  Purpose of Visit
+                  Purpose of Visit *
                 </Label>
                 <Input
                   id="purpose-visit"
                   placeholder="e.g. Tourism / University"
                   value={purposeOfVisit}
-                  onChange={(e) => setPurposeOfVisit(e.target.value)}
-                  className="h-9"
+                  onChange={(e) => {
+                    setPurposeOfVisit(e.target.value);
+                    if (step3Errors.purposeOfVisit) {
+                      setStep3Errors((prev) => ({
+                        ...prev,
+                        purposeOfVisit: undefined,
+                        banner: undefined,
+                      }));
+                    }
+                  }}
+                  className={cn(
+                    "h-9",
+                    step3Errors.purposeOfVisit &&
+                      "border-destructive focus-visible:ring-destructive"
+                  )}
                 />
+                {step3Errors.purposeOfVisit && (
+                  <p className="text-[11px] text-destructive font-medium">
+                    {step3Errors.purposeOfVisit}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1361,46 +2131,106 @@ export function NewBookingFlow({
             {showCorporate && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3 p-4 rounded-xl bg-muted/30 border border-border">
                 <div className="space-y-1.5">
-                  <Label htmlFor="company-name" className="text-xs">
-                    Company Name
+                  <Label htmlFor="company-name" className="text-xs font-semibold">
+                    Company Name *
                   </Label>
                   <Input
                     id="company-name"
                     placeholder="e.g. ABC Technologies Pvt Ltd"
                     value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    className="h-8 text-sm"
+                    onChange={(e) => {
+                      setCompanyName(e.target.value);
+                      if (step3Errors.companyName) {
+                        setStep3Errors((prev) => ({
+                          ...prev,
+                          companyName: undefined,
+                          banner: undefined,
+                        }));
+                      }
+                    }}
+                    className={cn(
+                      "h-8 text-sm",
+                      step3Errors.companyName &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                   />
+                  {step3Errors.companyName && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.companyName}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="company-gstin" className="text-xs">
-                    Company GSTIN
+                  <Label htmlFor="company-gstin" className="text-xs font-semibold">
+                    Company GSTIN *
                   </Label>
                   <Input
                     id="company-gstin"
                     placeholder="15-character GSTIN"
                     value={companyGstin}
-                    onChange={(e) =>
-                      setCompanyGstin(e.target.value.toUpperCase())
-                    }
-                    className="h-8 text-sm font-mono"
+                    onChange={(e) => {
+                      setCompanyGstin(e.target.value.toUpperCase());
+                      if (step3Errors.corporateGstin) {
+                        setStep3Errors((prev) => ({
+                          ...prev,
+                          corporateGstin: undefined,
+                          banner: undefined,
+                        }));
+                      }
+                    }}
+                    className={cn(
+                      "h-8 text-sm font-mono",
+                      step3Errors.corporateGstin &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                   />
+                  {step3Errors.corporateGstin && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.corporateGstin}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="company-addr" className="text-xs">
-                    Company Address
+                  <Label htmlFor="company-addr" className="text-xs font-semibold">
+                    Company Address *
                   </Label>
                   <Input
                     id="company-addr"
                     placeholder="City / Address"
                     value={companyAddress}
-                    onChange={(e) => setCompanyAddress(e.target.value)}
-                    className="h-8 text-sm"
+                    onChange={(e) => {
+                      setCompanyAddress(e.target.value);
+                      if (step3Errors.companyAddress) {
+                        setStep3Errors((prev) => ({
+                          ...prev,
+                          companyAddress: undefined,
+                          banner: undefined,
+                        }));
+                      }
+                    }}
+                    className={cn(
+                      "h-8 text-sm",
+                      step3Errors.companyAddress &&
+                        "border-destructive focus-visible:ring-destructive"
+                    )}
                   />
+                  {step3Errors.companyAddress && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {step3Errors.companyAddress}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
           </div>
+
+          {/* Inline Step 3 Error Banner */}
+          {step3Errors.banner && (
+            <div className="p-3.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium flex items-center gap-2">
+              <CircleAlertIcon className="size-4 shrink-0 text-destructive" />
+              <span>{step3Errors.banner}</span>
+            </div>
+          )}
 
           {/* Footer Navigation */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
@@ -1415,8 +2245,10 @@ export function NewBookingFlow({
             <Button
               type="button"
               onClick={() => {
-                if (!guests[0].name.trim()) {
-                  toast.error("Please enter the primary guest's name.");
+                if (!validateStep3()) {
+                  toast.error(
+                    "Please complete all mandatory guest details before proceeding."
+                  );
                   return;
                 }
                 setCurrentStep(4);
@@ -1649,30 +2481,22 @@ export function NewBookingFlow({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => handleSubmitBooking("RESERVE")}
+                  onClick={() => handleOpenVerifyModal("RESERVE")}
                   disabled={isPending}
                   className="w-full h-11 font-semibold text-xs border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40"
                 >
-                  {isPending ? (
-                    <SpinnerIcon className="size-4 animate-spin mr-2" />
-                  ) : (
-                    <CalendarIcon className="size-4 mr-2" />
-                  )}
+                  <CalendarIcon className="size-4 mr-2" />
                   Save as Reservation
                 </Button>
 
                 <Button
                   type="button"
                   variant="default"
-                  onClick={() => handleSubmitBooking("CHECK_IN")}
+                  onClick={() => handleOpenVerifyModal("CHECK_IN")}
                   disabled={isPending}
                   className="w-full h-11 font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                 >
-                  {isPending ? (
-                    <SpinnerIcon className="size-4 animate-spin mr-2" />
-                  ) : (
-                    <CheckInIcon className="size-4 mr-2" />
-                  )}
+                  <CheckInIcon className="size-4 mr-2" />
                   Check In Now
                 </Button>
               </div>
@@ -1688,6 +2512,285 @@ export function NewBookingFlow({
           </div>
         </div>
       )}
+
+      {/* ───────── PRE-CONFIRMATION / VERIFICATION MODAL ───────── */}
+      <Dialog
+        open={verifyAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !isPending) {
+            setVerifyAction(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
+          <DialogHeader className="space-y-1.5 border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-xs font-semibold px-2.5 py-0.5",
+                  verifyAction === "CHECK_IN"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                    : "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300"
+                )}
+              >
+                {verifyAction === "CHECK_IN"
+                  ? "Immediate Check-In"
+                  : "Advance Reservation"}
+              </Badge>
+            </div>
+            <DialogTitle className="text-lg sm:text-xl font-bold">
+              {verifyAction === "CHECK_IN"
+                ? "Verify Check-In Details"
+                : "Verify Reservation Details"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Please review all booking, guest, and financial details carefully.
+              If anything needs correction, click &ldquo;Back to Edit&rdquo; to
+              fix it before confirming.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3.5 text-xs">
+            {/* Section 1: Room & Stay Window */}
+            <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                <RoomIcon className="size-3.5" />
+                Room & Stay Window
+              </span>
+              <div className="grid grid-cols-2 gap-2 pt-1 font-mono">
+                <div>
+                  <span className="text-muted-foreground font-sans block text-[11px]">
+                    Room Assigned
+                  </span>
+                  <span className="font-bold text-foreground text-sm">
+                    Room {selectedRoom?.number} ({selectedRoom?.typeName})
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground font-sans block text-[11px]">
+                    Effective Tariff
+                  </span>
+                  <span className="font-bold text-foreground text-sm">
+                    {formatINR(effectiveRate)} / night
+                  </span>
+                </div>
+                <div className="col-span-2 pt-1.5 border-t border-border/50">
+                  <span className="text-muted-foreground font-sans block text-[11px]">
+                    Stay Window (IST)
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {checkInStr
+                      ? formatISTDateTime(fromISTInput(checkInStr))
+                      : ""}{" "}
+                    →{" "}
+                    {checkOutStr
+                      ? formatISTDateTime(fromISTInput(checkOutStr))
+                      : ""}
+                  </span>
+                  <span className="text-muted-foreground text-[11px] ml-1.5 font-sans">
+                    ({currentStay.days}{" "}
+                    {currentStay.days === 1 ? "day" : "days"},{" "}
+                    {currentStay.hours}h)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Guest Particulars */}
+            <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                <GuestIcon className="size-3.5" />
+                Guest Particulars
+              </span>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Primary Guest
+                    </span>
+                    <strong className="text-foreground">
+                      {guests[0]?.name}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Mobile Number
+                    </span>
+                    <span className="font-mono">
+                      {guests[0]?.mobile || "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Father / Husband
+                    </span>
+                    <span>{guests[0]?.fatherName || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Age & Gender
+                    </span>
+                    <span>
+                      {guests[0]?.age ? `${guests[0].age} yrs` : "—"},{" "}
+                      {guests[0]?.sex}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Booking Source
+                    </span>
+                    <span>
+                      {bookingSource === "WALK_IN"
+                        ? "Walk-In"
+                        : bookingSource === "PHONE"
+                          ? "Phone Reservation"
+                          : "Referral"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Arriving From
+                    </span>
+                    <span>{arrivingFrom || "—"}</span>
+                  </div>
+                </div>
+
+                {/* Additional Occupants */}
+                {guests.length > 1 && (
+                  <div className="pt-2 border-t border-border/50 space-y-1.5">
+                    <span className="text-[11px] font-semibold text-muted-foreground">
+                      Additional Occupants ({guests.length - 1}):
+                    </span>
+                    <div className="space-y-1 bg-card p-2 rounded-lg border border-border/60">
+                      {guests.slice(1).map((occ, i) => (
+                        <div
+                          key={occ.id}
+                          className="flex flex-wrap items-center justify-between text-[11px] py-1 border-b border-border/30 last:border-0"
+                        >
+                          <span className="font-semibold text-foreground">
+                            {i + 1}. {occ.name}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {occ.fatherName
+                              ? `Father/Husband: ${occ.fatherName}`
+                              : ""}
+                            {occ.age ? ` • ${occ.age} yrs` : ""}
+                            {occ.sex ? ` • ${occ.sex}` : ""}
+                            {occ.mobile ? ` • ${occ.mobile}` : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Corporate Details */}
+                {companyName && (
+                  <div className="pt-2 border-t border-border/50 text-[11px]">
+                    <span className="text-muted-foreground block">
+                      Corporate Billing:
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {companyName}{" "}
+                      {companyGstin ? `(GSTIN: ${companyGstin})` : ""}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section 3: Billing & Financials */}
+            <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                <RupeeIcon className="size-3.5" />
+                Financial Summary
+              </span>
+              <div className="space-y-1.5 font-mono">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-sans">
+                    Room Charges ({currentStay.days}d)
+                  </span>
+                  <span>{formatINR(roomCharges)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <span className="font-sans">Discount</span>
+                    <span>−{formatINR(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-muted-foreground">
+                  <span className="font-sans">
+                    GST (CGST + SGST @ {gstPercent}%)
+                  </span>
+                  <span>{formatINR(cgstAmount + sgstAmount)}</span>
+                </div>
+                <div className="flex justify-between pt-1 border-t border-border font-bold text-foreground">
+                  <span className="font-sans">Total Bill</span>
+                  <span className="text-sm">{formatINR(totalBill)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <span className="font-sans">Advance to Collect</span>
+                  <span>
+                    {advanceAmount > 0
+                      ? `${formatINR(advanceAmount)} (${advanceMode})`
+                      : "₹0 (Nil)"}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-1 border-t border-border font-bold text-foreground">
+                  <span className="font-sans">Balance Due on Check-out</span>
+                  <span className="text-sm font-bold text-primary">
+                    {formatINR(balanceDue)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setVerifyAction(null)}
+              disabled={isPending}
+              className="w-full sm:w-auto h-10 px-5 text-xs font-semibold"
+            >
+              ← Back to Edit
+            </Button>
+
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                if (verifyAction) {
+                  handleSubmitBooking(verifyAction);
+                }
+              }}
+              disabled={isPending}
+              className={cn(
+                "w-full sm:w-auto h-10 px-6 text-xs font-semibold shadow-xs text-white",
+                verifyAction === "CHECK_IN"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-amber-600 hover:bg-amber-700"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <SpinnerIcon className="size-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckIcon className="size-4 mr-2" />
+                  {verifyAction === "CHECK_IN"
+                    ? "Confirm & Check In Now"
+                    : "Confirm & Save Reservation"}
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ───────── SUCCESS CONFIRMATION MODAL ───────── */}
       {createdBooking && (

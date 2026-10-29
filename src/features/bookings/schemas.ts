@@ -6,6 +6,7 @@ export const BookingSourceEnum = z.enum([
   "ONLINE",
   "CORPORATE",
   "OTHER",
+  "REFERRAL",
 ]);
 
 export const SexEnum = z.enum(["MALE", "FEMALE", "OTHER"]);
