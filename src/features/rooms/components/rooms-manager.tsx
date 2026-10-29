@@ -259,7 +259,7 @@ export function RoomsManager({
 
       {/* Room Cards Grid */}
       {filteredRooms.length === 0 ? (
-        <div className="p-12 text-center rounded-xl border border-dashed border-border bg-card space-y-3">
+        <div className="w-full min-h-[300px] flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-xl border border-dashed border-border bg-card space-y-3">
           <div className="size-12 rounded-full bg-muted text-muted-foreground flex items-center justify-center mx-auto">
             <RoomIcon className="size-6" aria-hidden="true" />
           </div>
@@ -286,7 +286,7 @@ export function RoomsManager({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="w-full grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
           {filteredRooms.map((room) => (
             <RoomCard
               key={room.id}
