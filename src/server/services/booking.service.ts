@@ -56,7 +56,10 @@ export const bookingService = {
     const settings = await settingsService.getSettings();
     const stay = calculateStay(checkIn, checkOut, settings.hotel.graceMinutes);
 
-    return await prisma.$transaction(async (tx) => {
+    let retries = 5;
+    while (retries > 0) {
+      try {
+        return await prisma.$transaction(async (tx) => {
       // 1. Verify Room exists and is active
       const room = await tx.room.findUnique({
         where: { id: data.roomId },
@@ -294,6 +297,20 @@ export const bookingService = {
         balanceDue,
       };
     });
+      } catch (err: unknown) {
+        const errorMsg = (err as Error)?.message || "";
+        if (
+          (errorMsg.includes("Booking_reference_key") || errorMsg.includes("P2002")) &&
+          retries > 1
+        ) {
+          retries--;
+          await new Promise((r) => setTimeout(r, Math.floor(Math.random() * 50) + 15));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new AppError("INTERNAL_ERROR", "Failed to generate unique booking reference.");
   },
 
   /**

@@ -10,11 +10,14 @@ import {
   CalendarIcon,
   SearchIcon,
   NewBookingIcon,
+  CheckOutIcon,
 } from "@/lib/icons";
 import { Input } from "@/components/ui/input";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookingStatus } from "@prisma/client";
+import { useRouter } from "next/navigation";
+import { CheckoutDialog } from "./checkout-dialog";
 
 export interface BookingRow {
   id: string;
@@ -40,8 +43,14 @@ interface BookingsTableProps {
 }
 
 export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [checkoutTarget, setCheckoutTarget] = useState<{
+    id: string;
+    reference: string;
+    roomNumber: string;
+  } | null>(null);
 
   const filtered = initialBookings.filter((b) => {
     if (statusFilter !== "ALL" && b.status !== statusFilter) return false;
@@ -166,6 +175,7 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Tariff</th>
                   <th className="px-4 py-3 text-right">Advance Paid</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -174,8 +184,13 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                     key={b.id}
                     className="hover:bg-muted/30 transition-colors"
                   >
-                    <td className="px-4 py-3 font-mono font-bold text-primary">
-                      {b.reference}
+                    <td className="px-4 py-3 font-mono font-bold">
+                      <Link
+                        href={`/bookings/${b.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {b.reference}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
@@ -211,6 +226,36 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                     <td className="px-4 py-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                       {b.advancePaid > 0 ? formatINR(b.advancePaid) : "—"}
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          href={`/bookings/${b.id}`}
+                          className={cn(
+                            buttonVariants({ variant: "ghost", size: "sm" }),
+                            "h-7 px-2 text-xs"
+                          )}
+                        >
+                          Details
+                        </Link>
+                        {b.status === "CHECKED_IN" && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() =>
+                              setCheckoutTarget({
+                                id: b.id,
+                                reference: b.reference,
+                                roomNumber: b.roomNumber,
+                              })
+                            }
+                            className="h-7 px-2.5 text-xs font-semibold"
+                          >
+                            <CheckOutIcon className="size-3 mr-1" />
+                            Check Out
+                          </Button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -218,6 +263,22 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
           </div>
         )}
       </div>
+
+      {checkoutTarget && (
+        <CheckoutDialog
+          bookingId={checkoutTarget.id}
+          bookingRef={checkoutTarget.reference}
+          roomNumber={checkoutTarget.roomNumber}
+          open={!!checkoutTarget}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setCheckoutTarget(null);
+          }}
+          onSuccess={() => {
+            setCheckoutTarget(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
