@@ -8,27 +8,30 @@ import type { Role } from "@/lib/constants";
 
 interface AppShellProps {
   children: ReactNode;
-  userRole?: Role;
+  user?: {
+    name: string;
+    email: string;
+    role: Role;
+  };
 }
 
-export function AppShell({ children, userRole = "OWNER" }: AppShellProps) {
+export function AppShell({
+  children,
+  user = { name: "Front Desk Staff", email: "staff@hotelpaul.in", role: "OWNER" },
+}: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Desktop & Tablet Sidebar */}
-      <Sidebar userRole={userRole} />
+      <Sidebar userRole={user.role} />
 
       {/* Main Column */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
         <Topbar
           onMobileMenuOpen={() => setMobileNavOpen(true)}
-          user={{
-            name: "Front Desk Staff",
-            email: "staff@hotelpaul.in",
-            role: userRole,
-          }}
+          user={user}
         />
 
         {/* Content View */}
@@ -43,7 +46,7 @@ export function AppShell({ children, userRole = "OWNER" }: AppShellProps) {
       <MobileNav
         open={mobileNavOpen}
         onOpenChange={setMobileNavOpen}
-        userRole={userRole}
+        userRole={user.role}
       />
     </div>
   );

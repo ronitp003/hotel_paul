@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────── Enums ─────────
+enum Role {
+  OWNER
+  RECEPTIONIST
+}
+
+enum BookingStatus {
+  RESERVED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum BookingSource {
+  WALK_IN
+  PHONE
+  ONLINE
+  CORPORATE
+  OTHER
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+}
+
+enum PaymentKind {
+  ADVANCE
+  PAYMENT
+  REFUND
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProblemStatus {
+  OPEN
+  FIXED
+}
+
+enum InvoiceStatus {
+  ISSUED
+  CANCELLED
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum StockLocation {
+  STORE
+  ROOMS
+  LAUNDRY
+  DAMAGED
+}
+
+// ───────── Better Auth Models ─────────
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(RECEPTIONIST)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@index([identifier])
+}
+
+// ───────── Settings ─────────
+model HotelSettings {
+  id                Int      @id @default(1)
+  name              String
+  address           String
+  phone             String
+  gstin             String
+  logoUrl           String?
+  invoicePrefix     String   @default("")
+  invoiceNotes      String   @default("")
+  graceMinutes      Int      @default(0)
+  roundBillToRupee  Boolean  @default(false)
+  gstOnOtherCharges Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+}
+
+model GstSlab {
+  id       String   @id @default(cuid())
+  minRate  Decimal  @db.Decimal(12, 2)
+  maxRate  Decimal? @db.Decimal(12, 2)
+  percent  Decimal  @db.Decimal(5, 2)
+  isActive Boolean  @default(true)
+}
+
+model InvoiceSequence {
+  id     Int @id @default(1)
+  nextNo Int
+}
+
+// ───────── Rooms ─────────
+model RoomType {
+  id    String @id @default(cuid())
+  name  String @unique
+  rooms Room[]
+}
+
+model Room {
+  id            String            @id @default(cuid())
+  number        String            @unique
+  typeId        String
+  type          RoomType          @relation(fields: [typeId], references: [id])
+  pricePerNight Decimal           @db.Decimal(12, 2)
+  isActive      Boolean           @default(true)
+  bookings      Booking[]
+  maintenance   RoomMaintenance[]
+  problems      RoomProblem[]
+  createdAt     DateTime          @default(now())
+}
+
+model RoomMaintenance {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  startsAt    DateTime @db.Timestamptz
+  endsAt      DateTime @db.Timestamptz
+  reason      String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([roomId, startsAt, endsAt])
+}
+
+model RoomProblem {
+  id           String        @id @default(cuid())
+  roomId       String
+  room         Room          @relation(fields: [roomId], references: [id])
+  description  String
+  severity     Severity
+  status       ProblemStatus @default(OPEN)
+  reportedById String
+  reportedAt   DateTime      @default(now())
+  fixedById    String?
+  fixedAt      DateTime?     @db.Timestamptz
+
+  @@index([roomId, status])
+}
+
+// ───────── Bookings ─────────
+model Booking {
+  id                 String         @id @default(cuid())
+  reference          String         @unique
+  roomId             String
+  room               Room           @relation(fields: [roomId], references: [id])
+  status             BookingStatus  @default(RESERVED)
+  source             BookingSource  @default(WALK_IN)
+  checkInAt          DateTime       @db.Timestamptz
+  checkOutAt         DateTime       @db.Timestamptz
+  actualCheckInAt    DateTime?      @db.Timestamptz
+  actualCheckOutAt   DateTime?      @db.Timestamptz
+  arrivingFrom       String?
+  purposeOfVisit     String?
+  companyName        String?
+  companyGstin       String?
+  companyAddress     String?
+  rateApplied        Decimal        @db.Decimal(12, 2)
+  discount           Decimal        @default(0) @db.Decimal(12, 2)
+  gstPercentOverride Decimal?       @db.Decimal(5, 2)
+  guests             BookingGuest[]
+  charges            Charge[]
+  payments           Payment[]
+  invoice            Invoice?
+  createdById        String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([roomId, checkInAt, checkOutAt])
+  @@index([status])
+}
+
+model BookingGuest {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  isPrimary  Boolean  @default(false)
+  name       String
+  fatherName String?
+  age        Int?
+  sex        Sex?
+  mobile     String?
+
+  @@index([name])
+  @@index([mobile])
+}
+
+// ───────── Money ─────────
+model Charge {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  description String
+  amount      Decimal  @db.Decimal(12, 2)
+  isTaxable   Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+model Payment {
+  id          String      @id @default(cuid())
+  bookingId   String
+  booking     Booking     @relation(fields: [bookingId], references: [id])
+  kind        PaymentKind
+  mode        PaymentMode
+  amount      Decimal     @db.Decimal(12, 2)
+  note        String?
+  receivedAt  DateTime    @default(now()) @db.Timestamptz
+  createdById String
+
+  @@index([bookingId])
+  @@index([receivedAt])
+}
+
+model Invoice {
+  id            String              @id @default(cuid())
+  number        Int                 @unique
+  displayNo     String              @unique
+  bookingId     String              @unique
+  booking       Booking             @relation(fields: [bookingId], references: [id])
+  status        InvoiceStatus       @default(ISSUED)
+  issuedAt      DateTime            @db.Timestamptz
+  issuedById    String
+  taxableAmount Decimal             @db.Decimal(12, 2)
+  cgst          Decimal             @db.Decimal(12, 2)
+  sgst          Decimal             @db.Decimal(12, 2)
+  billAmount    Decimal             @db.Decimal(12, 2)
+  advancePaid   Decimal             @db.Decimal(12, 2)
+  balance       Decimal             @db.Decimal(12, 2)
+  snapshot      Json
+  corrections   InvoiceCorrection[]
+}
+
+model InvoiceCorrection {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  action    String
+  reason    String
+  before    Json
+  after     Json?
+  doneById  String
+  doneAt    DateTime @default(now())
+}
+
+// ───────── Inventory ─────────
+model InventoryItem {
+  id           String              @id @default(cuid())
+  name         String              @unique
+  unit         String              @default("pcs")
+  reorderLevel Int                 @default(0)
+  qtyStore     Int                 @default(0)
+  qtyRooms     Int                 @default(0)
+  qtyLaundry   Int                 @default(0)
+  qtyDamaged   Int                 @default(0)
+  movements    InventoryMovement[]
+  isActive     Boolean             @default(true)
+}
+
+model InventoryMovement {
+  id       String         @id @default(cuid())
+  itemId   String
+  item     InventoryItem  @relation(fields: [itemId], references: [id])
+  from     StockLocation?
+  to       StockLocation?
+  quantity Int
+  note     String?
+  doneById String
+  doneAt   DateTime       @default(now())
+
+  @@index([itemId, doneAt])
+}
+
+// ───────── Audit ─────────
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
