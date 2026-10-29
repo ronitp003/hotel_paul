@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RoomCard } from "./room-card";
 import { AddRoomDialog } from "./add-room-dialog";
 import { EditRoomDialog } from "./edit-room-dialog";
+import { cn } from "@/lib/utils";
 import {
   SearchIcon,
   AddIcon,
@@ -112,72 +113,107 @@ export function RoomsManager({
     <div className="space-y-6">
       {/* KPI / Quick Metric Badges Row */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={statusFilter === "ALL" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("ALL")}
-          className="gap-1.5 rounded-full"
-        >
-          <RoomIcon className="size-3.5" aria-hidden="true" />
-          <span>All Rooms</span>
-          <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
-            {counts.total}
-          </Badge>
-        </Button>
+        {[
+          {
+            id: "ALL" as const,
+            label: "All Rooms",
+            icon: RoomIcon,
+            count: counts.total,
+            inactiveColorClass: "text-foreground",
+            inactiveBorder: "border-border hover:border-border",
+            inactiveBgHover: "hover:bg-muted/70",
+            inactiveBadgeClass: "bg-muted text-muted-foreground border-border",
+          },
+          {
+            id: "AVAILABLE" as const,
+            label: "Available",
+            icon: CheckIcon,
+            count: counts.available,
+            inactiveColorClass: "text-status-available",
+            inactiveBorder: "border-border hover:border-status-available/40",
+            inactiveBgHover: "hover:bg-status-available/10",
+            inactiveBadgeClass: "bg-status-available/15 text-status-available border-status-available/25",
+          },
+          {
+            id: "OCCUPIED" as const,
+            label: "Occupied",
+            icon: RoomIcon,
+            count: counts.occupied,
+            inactiveColorClass: "text-status-occupied",
+            inactiveBorder: "border-border hover:border-status-occupied/40",
+            inactiveBgHover: "hover:bg-status-occupied/10",
+            inactiveBadgeClass: "bg-status-occupied/15 text-status-occupied border-status-occupied/25",
+          },
+          {
+            id: "MAINTENANCE" as const,
+            label: "Maintenance",
+            icon: MaintenanceIcon,
+            count: counts.maintenance,
+            inactiveColorClass: "text-status-maintenance",
+            inactiveBorder: "border-border hover:border-status-maintenance/40",
+            inactiveBgHover: "hover:bg-status-maintenance/10",
+            inactiveBadgeClass: "bg-status-maintenance/15 text-status-maintenance border-status-maintenance/25",
+          },
+          ...(counts.problems > 0
+            ? [
+                {
+                  id: "PROBLEMS" as const,
+                  label: "Open Problems",
+                  icon: ProblemIcon,
+                  count: counts.problems,
+                  inactiveColorClass: "text-status-problem",
+                  inactiveBorder: "border-status-problem/30 hover:border-status-problem/50",
+                  inactiveBgHover: "hover:bg-status-problem/10",
+                  inactiveBadgeClass: "bg-status-problem/15 text-status-problem border-status-problem/25",
+                },
+              ]
+            : []),
+        ].map((item) => {
+          const isActive = statusFilter === item.id;
+          const Icon = item.icon;
 
-        <Button
-          variant={statusFilter === "AVAILABLE" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("AVAILABLE")}
-          className="gap-1.5 rounded-full text-status-available hover:text-status-available"
-        >
-          <CheckIcon className="size-3.5" aria-hidden="true" />
-          <span>Available</span>
-          <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
-            {counts.available}
-          </Badge>
-        </Button>
-
-        <Button
-          variant={statusFilter === "OCCUPIED" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("OCCUPIED")}
-          className="gap-1.5 rounded-full text-status-occupied hover:text-status-occupied"
-        >
-          <RoomIcon className="size-3.5" aria-hidden="true" />
-          <span>Occupied</span>
-          <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
-            {counts.occupied}
-          </Badge>
-        </Button>
-
-        <Button
-          variant={statusFilter === "MAINTENANCE" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("MAINTENANCE")}
-          className="gap-1.5 rounded-full text-status-maintenance hover:text-status-maintenance"
-        >
-          <MaintenanceIcon className="size-3.5" aria-hidden="true" />
-          <span>Maintenance</span>
-          <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
-            {counts.maintenance}
-          </Badge>
-        </Button>
-
-        {counts.problems > 0 && (
-          <Button
-            variant={statusFilter === "PROBLEMS" ? "destructive" : "outline"}
-            size="sm"
-            onClick={() => setStatusFilter("PROBLEMS")}
-            className="gap-1.5 rounded-full text-status-problem hover:text-status-problem"
-          >
-            <ProblemIcon className="size-3.5" aria-hidden="true" />
-            <span>Open Problems</span>
-            <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0 h-4">
-              {counts.problems}
-            </Badge>
-          </Button>
-        )}
+          return (
+            <Button
+              key={item.id}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter(item.id)}
+              className={cn(
+                "gap-1.5 rounded-full transition-all duration-150 motion-reduce:transition-none shadow-xs font-medium cursor-pointer",
+                isActive
+                  ? "bg-primary text-white border-primary hover:bg-primary/90 hover:text-white"
+                  : cn(
+                      "bg-card",
+                      item.inactiveColorClass,
+                      item.inactiveBorder,
+                      item.inactiveBgHover
+                    )
+              )}
+            >
+              <Icon
+                className={cn(
+                  "size-3.5 shrink-0 transition-colors",
+                  isActive ? "text-white" : item.inactiveColorClass
+                )}
+                aria-hidden="true"
+              />
+              <span className={cn("transition-colors", isActive ? "text-white" : item.inactiveColorClass)}>
+                {item.label}
+              </span>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "ml-1 text-[10px] px-1.5 py-0 h-4 font-bold transition-colors border",
+                  isActive
+                    ? "bg-white/20 text-white border-white/30"
+                    : item.inactiveBadgeClass
+                )}
+              >
+                {item.count}
+              </Badge>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Toolbar: Search, Type filter, Add Room */}
