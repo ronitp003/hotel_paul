@@ -5,7 +5,10 @@ import { Decimal } from "decimal.js";
 import { formatIST } from "@/lib/datetime";
 import { type Actor, settingsService } from "./settings.service";
 import { calculateStay } from "./billing.service";
-import { type NewBookingInput } from "@/features/bookings/schemas";
+import {
+  type NewBookingInput,
+  type UpdateBookingDatesInput,
+} from "@/features/bookings/schemas";
 import {
   BookingStatus,
   PaymentKind,
@@ -740,6 +743,123 @@ export const bookingService = {
             primaryGuest: primaryGuest?.name || "Guest",
             reason: data.reason?.trim() || "Cancelled by front desk staff",
             paymentsCount: booking.payments.length,
+          },
+        },
+      });
+
+      return updated;
+    });
+  },
+
+  /**
+   * Modifies the check-in and/or check-out dates of an active booking (RESERVED or CHECKED_IN).
+   * Verifies that the room is available during the new duration (no collisions with other bookings or maintenance).
+   */
+  async updateBookingDates(
+    actor: Actor,
+    data: UpdateBookingDatesInput
+  ) {
+    const checkIn = new Date(data.checkInAt);
+    const checkOut = new Date(data.checkOutAt);
+
+    if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Invalid check-in or check-out date."
+      );
+    }
+
+    if (checkOut.getTime() <= checkIn.getTime()) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Check-out time must be strictly after check-in time."
+      );
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id: data.bookingId },
+        include: { room: true },
+      });
+
+      if (!booking) {
+        throw new AppError(
+          "BOOKING_NOT_FOUND",
+          "The requested booking does not exist."
+        );
+      }
+
+      if (booking.status === BookingStatus.CHECKED_OUT) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Cannot modify dates for an already checked-out stay."
+        );
+      }
+
+      if (booking.status === BookingStatus.CANCELLED) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Cannot modify dates for a cancelled booking."
+        );
+      }
+
+      // 1. Maintenance conflict check
+      const maintenanceConflict = await tx.roomMaintenance.findFirst({
+        where: {
+          roomId: booking.roomId,
+          startsAt: { lt: checkOut },
+          endsAt: { gt: checkIn },
+        },
+      });
+
+      if (maintenanceConflict) {
+        throw new AppError(
+          "MAINTENANCE_OVERLAP",
+          `Room ${booking.room.number} has maintenance scheduled during these dates (${maintenanceConflict.reason}).`
+        );
+      }
+
+      // 2. Booking collision check (excluding this booking)
+      const bookingConflict = await tx.booking.findFirst({
+        where: {
+          id: { not: booking.id },
+          roomId: booking.roomId,
+          status: {
+            in: [BookingStatus.RESERVED, BookingStatus.CHECKED_IN],
+          },
+          checkInAt: { lt: checkOut },
+          checkOutAt: { gt: checkIn },
+        },
+      });
+
+      if (bookingConflict) {
+        throw new AppError(
+          "ROOM_OVERLAP",
+          `Room ${booking.room.number} is already booked or occupied by another guest during these dates.`
+        );
+      }
+
+      const updated = await tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          checkInAt: checkIn,
+          checkOutAt: checkOut,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: "booking.update_dates",
+          entity: "Booking",
+          entityId: booking.id,
+          metadata: {
+            reference: booking.reference,
+            roomNumber: booking.room.number,
+            oldCheckInAt: booking.checkInAt.toISOString(),
+            oldCheckOutAt: booking.checkOutAt.toISOString(),
+            newCheckInAt: checkIn.toISOString(),
+            newCheckOutAt: checkOut.toISOString(),
           },
         },
       });

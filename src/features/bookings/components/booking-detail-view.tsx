@@ -28,6 +28,7 @@ import { AddChargeDialog } from "./add-charge-dialog";
 import { AddPaymentDialog } from "./add-payment-dialog";
 import { CheckInConfirmDialog } from "./checkin-confirm-dialog";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
+import { EditStayDatesDialog } from "./edit-stay-dates-dialog";
 import { deleteChargeAction } from "@/server/actions/billing.actions";
 import { toast } from "sonner";
 
@@ -103,11 +104,12 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [chargeOpen, setChargeOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [paymentKind, setPaymentKind] = useState<
-    "PAYMENT" | "REFUND" | "ADVANCE"
-  >("PAYMENT");
+  const [paymentKind, setPaymentKind] = useState<"PAYMENT" | "ADVANCE">(
+    "PAYMENT"
+  );
   const [checkInConfirmOpen, setCheckInConfirmOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [editDatesOpen, setEditDatesOpen] = useState(false);
   const [deletingChargeId, setDeletingChargeId] = useState<string | null>(null);
 
   const isCheckedIn = booking.status === "CHECKED_IN";
@@ -353,10 +355,23 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
 
           {/* Stay Timeline Card */}
           <Card className="p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <CalendarIcon className="size-4 text-primary" />
-              Stay & Room Timeline
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <CalendarIcon className="size-4 text-primary" />
+                Stay & Room Timeline
+              </h3>
+              {!isCheckedOut && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditDatesOpen(true)}
+                  className="h-7 text-xs"
+                >
+                  <CalendarIcon className="size-3 mr-1" />
+                  Edit Dates
+                </Button>
+              )}
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60">
                 <span className="text-muted-foreground block text-[11px]">
@@ -522,24 +537,13 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setPaymentKind("REFUND");
-                      setPaymentOpen(true);
-                    }}
-                    className="h-7 text-xs text-red-600 hover:text-red-700"
-                  >
-                    Refund
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
                       setPaymentKind("PAYMENT");
                       setPaymentOpen(true);
                     }}
                     className="h-7 text-xs"
                   >
                     <AddIcon className="size-3 mr-1" />
-                    Payment
+                    Record Payment
                   </Button>
                 </div>
               )}
@@ -764,6 +768,7 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
       <AddPaymentDialog
         bookingId={booking.id}
         bookingRef={booking.reference}
+        balanceDue={booking.balanceDue}
         open={paymentOpen}
         onOpenChange={setPaymentOpen}
         defaultKind={paymentKind}
@@ -793,6 +798,17 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
           guestName: primaryGuestName,
           totalPaid: booking.totalPaid,
         }}
+        onSuccess={() => router.refresh()}
+      />
+
+      <EditStayDatesDialog
+        open={editDatesOpen}
+        onOpenChange={setEditDatesOpen}
+        bookingId={booking.id}
+        bookingRef={booking.reference}
+        roomNumber={booking.roomNumber}
+        checkInAt={booking.actualCheckInAt || booking.checkInAt}
+        checkOutAt={booking.checkOutAt}
         onSuccess={() => router.refresh()}
       />
     </div>

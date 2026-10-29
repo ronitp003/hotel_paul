@@ -11,6 +11,7 @@ import {
   newBookingSchema,
   checkInBookingSchema,
   cancelBookingSchema,
+  updateBookingDatesSchema,
 } from "@/features/bookings/schemas";
 import {
   AppError,
@@ -120,3 +121,39 @@ export async function cancelBookingAction(
     return errorResult("INTERNAL_ERROR");
   }
 }
+
+export async function updateBookingDatesAction(
+  input: unknown
+): Promise<ActionResult<{ id: string; reference: string; checkInAt: Date; checkOutAt: Date }>> {
+  try {
+    const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
+    const data = updateBookingDatesSchema.parse(input);
+    const result = await bookingService.updateBookingDates(actor, data);
+
+    revalidatePath("/bookings");
+    revalidatePath(`/bookings/${data.bookingId}`);
+    revalidatePath("/rooms");
+    revalidatePath("/dashboard");
+    revalidatePath("/calendar");
+
+    return successResult({
+      id: result.id,
+      reference: result.reference,
+      checkInAt: result.checkInAt,
+      checkOutAt: result.checkOutAt,
+    });
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    if (err instanceof ZodError) {
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
+    }
+    console.error("updateBookingDatesAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}
+

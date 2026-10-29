@@ -106,11 +106,12 @@ export async function refundPaymentAction(
 }
 
 export async function getBookingBillAction(
-  bookingId: string
+  bookingId: string,
+  options?: { isEarlyCheckout?: boolean }
 ): Promise<ActionResult<unknown>> {
   try {
     await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
-    const result = await billingService.getBookingBill(bookingId);
+    const result = await billingService.getBookingBill(bookingId, options);
     return successResult(result);
   } catch (err) {
     if (err instanceof AppError) return errorResult(err.code, err.message);

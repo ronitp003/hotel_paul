@@ -2,10 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import {
-  addPaymentAction,
-  refundPaymentAction,
-} from "@/server/actions/billing.actions";
+import { addPaymentAction } from "@/server/actions/billing.actions";
 import {
   Dialog,
   DialogContent,
@@ -18,71 +15,70 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaymentIcon, SpinnerIcon } from "@/lib/icons";
+import { formatINR } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 interface AddPaymentDialogProps {
   bookingId: string;
   bookingRef: string;
+  balanceDue?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultKind?: "PAYMENT" | "REFUND" | "ADVANCE";
+  defaultKind?: "PAYMENT" | "ADVANCE";
   onSuccess?: () => void;
 }
 
 export function AddPaymentDialog({
   bookingId,
   bookingRef,
+  balanceDue,
   open,
   onOpenChange,
   defaultKind = "PAYMENT",
   onSuccess,
 }: AddPaymentDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [kind, setKind] = useState<"PAYMENT" | "REFUND" | "ADVANCE">(
-    defaultKind
-  );
+  const [kind, setKind] = useState<"PAYMENT" | "ADVANCE">(defaultKind);
   const [mode, setMode] = useState<"CASH" | "UPI" | "CARD" | "BANK_TRANSFER">(
     "UPI"
   );
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
+  const maxAllowed =
+    balanceDue !== undefined ? Math.max(0, balanceDue) : undefined;
+  const amtNum = parseFloat(amount) || 0;
+  const isExceedingBalance = maxAllowed !== undefined && amtNum > maxAllowed;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const amtNum = parseFloat(amount);
     if (isNaN(amtNum) || amtNum <= 0) {
       toast.error("Please enter a valid positive payment amount.");
       return;
     }
 
+    if (maxAllowed !== undefined && amtNum > maxAllowed) {
+      toast.error(
+        `Payment amount cannot exceed remaining balance due of ${formatINR(maxAllowed)}.`
+      );
+      return;
+    }
+
     startTransition(async () => {
-      let res;
-      if (kind === "REFUND") {
-        res = await refundPaymentAction({
-          bookingId,
-          mode,
-          amount: amtNum,
-          note: note.trim() || undefined,
-        });
-      } else {
-        res = await addPaymentAction({
-          bookingId,
-          kind: kind === "ADVANCE" ? "ADVANCE" : "PAYMENT",
-          mode,
-          amount: amtNum,
-          note: note.trim() || undefined,
-        });
-      }
+      const res = await addPaymentAction({
+        bookingId,
+        kind: kind === "ADVANCE" ? "ADVANCE" : "PAYMENT",
+        mode,
+        amount: amtNum,
+        note: note.trim() || undefined,
+      });
 
       if (!res.ok) {
-        toast.error(res.message || "Failed to record transaction.");
+        toast.error(res.message || "Failed to record payment.");
         return;
       }
 
-      toast.success(
-        kind === "REFUND"
-          ? "Refund recorded successfully."
-          : "Payment recorded successfully."
-      );
+      toast.success("Payment recorded successfully.");
       setAmount("");
       setNote("");
       onOpenChange(false);
@@ -97,11 +93,10 @@ export function AddPaymentDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <PaymentIcon className="size-4 text-primary" />
-              {kind === "REFUND" ? "Issue Refund" : "Record Payment"} —{" "}
-              {bookingRef}
+              Record Payment — {bookingRef}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Record a guest payment or refund transaction linked to this stay.
+              Record a guest payment or advance transaction linked to this stay.
             </DialogDescription>
           </DialogHeader>
 
@@ -114,13 +109,12 @@ export function AddPaymentDialog({
                 id="payment-kind"
                 value={kind}
                 onChange={(e) =>
-                  setKind(e.target.value as "PAYMENT" | "REFUND" | "ADVANCE")
+                  setKind(e.target.value as "PAYMENT" | "ADVANCE")
                 }
                 className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"
               >
                 <option value="PAYMENT">Stay Payment</option>
                 <option value="ADVANCE">Advance Deposit</option>
-                <option value="REFUND">Refund</option>
               </select>
             </div>
 
@@ -146,20 +140,40 @@ export function AddPaymentDialog({
             </div>
 
             <div>
-              <Label htmlFor="payment-amt" className="text-xs">
-                Amount (₹)
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="payment-amt" className="text-xs">
+                  Amount (₹)
+                </Label>
+                {maxAllowed !== undefined && (
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    Remaining Balance:{" "}
+                    <strong className="text-foreground">
+                      {formatINR(maxAllowed)}
+                    </strong>
+                  </span>
+                )}
+              </div>
               <Input
                 id="payment-amt"
                 type="number"
                 step="0.01"
                 min="0.01"
-                placeholder="0.00"
+                max={maxAllowed}
+                placeholder={maxAllowed !== undefined ? `Max ${maxAllowed}` : "0.00"}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-8 text-xs font-mono mt-1"
+                className={cn(
+                  "h-8 text-xs font-mono mt-1",
+                  isExceedingBalance &&
+                    "border-destructive focus-visible:ring-destructive"
+                )}
                 required
               />
+              {isExceedingBalance && (
+                <p className="text-[11px] text-destructive font-medium mt-1">
+                  Amount cannot exceed remaining balance due of {formatINR(maxAllowed)}
+                </p>
+              )}
             </div>
 
             <div>
@@ -168,7 +182,7 @@ export function AddPaymentDialog({
               </Label>
               <Input
                 id="payment-note"
-                placeholder="e.g. Transaction ID, GPay reference, reason"
+                placeholder="e.g. Transaction ID, GPay reference, receipt"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 className="h-8 text-xs mt-1"
@@ -189,16 +203,14 @@ export function AddPaymentDialog({
             <Button
               type="submit"
               size="sm"
-              variant={kind === "REFUND" ? "destructive" : "default"}
-              disabled={isPending}
+              variant="default"
+              disabled={isPending || isExceedingBalance}
             >
               {isPending ? (
                 <>
                   <SpinnerIcon className="size-3.5 animate-spin mr-1.5" />
                   Processing...
                 </>
-              ) : kind === "REFUND" ? (
-                "Issue Refund"
               ) : (
                 "Record Payment"
               )}
@@ -209,3 +221,4 @@ export function AddPaymentDialog({
     </Dialog>
   );
 }
+

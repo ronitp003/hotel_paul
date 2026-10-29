@@ -114,3 +114,16 @@ export const cancelBookingSchema = z.object({
 });
 
 export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
+
+export const updateBookingDatesSchema = z
+  .object({
+    bookingId: z.string().min(1, "Booking ID is required"),
+    checkInAt: z.coerce.date(),
+    checkOutAt: z.coerce.date(),
+  })
+  .refine((data) => data.checkOutAt.getTime() > data.checkInAt.getTime(), {
+    message: "Check-out time must be strictly after check-in time",
+    path: ["checkOutAt"],
+  });
+
+export type UpdateBookingDatesInput = z.infer<typeof updateBookingDatesSchema>;

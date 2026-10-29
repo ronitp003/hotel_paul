@@ -36,6 +36,10 @@ export const checkoutSchema = z.object({
   paymentMode: PaymentModeEnum.optional(),
   paymentNote: z.string().trim().max(255).optional().or(z.literal("")),
   allowZeroPaymentWithBalance: z.boolean().default(false).optional(),
+  isEarlyCheckout: z.boolean().default(false).optional(),
+  refundAmount: z.number().min(0).optional(),
+  refundMode: PaymentModeEnum.optional(),
+  refundNote: z.string().trim().max(255).optional().or(z.literal("")),
 });
 
 export const cancelInvoiceSchema = z.object({

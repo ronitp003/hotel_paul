@@ -298,7 +298,10 @@ export const billingService = {
   /**
    * Retrieves the comprehensive calculated bill for a booking at the current point in time.
    */
-  async getBookingBill(bookingId: string) {
+  async getBookingBill(
+    bookingId: string,
+    options?: { isEarlyCheckout?: boolean }
+  ) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -321,15 +324,27 @@ export const billingService = {
     const gstSlabs = settings.gstSlabs;
 
     // Determine actual or planned stay dates
-    const checkIn = booking.actualCheckInAt || booking.checkInAt;
-    const checkOut =
-      booking.status === BookingStatus.CHECKED_OUT && booking.actualCheckOutAt
-        ? booking.actualCheckOutAt
-        : booking.status === BookingStatus.CHECKED_IN
-          ? new Date() > booking.checkOutAt
-            ? new Date()
-            : booking.checkOutAt
-          : booking.checkOutAt;
+    const isOverstay =
+      booking.status === BookingStatus.CHECKED_IN && new Date() > booking.checkOutAt;
+    const isEarly = Boolean(options?.isEarlyCheckout);
+    const isCheckedOut =
+      booking.status === BookingStatus.CHECKED_OUT && Boolean(booking.actualCheckOutAt);
+
+    const checkIn = isCheckedOut
+      ? (booking.actualCheckOutAt && booking.actualCheckOutAt > booking.checkOutAt
+          ? (booking.actualCheckInAt || booking.checkInAt)
+          : booking.checkInAt)
+      : (isOverstay || isEarly)
+        ? (booking.actualCheckInAt || booking.checkInAt)
+        : booking.checkInAt;
+
+    const checkOut = isCheckedOut
+      ? (booking.actualCheckOutAt && booking.actualCheckOutAt > booking.checkOutAt
+          ? booking.actualCheckOutAt!
+          : booking.checkOutAt)
+      : (isOverstay || isEarly)
+        ? new Date()
+        : booking.checkOutAt;
 
     const stay = calculateStay(checkIn, checkOut, settings.hotel.graceMinutes);
 

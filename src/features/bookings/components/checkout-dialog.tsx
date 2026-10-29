@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { formatINR, formatINRPlain } from "@/lib/money";
 import { getBookingBillAction } from "@/server/actions/billing.actions";
@@ -16,7 +16,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckOutIcon, SpinnerIcon, CheckIcon, ProblemIcon } from "@/lib/icons";
+import {
+  CheckOutIcon,
+  SpinnerIcon,
+  CheckIcon,
+  ProblemIcon,
+  CalendarIcon,
+} from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 export interface BookingBillData {
   booking: {
@@ -100,41 +107,27 @@ export function CheckoutDialog({
   const [allowZeroPaymentWithBalance, setAllowZeroPaymentWithBalance] =
     useState(false);
 
+  // Early Departure State
+  const [isEarlyCheckout, setIsEarlyCheckout] = useState(false);
+  const [refundMode, setRefundMode] = useState<
+    "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
+  >("CASH");
+  const [refundNote, setRefundNote] = useState<string>("Early check-out refund");
+
   const isLoadingBill = open && !billData && !loadError;
 
-  // Load live bill calculation when dialog opens
-  const fetchBill = useCallback(async () => {
-    setLoadError(null);
-    try {
-      const res = await getBookingBillAction(bookingId);
-      if (res.ok && res.data) {
-        const data = res.data as BookingBillData;
-        setBillData(data);
-        if (data.bill.balanceDue > 0) {
-          setPaymentAmount(data.bill.balanceDue.toString());
-        } else {
-          setPaymentAmount("0");
-        }
-      } else {
-        setLoadError(res.message || "Failed to load stay bill calculation.");
-        toast.error(res.message || "Failed to load stay bill calculation.");
-      }
-    } catch {
-      setLoadError("Failed to fetch bill calculation.");
-      toast.error("Failed to fetch bill calculation.");
-    }
-  }, [bookingId]);
-
+  // Load live bill calculation when dialog opens or when isEarlyCheckout toggles
   useEffect(() => {
     if (!open) return;
     let isCancelled = false;
 
-    getBookingBillAction(bookingId)
+    getBookingBillAction(bookingId, { isEarlyCheckout })
       .then((res) => {
         if (isCancelled) return;
         if (res.ok && res.data) {
           const data = res.data as BookingBillData;
           setBillData(data);
+          setLoadError(null);
           if (data.bill.balanceDue > 0) {
             setPaymentAmount(data.bill.balanceDue.toString());
           } else {
@@ -151,10 +144,43 @@ export function CheckoutDialog({
     return () => {
       isCancelled = true;
     };
-  }, [open, bookingId]);
+  }, [open, bookingId, isEarlyCheckout]);
+
+  const handleRetry = () => {
+    setLoadError(null);
+    getBookingBillAction(bookingId, { isEarlyCheckout })
+      .then((res) => {
+        if (res.ok && res.data) {
+          const data = res.data as BookingBillData;
+          setBillData(data);
+          if (data.bill.balanceDue > 0) {
+            setPaymentAmount(data.bill.balanceDue.toString());
+          } else {
+            setPaymentAmount("0");
+          }
+        } else {
+          setLoadError(res.message || "Failed to load stay bill calculation.");
+        }
+      })
+      .catch(() => {
+        setLoadError("Failed to fetch bill calculation.");
+      });
+  };
+
+  const currentBalance = billData ? billData.bill.balanceDue : 0;
+  const payAmt = parseFloat(paymentAmount) || 0;
+  const netRemainingAfterPayment = Math.max(0, currentBalance - payAmt);
 
   const handleCheckout = () => {
     const amtNum = parseFloat(paymentAmount) || 0;
+    const excessRefund = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+
+    if (currentBalance > 0 && amtNum > currentBalance) {
+      toast.error(
+        `Payment amount cannot exceed remaining balance due of ${formatINR(currentBalance)}.`
+      );
+      return;
+    }
 
     startTransition(async () => {
       const res = await checkoutAction({
@@ -163,6 +189,10 @@ export function CheckoutDialog({
         paymentMode: amtNum > 0 ? paymentMode : undefined,
         paymentNote: amtNum > 0 ? paymentNote : undefined,
         allowZeroPaymentWithBalance,
+        isEarlyCheckout,
+        refundAmount: excessRefund > 0 ? excessRefund : undefined,
+        refundMode: excessRefund > 0 ? refundMode : undefined,
+        refundNote: excessRefund > 0 ? refundNote : undefined,
       });
 
       if (!res.ok) {
@@ -188,10 +218,6 @@ export function CheckoutDialog({
     });
   };
 
-  const currentBalance = billData ? billData.bill.balanceDue : 0;
-  const payAmt = parseFloat(paymentAmount) || 0;
-  const netRemainingAfterPayment = Math.max(0, currentBalance - payAmt);
-
   const handleDialogChange = (isOpen: boolean) => {
     if (!isOpen) {
       setBillData(null);
@@ -199,6 +225,9 @@ export function CheckoutDialog({
       setPaymentAmount("");
       setPaymentNote("");
       setAllowZeroPaymentWithBalance(false);
+      setIsEarlyCheckout(false);
+      setRefundMode("CASH");
+      setRefundNote("Early check-out refund");
     }
     onOpenChange(isOpen);
   };
@@ -230,6 +259,29 @@ export function CheckoutDialog({
           </div>
         ) : billData ? (
           <div className="space-y-4 py-2 text-xs">
+            {/* Early Departure Switch */}
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border/80 bg-muted/40">
+              <div className="space-y-0.5 pr-4">
+                <label
+                  htmlFor="early-checkout-toggle"
+                  className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5"
+                >
+                  <CalendarIcon className="size-3.5 text-primary" />
+                  Early Departure / Bill Only Up to Today
+                </label>
+                <p className="text-[11px] text-muted-foreground">
+                  Guest leaving early? Recalculate stay tariff for duration up to now instead of full scheduled booking.
+                </p>
+              </div>
+              <input
+                id="early-checkout-toggle"
+                type="checkbox"
+                checked={isEarlyCheckout}
+                onChange={(e) => setIsEarlyCheckout(e.target.checked)}
+                className="size-4 rounded border-border text-primary cursor-pointer accent-primary"
+              />
+            </div>
+
             {/* Stay & Room Summary Box */}
             <div className="bg-muted/40 p-3 rounded-lg border border-border/80 flex items-center justify-between">
               <div>
@@ -363,22 +415,40 @@ export function CheckoutDialog({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label
-                      htmlFor="checkout-payment-amount"
-                      className="text-xs"
-                    >
-                      Payment Amount (₹)
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="checkout-payment-amount"
+                        className="text-xs"
+                      >
+                        Payment Amount (₹)
+                      </Label>
+                      <span className="text-[11px] text-muted-foreground font-medium">
+                        Max:{" "}
+                        <strong className="text-foreground">
+                          {formatINR(currentBalance)}
+                        </strong>
+                      </span>
+                    </div>
                     <Input
                       id="checkout-payment-amount"
                       type="number"
                       step="0.01"
                       min="0"
+                      max={currentBalance}
                       value={paymentAmount}
                       onChange={(e) => setPaymentAmount(e.target.value)}
-                      className="h-8 text-xs font-mono mt-1 bg-background"
+                      className={cn(
+                        "h-8 text-xs font-mono mt-1 bg-background",
+                        payAmt > currentBalance &&
+                          "border-destructive focus-visible:ring-destructive"
+                      )}
                       placeholder="Enter amount..."
                     />
+                    {payAmt > currentBalance && (
+                      <p className="text-[11px] text-destructive font-medium mt-1">
+                        Amount cannot exceed balance due of {formatINR(currentBalance)}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -442,8 +512,61 @@ export function CheckoutDialog({
               </div>
             )}
 
+            {/* Excess Paid / Refund Due to Guest */}
+            {currentBalance < 0 && (
+              <div className="border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/30 p-3.5 rounded-lg space-y-3">
+                <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-semibold text-xs">
+                  <CheckIcon className="size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                  Excess Payment Collected — Refund Due to Guest: {formatINR(Math.abs(currentBalance))}
+                </div>
+                <p className="text-[11px] text-blue-800 dark:text-blue-300">
+                  Because of the shortened stay, payments collected ({formatINR(billData.bill.netPaid)}) exceed the revised bill ({formatINR(billData.bill.billAmount)}). Confirming checkout will record this refund and settle the invoice at ₹0.00.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="checkout-refund-mode" className="text-xs">
+                      Refund Mode
+                    </Label>
+                    <select
+                      id="checkout-refund-mode"
+                      value={refundMode}
+                      onChange={(e) =>
+                        setRefundMode(
+                          e.target.value as
+                            | "CASH"
+                            | "UPI"
+                            | "CARD"
+                            | "BANK_TRANSFER"
+                        )
+                      }
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"
+                    >
+                      <option value="CASH">Cash Return</option>
+                      <option value="UPI">UPI Refund</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                      <option value="CARD">Card Reversal</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="checkout-refund-note" className="text-xs">
+                      Refund Note
+                    </Label>
+                    <Input
+                      id="checkout-refund-note"
+                      value={refundNote}
+                      onChange={(e) => setRefundNote(e.target.value)}
+                      placeholder="e.g. Returned excess cash at front desk"
+                      className="h-8 text-xs mt-1 bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Fully Settled Banner */}
-            {currentBalance <= 0 && (
+            {currentBalance === 0 && (
               <div className="border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-200 text-xs">
                 <CheckIcon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span className="font-medium">
@@ -461,7 +584,7 @@ export function CheckoutDialog({
               type="button"
               variant="outline"
               size="sm"
-              onClick={fetchBill}
+              onClick={handleRetry}
               className="text-xs font-medium"
             >
               Retry Calculation
@@ -488,6 +611,7 @@ export function CheckoutDialog({
               isPending ||
               isLoadingBill ||
               !billData ||
+              (currentBalance > 0 && payAmt > currentBalance) ||
               (currentBalance > 0 &&
                 payAmt < currentBalance &&
                 !allowZeroPaymentWithBalance)
@@ -498,6 +622,11 @@ export function CheckoutDialog({
               <>
                 <SpinnerIcon className="size-4 animate-spin mr-1.5" />
                 Processing Check-out...
+              </>
+            ) : currentBalance < 0 ? (
+              <>
+                <CheckIcon className="size-4 mr-1.5" />
+                Confirm Check-Out & Refund {formatINR(Math.abs(currentBalance))}
               </>
             ) : (
               <>

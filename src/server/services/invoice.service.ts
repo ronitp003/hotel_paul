@@ -143,17 +143,38 @@ export const invoiceService = {
     const actualCheckIn = bookingPre.actualCheckInAt || bookingPre.checkInAt;
     const actualCheckOut = new Date();
 
+    // Check if the guest has overstayed beyond the scheduled check-out time or requested early departure.
+    // If early checkout is requested or overstaying, the stay extends up to actual departure time.
+    // Otherwise, the billable stay corresponds to the scheduled booking reservation.
+    const isOverstay = actualCheckOut > bookingPre.checkOutAt;
+    const isEarly = Boolean(data.isEarlyCheckout);
+    const effectiveCheckIn = (isOverstay || isEarly) ? actualCheckIn : bookingPre.checkInAt;
+    const effectiveCheckOut = (isOverstay || isEarly) ? actualCheckOut : bookingPre.checkOutAt;
+
     const stay = calculateStay(
-      actualCheckIn,
-      actualCheckOut,
+      effectiveCheckIn,
+      effectiveCheckOut,
       settings.hotel.graceMinutes
     );
 
-    // Prepare payments list including optional final settlement payment
+    // Prepare payments list including optional final settlement payment or refund
     const paymentItems = bookingPre.payments.map((p) => ({
       amount: p.amount,
       kind: p.kind as "ADVANCE" | "PAYMENT" | "REFUND",
     }));
+
+    if (data.refundAmount && data.refundAmount > 0) {
+      if (!data.refundMode) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Refund mode is required when issuing an early check-out refund."
+        );
+      }
+      paymentItems.push({
+        amount: new Decimal(data.refundAmount),
+        kind: "REFUND",
+      });
+    }
 
     if (data.paymentAmount && data.paymentAmount > 0) {
       if (!data.paymentMode) {
@@ -199,8 +220,18 @@ export const invoiceService = {
       );
     }
 
+    if (data.paymentAmount && data.paymentAmount > 0) {
+      const priorBalance = calculation.balanceDue.plus(data.paymentAmount);
+      if (new Decimal(data.paymentAmount).greaterThan(priorBalance)) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          `Payment amount exceeds remaining balance due. Maximum allowed payment is ₹${priorBalance.toString()}.`
+        );
+      }
+    }
+
     return await prisma.$transaction(async (tx) => {
-      // 1. Record final settlement payment in DB if provided
+      // 1. Record final settlement payment or refund in DB if provided
       let finalPaymentId: string | null = null;
       if (data.paymentAmount && data.paymentAmount > 0 && data.paymentMode) {
         const finalPmt = await tx.payment.create({
@@ -214,6 +245,19 @@ export const invoiceService = {
           },
         });
         finalPaymentId = finalPmt.id;
+      }
+
+      if (data.refundAmount && data.refundAmount > 0 && data.refundMode) {
+        await tx.payment.create({
+          data: {
+            bookingId: bookingPre.id,
+            kind: PaymentKind.REFUND,
+            mode: data.refundMode as PaymentMode,
+            amount: new Decimal(data.refundAmount),
+            note: data.refundNote?.trim() || "Early check-out refund",
+            createdById: actor.id,
+          },
+        });
       }
 
       // 2. Gapless Sequential Number allocation with PostgreSQL row lock
@@ -338,6 +382,7 @@ export const invoiceService = {
         where: { id: bookingPre.id },
         data: {
           status: BookingStatus.CHECKED_OUT,
+          checkOutAt: data.isEarlyCheckout ? actualCheckOut : bookingPre.checkOutAt,
           actualCheckInAt: actualCheckIn,
           actualCheckOutAt: actualCheckOut,
         },
