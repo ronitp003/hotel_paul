@@ -491,4 +491,60 @@ export const roomService = {
       };
     });
   },
+
+  /**
+   * Deletes a room if it has no associated bookings, maintenance records, or problems.
+   */
+  async deleteRoom(actor: Actor, id: string) {
+    return await prisma.$transaction(async (tx) => {
+      const current = await tx.room.findUnique({
+        where: { id },
+        include: {
+          _count: {
+            select: {
+              bookings: true,
+              maintenance: true,
+              problems: true,
+            },
+          },
+        },
+      });
+
+      if (!current) {
+        throw new AppError("ROOM_NOT_FOUND", "Room not found.");
+      }
+
+      const { bookings, maintenance, problems } = current._count;
+      if (bookings > 0 || maintenance > 0 || problems > 0) {
+        const reasons: string[] = [];
+        if (bookings > 0) reasons.push(`${bookings} booking(s)`);
+        if (maintenance > 0) reasons.push(`${maintenance} maintenance record(s)`);
+        if (problems > 0) reasons.push(`${problems} reported problem(s)`);
+
+        throw new AppError(
+          "VALIDATION_ERROR",
+          `Cannot delete Room "${current.number}": it has ${reasons.join(", ")}. Disable the room instead to preserve historical records.`
+        );
+      }
+
+      await tx.room.delete({ where: { id } });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: "room.delete",
+          entity: "Room",
+          entityId: id,
+          metadata: {
+            number: current.number,
+          },
+        },
+      });
+
+      return {
+        id,
+        number: current.number,
+      };
+    });
+  },
 };

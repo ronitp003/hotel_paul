@@ -10,6 +10,7 @@ import {
   bulkCreateRoomsAction,
   updateRoomAction,
   toggleRoomActiveAction,
+  deleteRoomAction,
 } from "@/server/actions/room.actions";
 import { roomService } from "@/server/services/room.service";
 
@@ -107,6 +108,12 @@ describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
 
     it("forbids toggleRoomActiveAction", async () => {
       const res = await toggleRoomActiveAction("any-id", false);
+      expect(res.ok).toBe(false);
+      expect(res.code).toBe("FORBIDDEN");
+    });
+
+    it("forbids deleteRoomAction", async () => {
+      const res = await deleteRoomAction("any-id");
       expect(res.ok).toBe(false);
       expect(res.code).toBe("FORBIDDEN");
     });
@@ -253,6 +260,65 @@ describe("Phase 1.3 Rooms Inventory & Management (Integration)", () => {
       expect(typeof target?.pricePerNight).toBe("number");
       expect(target?.pricePerNight).toBe(3500);
       expect(target?.pricePerNight).not.toHaveProperty("d"); // No Decimal instance
+    });
+
+    it("deletes an accidental unused room and logs audit record", async () => {
+      // Create a temporary accidental room
+      const accidentalNumber = `ERR-${Date.now().toString().slice(-4)}`;
+      const createRes = await createRoomAction({
+        number: accidentalNumber,
+        typeId: testTypeId,
+        pricePerNight: 1800,
+        isActive: true,
+      });
+      expect(createRes.ok).toBe(true);
+      const roomId = (createRes.data as { id: string }).id;
+
+      const auditsBefore = await prisma.auditLog.count({
+        where: { action: "room.delete" },
+      });
+
+      // Delete the accidental room
+      const deleteRes = await deleteRoomAction(roomId);
+      expect(deleteRes.ok).toBe(true);
+
+      // Verify room no longer exists in database
+      const deletedRoom = await prisma.room.findUnique({ where: { id: roomId } });
+      expect(deletedRoom).toBeNull();
+
+      // Verify audit log
+      const auditsAfter = await prisma.auditLog.count({
+        where: { action: "room.delete" },
+      });
+      expect(auditsAfter).toBe(auditsBefore + 1);
+    });
+
+    it("blocks room deletion when the room has associated problem or booking records", async () => {
+      // Create a room and attach a problem record
+      const guardedRoom = await prisma.room.create({
+        data: {
+          number: `GRD-${Date.now().toString().slice(-4)}`,
+          typeId: testTypeId,
+          pricePerNight: 2000,
+          problems: {
+            create: {
+              description: "Broken window handle",
+              severity: "MEDIUM",
+              reportedById: ownerActor.id,
+            },
+          },
+        },
+      });
+
+      try {
+        const deleteRes = await deleteRoomAction(guardedRoom.id);
+        expect(deleteRes.ok).toBe(false);
+        expect(deleteRes.code).toBe("VALIDATION_ERROR");
+        expect(deleteRes.message).toMatch(/Cannot delete Room.*Disable the room instead/i);
+      } finally {
+        await prisma.roomProblem.deleteMany({ where: { roomId: guardedRoom.id } });
+        await prisma.room.delete({ where: { id: guardedRoom.id } });
+      }
     });
   });
 });

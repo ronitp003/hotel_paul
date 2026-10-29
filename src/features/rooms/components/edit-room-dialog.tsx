@@ -11,14 +11,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { roomSchema } from "../schemas";
-import { updateRoomAction } from "@/server/actions/room.actions";
-import { CircleAlertIcon, LoaderIcon, RoomIcon } from "@/lib/icons";
+import { updateRoomAction, deleteRoomAction } from "@/server/actions/room.actions";
+import { CircleAlertIcon, LoaderIcon, RoomIcon, DeleteIcon } from "@/lib/icons";
 import type { RoomWithStatus } from "@/server/services/room.service";
 
 interface RoomTypeOption {
@@ -42,6 +52,8 @@ export function EditRoomDialog({
   onSuccess,
 }: EditRoomDialogProps) {
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const editForm = useForm({
     defaultValues: {
@@ -71,6 +83,23 @@ export function EditRoomDialog({
       onSuccess?.();
     },
   });
+
+  const handleDelete = async () => {
+    if (!room) return;
+    setActionError(null);
+    setIsDeleting(true);
+    const res = await deleteRoomAction(room.id);
+    setIsDeleting(false);
+    if (!res.ok) {
+      setActionError(res.message || "Failed to delete room.");
+      setIsDeleteConfirmOpen(false);
+      return;
+    }
+    toast.success(`Room ${room.number} deleted successfully.`);
+    setIsDeleteConfirmOpen(false);
+    onOpenChange(false);
+    onSuccess?.();
+  };
 
   if (!room) return null;
 
@@ -179,27 +208,69 @@ export function EditRoomDialog({
             </editForm.Field>
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-2 flex flex-row items-center justify-between gap-2 sm:justify-between">
             <Button
               type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
+              variant="destructive"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setIsDeleteConfirmOpen(true)}
             >
-              Cancel
+              <DeleteIcon className="size-4" aria-hidden="true" />
+              <span>Delete Room</span>
             </Button>
-            <editForm.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-            >
-              {([canSubmit, isSubmitting]) => (
-                <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                  {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
-                  Save Changes
-                </Button>
-              )}
-            </editForm.Subscribe>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <editForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
+                {([canSubmit, isSubmitting]) => (
+                  <Button type="submit" size="sm" disabled={!canSubmit || isSubmitting}>
+                    {isSubmitting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+                    Save Changes
+                  </Button>
+                )}
+              </editForm.Subscribe>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Delete Confirmation Alert Dialog */}
+      <AlertDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Room {room.number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete Room <strong>{room.number}</strong>?
+              This action permanently removes the room from inventory. Rooms with historical bookings,
+              maintenance records, or problems cannot be deleted and should be disabled instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isDeleting && <LoaderIcon className="size-4 animate-spin mr-1.5" />}
+              Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

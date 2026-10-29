@@ -89,3 +89,19 @@ export async function toggleRoomActiveAction(
     return errorResult("INTERNAL_ERROR");
   }
 }
+
+export async function deleteRoomAction(id: string): Promise<ActionResult> {
+  try {
+    const actor = await requireRole([ROLES.OWNER]);
+    const result = await roomService.deleteRoom(actor, id);
+    revalidatePath("/rooms");
+    revalidatePath("/dashboard");
+    return successResult(result);
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    console.error("deleteRoomAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}
