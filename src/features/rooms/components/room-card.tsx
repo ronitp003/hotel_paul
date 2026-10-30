@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatINR } from "@/lib/money";
-import { formatISTDateTime, formatISTDate } from "@/lib/datetime";
+import { formatISTDateTime, formatISTDate, formatIST } from "@/lib/datetime";
 import {
   GuestIcon,
   ClockIcon,
@@ -28,6 +28,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { RoomWithStatus } from "@/server/services/room.service";
 import type { Role } from "@/lib/constants";
+import { LogProblemDialog } from "./log-problem-dialog";
+import { CreateMaintenanceDialog } from "./create-maintenance-dialog";
 
 interface RoomCardProps {
   room: RoomWithStatus;
@@ -41,6 +43,8 @@ export function RoomCard({
   onEdit,
 }: RoomCardProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isProblemOpen, setIsProblemOpen] = useState(false);
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
 
   const isOwner = userRole === "OWNER";
 
@@ -59,14 +63,7 @@ export function RoomCard({
     <>
       <Card
         onClick={() => {
-          if (
-            room.status === "OCCUPIED" ||
-            room.status === "RESERVED" ||
-            room.status === "MAINTENANCE" ||
-            room.hasProblem
-          ) {
-            setIsDetailsOpen(true);
-          }
+          setIsDetailsOpen(true);
         }}
         className={cn(
           "relative overflow-hidden transition-all duration-150 ease-out cursor-pointer flex flex-col justify-between select-none group border rounded-xl hover:shadow-md hover:border-border/80 motion-reduce:transition-none bg-card py-0 gap-0",
@@ -80,7 +77,24 @@ export function RoomCard({
               {room.number}
             </span>
 
-            <div className="shrink-0">
+            <div className="shrink-0 flex items-center gap-1.5">
+              {room.status === "AVAILABLE" &&
+                room.upcomingMaintenance &&
+                room.upcomingMaintenance.length > 0 && (
+                  <span
+                    title={`Scheduled Maintenance: ${room.upcomingMaintenance[0].reason}`}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-status-maintenance/15 text-status-maintenance text-[11px] font-semibold border border-status-maintenance/30 shrink-0"
+                  >
+                    <MaintenanceIcon className="size-3" aria-hidden="true" />
+                    <span>
+                      Maint:{" "}
+                      {formatIST(
+                        new Date(room.upcomingMaintenance[0].startsAt),
+                        "d MMM"
+                      )}
+                    </span>
+                  </span>
+                )}
               <StatusBadge
                 status={room.status}
                 label={
@@ -194,12 +208,32 @@ export function RoomCard({
             )}
 
             {room.status === "AVAILABLE" && room.isActive && (
-              <div className="rounded-md bg-status-available/5 border border-status-available/15 px-2.5 py-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
-                <span className="size-2 rounded-full bg-status-available shrink-0 animate-pulse" />
-                <span className="font-medium text-foreground/80">
-                  Available for check-in
-                </span>
-              </div>
+              room.upcomingMaintenance && room.upcomingMaintenance.length > 0 ? (
+                <div className="rounded-lg bg-status-maintenance/10 border border-status-maintenance/25 p-2.5 space-y-1 text-xs">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-status-maintenance">
+                      <MaintenanceIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                      <span>Upcoming Maintenance</span>
+                    </div>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-status-maintenance/15 text-status-maintenance font-bold">
+                      {formatIST(new Date(room.upcomingMaintenance[0].startsAt), "dd MMM")}
+                    </span>
+                  </div>
+                  <p
+                    className="text-[11px] text-muted-foreground line-clamp-1"
+                    title={room.upcomingMaintenance[0].reason}
+                  >
+                    {room.upcomingMaintenance[0].reason}
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md bg-status-available/5 border border-status-available/15 px-2.5 py-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-status-available shrink-0 animate-pulse" />
+                  <span className="font-medium text-foreground/80">
+                    Available for check-in
+                  </span>
+                </div>
+              )
             )}
           </div>
         </CardContent>
@@ -215,7 +249,9 @@ export function RoomCard({
                   ? "Out of service"
                   : !room.isActive
                     ? "Not bookable"
-                    : "Vacant clean"}
+                    : room.upcomingMaintenance && room.upcomingMaintenance.length > 0
+                      ? `Vacant (Maint: ${formatIST(new Date(room.upcomingMaintenance[0].startsAt), "d MMM")})`
+                      : "Vacant clean"}
           </span>
 
           <div
@@ -398,48 +434,166 @@ export function RoomCard({
               </div>
             )}
 
+            {/* Scheduled Upcoming Maintenance */}
+            {room.upcomingMaintenance && room.upcomingMaintenance.length > 0 && (
+              <div className="rounded-xl bg-status-maintenance/10 border border-status-maintenance/20 p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-status-maintenance">
+                  <div className="flex items-center gap-1.5">
+                    <MaintenanceIcon
+                      className="size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Scheduled Maintenance ({room.upcomingMaintenance.length})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-0.5">
+                  {room.upcomingMaintenance.map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-lg bg-card/90 border border-status-maintenance/25 p-2.5 space-y-1 text-xs shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-foreground text-xs">
+                          {m.reason}
+                        </span>
+                        <span className="text-[10px] font-mono text-status-maintenance font-bold shrink-0">
+                          {formatIST(new Date(m.startsAt), "dd MMM, hh:mm a")} – {formatIST(new Date(m.endsAt), "dd MMM, hh:mm a")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Open Problems */}
             {room.hasProblem && (
-              <div className="rounded-xl bg-status-problem/10 border border-status-problem/20 p-4 space-y-1.5">
+              <div className="rounded-xl bg-status-problem/10 border border-status-problem/20 p-4 space-y-2.5">
                 <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-status-problem">
                   <ProblemIcon className="size-4 shrink-0" aria-hidden="true" />
                   <span>{room.openProblemsCount} Unresolved Issue(s)</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Room requires front-desk or housekeeping inspection before
-                  assigning to a walk-in guest.
-                </p>
+
+                {room.openProblems && room.openProblems.length > 0 ? (
+                  <div className="space-y-2 pt-0.5">
+                    {room.openProblems.map((prob) => (
+                      <div
+                        key={prob.id}
+                        className="rounded-lg bg-card/90 border border-status-problem/25 p-2.5 space-y-1 text-xs shadow-2xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={cn(
+                              "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border",
+                              prob.severity === "HIGH" || prob.severity === "CRITICAL"
+                                ? "bg-destructive/15 text-destructive border-destructive/30"
+                                : prob.severity === "MEDIUM"
+                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                                  : "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30"
+                            )}
+                          >
+                            {prob.severity} Priority
+                          </span>
+                          {prob.reportedAt && (
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {formatISTDateTime(prob.reportedAt)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium text-foreground whitespace-pre-wrap">
+                          {prob.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Room requires front-desk or housekeeping inspection before
+                    assigning to a walk-in guest.
+                  </p>
+                )}
               </div>
             )}
+            {/* Quick Action Buttons for Problem & Maintenance */}
+            <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsDetailsOpen(false);
+                  setIsProblemOpen(true);
+                }}
+                className="flex-1 gap-1.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <ProblemIcon className="size-3.5" />
+                <span>Report Problem</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsDetailsOpen(false);
+                  setIsMaintenanceOpen(true);
+                }}
+                className="flex-1 gap-1.5 text-xs text-status-maintenance border-status-maintenance/30 hover:bg-status-maintenance/10"
+              >
+                <MaintenanceIcon className="size-3.5" />
+                <span>Maintenance</span>
+              </Button>
+            </div>
           </div>
 
           <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5">
-            {(room.status === "OCCUPIED" || room.status === "RESERVED") &&
-            room.currentBooking ? (
-              <Link
-                href={`/bookings/${room.currentBooking.id}`}
-                className={buttonVariants({ variant: "default", size: "sm" })}
-              >
-                View Booking Details
-                <ChevronRightIcon
-                  className="size-3.5 ml-1.5"
-                  aria-hidden="true"
-                />
-              </Link>
-            ) : (
-              <div />
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsDetailsOpen(false)}
+            <Link
+              href={`/rooms/${room.id}`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Close
-            </Button>
+              Full Room Details
+              <ChevronRightIcon className="size-3.5 ml-1" />
+            </Link>
+
+            <div className="flex items-center gap-2">
+              {(room.status === "OCCUPIED" || room.status === "RESERVED") &&
+              room.currentBooking && (
+                <Link
+                  href={`/bookings/${room.currentBooking.id}`}
+                  className={buttonVariants({ variant: "default", size: "sm" })}
+                >
+                  View Booking
+                </Link>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDetailsOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Log Problem Dialog */}
+      <LogProblemDialog
+        open={isProblemOpen}
+        onOpenChange={setIsProblemOpen}
+        room={{ id: room.id, number: room.number }}
+      />
+
+      {/* Create Maintenance Dialog */}
+      <CreateMaintenanceDialog
+        open={isMaintenanceOpen}
+        onOpenChange={setIsMaintenanceOpen}
+        room={{ id: room.id, number: room.number }}
+      />
     </>
   );
 }

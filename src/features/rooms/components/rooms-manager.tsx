@@ -9,6 +9,8 @@ import { SelectDropdown } from "@/components/ui/select-dropdown";
 import { RoomCard } from "./room-card";
 import { AddRoomDialog } from "./add-room-dialog";
 import { EditRoomDialog } from "./edit-room-dialog";
+import { LogProblemDialog } from "./log-problem-dialog";
+import { CreateMaintenanceDialog } from "./create-maintenance-dialog";
 import { cn } from "@/lib/utils";
 import {
   SearchIcon,
@@ -48,6 +50,8 @@ export function RoomsManager({
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<RoomWithStatus | null>(null);
+  const [isProblemOpen, setIsProblemOpen] = useState(false);
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
 
   const isOwner = userRole === "OWNER";
 
@@ -63,7 +67,12 @@ export function RoomsManager({
       if (r.status === "AVAILABLE") available++;
       if (r.status === "OCCUPIED") occupied++;
       if (r.status === "RESERVED") reserved++;
-      if (r.status === "MAINTENANCE") maintenance++;
+      if (
+        r.status === "MAINTENANCE" ||
+        (r.upcomingMaintenance && r.upcomingMaintenance.length > 0)
+      ) {
+        maintenance++;
+      }
       if (r.hasProblem) problems++;
     }
 
@@ -103,8 +112,13 @@ export function RoomsManager({
       if (statusFilter === "RESERVED" && room.status !== "RESERVED") {
         return false;
       }
-      if (statusFilter === "MAINTENANCE" && room.status !== "MAINTENANCE") {
-        return false;
+      if (statusFilter === "MAINTENANCE") {
+        const hasMaintenance =
+          room.status === "MAINTENANCE" ||
+          Boolean(room.upcomingMaintenance && room.upcomingMaintenance.length > 0);
+        if (!hasMaintenance) {
+          return false;
+        }
       }
       if (statusFilter === "PROBLEMS" && !room.hasProblem) {
         return false;
@@ -299,16 +313,38 @@ export function RoomsManager({
           </div>
         </div>
 
-        {isOwner && (
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
-            onClick={() => setIsAddOpen(true)}
+            variant="outline"
             size="sm"
-            className="gap-1.5 shrink-0 shadow-xs"
+            onClick={() => setIsProblemOpen(true)}
+            className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10"
           >
-            <AddIcon className="size-4" aria-hidden="true" />
-            <span>Add Rooms</span>
+            <ProblemIcon className="size-3.5" />
+            <span>Report Issue</span>
           </Button>
-        )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsMaintenanceOpen(true)}
+            className="gap-1.5 border-status-maintenance/30 text-status-maintenance hover:bg-status-maintenance/10"
+          >
+            <MaintenanceIcon className="size-3.5" />
+            <span>Schedule Maintenance</span>
+          </Button>
+
+          {isOwner && (
+            <Button
+              onClick={() => setIsAddOpen(true)}
+              size="sm"
+              className="gap-1.5 shadow-xs"
+            >
+              <AddIcon className="size-4" aria-hidden="true" />
+              <span>Add Rooms</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Room Cards Grid */}
@@ -368,6 +404,22 @@ export function RoomsManager({
         open={Boolean(editingRoom)}
         onOpenChange={(open) => !open && setEditingRoom(null)}
         roomTypes={roomTypes}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Global Log Problem Dialog */}
+      <LogProblemDialog
+        open={isProblemOpen}
+        onOpenChange={setIsProblemOpen}
+        rooms={initialRooms.map((r) => ({ id: r.id, number: r.number }))}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Global Create Maintenance Dialog */}
+      <CreateMaintenanceDialog
+        open={isMaintenanceOpen}
+        onOpenChange={setIsMaintenanceOpen}
+        rooms={initialRooms.map((r) => ({ id: r.id, number: r.number }))}
         onSuccess={handleRefresh}
       />
     </div>

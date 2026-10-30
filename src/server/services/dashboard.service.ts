@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/server/db";
 import { Decimal } from "decimal.js";
+import { addDays } from "date-fns";
 import { roomService } from "./room.service";
 import { billingService } from "./billing.service";
 import {
@@ -13,13 +14,16 @@ import {
 import type {
   DashboardSummary,
   TodayGuestMovement,
+  ForecastDay,
+  DashboardLowStockAlert,
 } from "@/features/dashboard/schemas";
 import { BookingStatus, InvoiceStatus } from "@prisma/client";
 
 export const dashboardService = {
   /**
-   * Computes the operational KPI summary for Dashboard v1.
-   * Includes room statuses, today's arrivals & departures in IST, payments due, and MTD billing/GST.
+   * Computes the operational KPI summary for Dashboard v2.
+   * Includes room statuses, today's arrivals & departures in IST, payments due, MTD billing/GST,
+   * low-stock alerts, and 7-day booked-room occupancy forecast.
    */
   async getDashboardSummary(): Promise<DashboardSummary> {
     const now = new Date();
@@ -147,8 +151,6 @@ export const dashboardService = {
     }
 
     // 5. Monthly Billed Revenue and Total GST Payable
-    // TODO(confirm): Confirm with accountant whether monthly GST payable is based on issued invoices or collected payments.
-    // Currently based on issued invoices during the IST calendar month.
     const monthInvoices = await prisma.invoice.findMany({
       where: {
         status: InvoiceStatus.ISSUED,
@@ -170,6 +172,121 @@ export const dashboardService = {
     for (const inv of monthInvoices) {
       monthlyTotalBilled = monthlyTotalBilled.add(new Decimal(inv.billAmount));
       monthlyTotalGst = monthlyTotalGst.add(new Decimal(inv.cgst)).add(new Decimal(inv.sgst));
+    }
+
+    // 6. Low Stock Alerts (Phase 2.4/2.5)
+    const activeInventory = await prisma.inventoryItem.findMany({
+      where: {
+        isActive: true,
+        reorderLevel: { gt: 0 },
+      },
+      select: {
+        id: true,
+        name: true,
+        unit: true,
+        qtyStore: true,
+        reorderLevel: true,
+      },
+      orderBy: { qtyStore: "asc" },
+    });
+
+    const lowStockItems = activeInventory.filter(
+      (i) => i.qtyStore <= i.reorderLevel
+    );
+
+    const lowStock: DashboardLowStockAlert = {
+      count: lowStockItems.length,
+      items: lowStockItems.slice(0, 5),
+    };
+
+    // 7. 7-Day Booked-Room Occupancy Forecast (Phase 2.5)
+    const forecastStartUTC = startOfISTDay(now);
+    const forecastEndUTC = endOfISTDay(addDays(now, 6));
+
+    const forecastBookings = await prisma.booking.findMany({
+      where: {
+        status: { in: [BookingStatus.RESERVED, BookingStatus.CHECKED_IN] },
+        AND: [
+          { checkInAt: { lt: forecastEndUTC } },
+          { checkOutAt: { gt: forecastStartUTC } },
+        ],
+      },
+      select: {
+        id: true,
+        roomId: true,
+        checkInAt: true,
+        checkOutAt: true,
+        status: true,
+      },
+    });
+
+    const forecastMaintenance = await prisma.roomMaintenance.findMany({
+      where: {
+        AND: [
+          { startsAt: { lt: forecastEndUTC } },
+          { endsAt: { gt: forecastStartUTC } },
+        ],
+      },
+      select: {
+        id: true,
+        roomId: true,
+        startsAt: true,
+        endsAt: true,
+      },
+    });
+
+    const totalRooms = roomCounts.total;
+    const forecast: ForecastDay[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const targetDate = addDays(now, i);
+      const dayStart = startOfISTDay(targetDate);
+      const dayEnd = endOfISTDay(targetDate);
+
+      // Booked rooms on this day (distinct rooms)
+      const dayBookedRoomIds = new Set<string>();
+      for (const b of forecastBookings) {
+        if (b.checkInAt < dayEnd && b.checkOutAt > dayStart) {
+          dayBookedRoomIds.add(b.roomId);
+        }
+      }
+
+      // Maintenance rooms on this day (distinct rooms)
+      const dayMaintenanceRoomIds = new Set<string>();
+      for (const m of forecastMaintenance) {
+        if (m.startsAt < dayEnd && m.endsAt > dayStart) {
+          dayMaintenanceRoomIds.add(m.roomId);
+        }
+      }
+
+      const bookedCount = dayBookedRoomIds.size;
+      const maintenanceCount = dayMaintenanceRoomIds.size;
+      const availableCount = Math.max(
+        0,
+        totalRooms - bookedCount - maintenanceCount
+      );
+      const occupancyPercent =
+        totalRooms > 0 ? Math.round((bookedCount / totalRooms) * 100) : 0;
+
+      const dayStr = formatIST(targetDate, "dd MMM");
+      const dayOfWeek = formatIST(targetDate, "EEE");
+      const label =
+        i === 0
+          ? `Today (${dayStr})`
+          : i === 1
+          ? `Tomorrow (${dayStr})`
+          : dayStr;
+
+      forecast.push({
+        date: formatIST(targetDate, "yyyy-MM-dd"),
+        label,
+        dayOfWeek,
+        booked: bookedCount,
+        maintenance: maintenanceCount,
+        available: availableCount,
+        totalRooms,
+        occupancyPercent,
+      });
     }
 
     return {
@@ -196,6 +313,8 @@ export const dashboardService = {
         totalGst: monthlyTotalGst.toNumber(),
         monthName,
       },
+      lowStock,
+      forecast,
       arrivingToday,
       departingToday,
     };

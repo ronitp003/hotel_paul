@@ -7,6 +7,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { MoneyText } from "@/components/shared/money-text";
 import { ArrivalsDeparturesTables } from "./arrivals-departures-tables";
+import { ForecastChart } from "./forecast-chart";
 import {
   RoomIcon,
   MaintenanceIcon,
@@ -17,6 +18,7 @@ import {
   InvoiceIcon,
   RupeeIcon,
   NewBookingIcon,
+  InventoryIcon,
 } from "@/lib/icons";
 import type { DashboardSummary } from "@/features/dashboard/schemas";
 
@@ -35,7 +37,7 @@ export function DashboardView({ data }: DashboardViewProps) {
       {/* Page Header */}
       <PageHeader
         title="Dashboard"
-        description="Property overview, room occupancy, daily operations, and month-to-date billing."
+        description="Property overview, room occupancy, daily operations, inventory alerts, and revenue summary."
       >
         <Link href="/bookings/new">
           <Button className="gap-2 font-semibold">
@@ -100,12 +102,12 @@ export function DashboardView({ data }: DashboardViewProps) {
         </div>
       </div>
 
-      {/* KPI Section 2: Today's Operations & Finance */}
+      {/* KPI Section 2: Today's Operations, Billing & Inventory */}
       <div className="space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Today&apos;s Operations & Billing
+          Operations, Finance & Inventory
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
           <StatCard
             title="Arrivals Today"
             value={data.movements.arrivals.total}
@@ -141,6 +143,30 @@ export function DashboardView({ data }: DashboardViewProps) {
           />
 
           <StatCard
+            title="Low Stock"
+            value={data.lowStock.count}
+            icon={<InventoryIcon className="size-5 text-amber-500" aria-hidden="true" />}
+            badge={
+              data.lowStock.count > 0 ? (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                  <span className="size-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  Restock
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  Adequate
+                </span>
+              )
+            }
+            hint={
+              data.lowStock.count > 0
+                ? `${data.lowStock.count} item(s) below reorder`
+                : "All supplies healthy"
+            }
+            href="/inventory"
+          />
+
+          <StatCard
             title="Billed This Month"
             value={<MoneyText amount={data.billing.totalBilled} />}
             icon={<InvoiceIcon className="size-5 text-primary" aria-hidden="true" />}
@@ -156,6 +182,11 @@ export function DashboardView({ data }: DashboardViewProps) {
             href="/payments"
           />
         </div>
+      </div>
+
+      {/* 7-Day Room Occupancy Forecast Chart (Phase 2.5) */}
+      <div className="space-y-3 pt-2">
+        <ForecastChart data={data.forecast} />
       </div>
 
       {/* Tables: Arriving Today & Departing Today */}

@@ -1445,11 +1445,32 @@ export function NewBookingFlow({
 
                         {/* Open problem warning */}
                         {room.hasProblem && (
-                          <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 p-1.5 rounded-md border border-amber-200 dark:border-amber-900">
-                            <ProblemIcon className="size-3.5 shrink-0" />
-                            <span>
-                              {room.openProblemsCount} open maintenance issue
-                            </span>
+                          <div className="space-y-1.5 text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 p-2 rounded-md border border-amber-500/30">
+                            <div className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300">
+                              <ProblemIcon className="size-3.5 shrink-0" />
+                              <span>
+                                {room.openProblemsCount} Unresolved Issue(s)
+                              </span>
+                            </div>
+                            {room.openProblems && room.openProblems.length > 0 && (
+                              <div className="space-y-1 pt-0.5">
+                                {room.openProblems.map((prob) => (
+                                  <div
+                                    key={prob.id}
+                                    className="p-1.5 rounded bg-background/80 border border-amber-500/20 text-xs space-y-0.5"
+                                  >
+                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                                      <span className="font-bold text-amber-600 dark:text-amber-400">
+                                        {prob.severity}
+                                      </span>
+                                    </div>
+                                    <p className="text-foreground font-medium whitespace-pre-wrap">
+                                      {prob.description}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
 

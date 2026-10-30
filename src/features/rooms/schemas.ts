@@ -44,3 +44,65 @@ export const bulkRoomsSchema = z
   });
 
 export type BulkRoomsInput = z.infer<typeof bulkRoomsSchema>;
+
+export const logProblemSchema = z.object({
+  roomId: z.string().min(1, "Room is required"),
+  severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+  description: z
+    .string()
+    .trim()
+    .min(3, "Description must be at least 3 characters")
+    .max(500, "Description cannot exceed 500 characters"),
+});
+
+export type LogProblemInput = z.infer<typeof logProblemSchema>;
+
+export const markProblemFixedSchema = z.object({
+  problemId: z.string().min(1, "Problem ID is required"),
+});
+
+export type MarkProblemFixedInput = z.infer<typeof markProblemFixedSchema>;
+
+export const createMaintenanceSchema = z
+  .object({
+    roomId: z.string().min(1, "Room is required"),
+    startsAt: z.string().min(1, "Start date and time is required"),
+    endsAt: z.string().min(1, "End date and time is required"),
+    reason: z
+      .string()
+      .trim()
+      .min(3, "Reason must be at least 3 characters")
+      .max(500, "Reason cannot exceed 500 characters"),
+    confirmOverlap: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      const start = new Date(data.startsAt);
+      const end = new Date(data.endsAt);
+      return !isNaN(start.getTime()) && !isNaN(end.getTime()) && end.getTime() > start.getTime();
+    },
+    {
+      message: "End time must be after start time",
+      path: ["endsAt"],
+    }
+  );
+
+export type CreateMaintenanceInput = z.infer<typeof createMaintenanceSchema>;
+
+export const deleteMaintenanceSchema = z.object({
+  maintenanceId: z.string().min(1, "Maintenance ID is required"),
+});
+
+export type DeleteMaintenanceInput = z.infer<typeof deleteMaintenanceSchema>;
+
+export const closeMaintenanceSchema = z.object({
+  maintenanceId: z.string().min(1, "Maintenance ID is required"),
+  completionNote: z
+    .string()
+    .trim()
+    .max(500, "Completion note cannot exceed 500 characters")
+    .optional(),
+});
+
+export type CloseMaintenanceInput = z.infer<typeof closeMaintenanceSchema>;
+

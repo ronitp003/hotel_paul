@@ -38,4 +38,8 @@ export {
   LuLoader as LoaderIcon,
   LuEye as EyeIcon,
   LuEyeOff as EyeOffIcon,
+  LuArrowRightLeft as TransferIcon,
+  LuHistory as HistoryIcon,
+  LuArrowDownToLine as RestockIcon,
+  LuArrowRight as ArrowRightIcon,
 } from "react-icons/lu";

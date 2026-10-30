@@ -46,6 +46,12 @@ export interface AvailableRoomResult {
   unavailableType: "BOOKED" | "RESERVED" | "MAINTENANCE" | "DISABLED" | null;
   hasProblem: boolean;
   openProblemsCount: number;
+  openProblems?: Array<{
+    id: string;
+    description: string;
+    severity: string;
+    reportedAt?: Date;
+  }>;
   conflictingBooking: ConflictingBookingInfo | null;
   conflictingMaintenance: ConflictingMaintenanceInfo | null;
   calculatedStay: StayCalculationResult;
@@ -59,6 +65,13 @@ export interface FindAvailableRoomsResponse {
   totalCount: number;
 }
 
+export interface UpcomingMaintenanceInfo {
+  id: string;
+  reason: string;
+  startsAt: Date;
+  endsAt: Date;
+}
+
 export interface RoomWithStatus {
   id: string;
   number: string;
@@ -69,7 +82,15 @@ export interface RoomWithStatus {
   status: DerivedRoomStatus;
   hasProblem: boolean;
   openProblemsCount: number;
+  openProblems?: Array<{
+    id: string;
+    description: string;
+    severity: string;
+    reportedAt?: Date;
+  }>;
   maintenanceReason: string | null;
+  activeMaintenance?: UpcomingMaintenanceInfo | null;
+  upcomingMaintenance?: UpcomingMaintenanceInfo[];
   currentBooking: {
     id: string;
     reference: string;
@@ -81,6 +102,7 @@ export interface RoomWithStatus {
 
 export interface RoomCalculationInput {
   maintenance?: Array<{
+    id?: string;
     startsAt: Date;
     endsAt: Date;
     reason: string;
@@ -100,6 +122,7 @@ export interface RoomCalculationInput {
     description: string;
     severity: Severity;
     status: ProblemStatus;
+    reportedAt?: Date;
   }>;
 }
 
@@ -118,7 +141,15 @@ export function calculateRoomStatus(
   status: DerivedRoomStatus;
   hasProblem: boolean;
   openProblemsCount: number;
+  openProblems: Array<{
+    id: string;
+    description: string;
+    severity: string;
+    reportedAt: Date;
+  }>;
   maintenanceReason: string | null;
+  activeMaintenance: UpcomingMaintenanceInfo | null;
+  upcomingMaintenance: UpcomingMaintenanceInfo[];
   currentBooking: {
     id: string;
     reference: string;
@@ -130,18 +161,46 @@ export function calculateRoomStatus(
   const openProblems = room.problems?.filter((p) => p.status === "OPEN") ?? [];
   const hasProblem = openProblems.length > 0;
   const openProblemsCount = openProblems.length;
+  const mappedOpenProblems = openProblems.map((p) => ({
+    id: p.id,
+    description: p.description,
+    severity: p.severity,
+    reportedAt: p.reportedAt ?? now,
+  }));
 
-  // 1. Maintenance check (startsAt <= now && endsAt >= now)
+  // 1. Maintenance checks (active: startsAt <= now && endsAt >= now; upcoming: startsAt > now)
   const activeMaintenance = room.maintenance?.find(
     (m) => new Date(m.startsAt) <= now && new Date(m.endsAt) >= now
   );
+
+  const upcomingMaintenance: UpcomingMaintenanceInfo[] = (room.maintenance ?? [])
+    .filter((m) => new Date(m.startsAt) > now)
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+    .map((m) => ({
+      id: m.id ?? "",
+      reason: m.reason,
+      startsAt: new Date(m.startsAt),
+      endsAt: new Date(m.endsAt),
+    }));
+
+  const activeMaintenanceItem: UpcomingMaintenanceInfo | null = activeMaintenance
+    ? {
+        id: activeMaintenance.id ?? "",
+        reason: activeMaintenance.reason,
+        startsAt: new Date(activeMaintenance.startsAt),
+        endsAt: new Date(activeMaintenance.endsAt),
+      }
+    : null;
 
   if (activeMaintenance) {
     return {
       status: "MAINTENANCE",
       hasProblem,
       openProblemsCount,
+      openProblems: mappedOpenProblems,
       maintenanceReason: activeMaintenance.reason,
+      activeMaintenance: activeMaintenanceItem,
+      upcomingMaintenance,
       currentBooking: null,
     };
   }
@@ -173,7 +232,10 @@ export function calculateRoomStatus(
       status: "OCCUPIED",
       hasProblem,
       openProblemsCount,
+      openProblems: mappedOpenProblems,
       maintenanceReason: null,
+      activeMaintenance: null,
+      upcomingMaintenance,
       currentBooking: {
         id: activeBooking.id,
         reference: activeBooking.reference,
@@ -202,7 +264,10 @@ export function calculateRoomStatus(
       status: "RESERVED",
       hasProblem,
       openProblemsCount,
+      openProblems: mappedOpenProblems,
       maintenanceReason: null,
+      activeMaintenance: null,
+      upcomingMaintenance,
       currentBooking: {
         id: reservedBooking.id,
         reference: reservedBooking.reference,
@@ -218,7 +283,10 @@ export function calculateRoomStatus(
     status: "AVAILABLE",
     hasProblem,
     openProblemsCount,
+    openProblems: mappedOpenProblems,
     maintenanceReason: null,
+    activeMaintenance: null,
+    upcomingMaintenance,
     currentBooking: null,
   };
 }
@@ -269,6 +337,9 @@ export interface RoomAvailabilityInput {
   problems?: Array<{
     id: string;
     status: ProblemStatus;
+    description?: string;
+    severity?: Severity;
+    reportedAt?: Date;
   }>;
 }
 
@@ -290,9 +361,15 @@ export function evaluateRoomAvailability(
   stay: StayCalculationResult,
   now: Date = new Date()
 ): AvailableRoomResult {
-  const openProblems = room.problems?.filter((p) => p.status === "OPEN") ?? [];
-  const hasProblem = openProblems.length > 0;
-  const openProblemsCount = openProblems.length;
+  const rawOpenProblems = room.problems?.filter((p) => p.status === "OPEN") ?? [];
+  const hasProblem = rawOpenProblems.length > 0;
+  const openProblemsCount = rawOpenProblems.length;
+  const mappedOpenProblems = rawOpenProblems.map((p) => ({
+    id: p.id,
+    description: p.description ?? "Reported room issue",
+    severity: p.severity ?? "MEDIUM",
+    reportedAt: p.reportedAt ?? now,
+  }));
   const pricePerNight = Number(room.pricePerNight);
   const estimatedTotal = new Decimal(room.pricePerNight)
     .mul(stay.days)
@@ -312,6 +389,7 @@ export function evaluateRoomAvailability(
       unavailableType: "DISABLED",
       hasProblem,
       openProblemsCount,
+      openProblems: mappedOpenProblems,
       conflictingBooking: null,
       conflictingMaintenance: null,
       calculatedStay: stay,
@@ -351,6 +429,7 @@ export function evaluateRoomAvailability(
       unavailableType: "MAINTENANCE",
       hasProblem,
       openProblemsCount,
+      openProblems: mappedOpenProblems,
       conflictingBooking: null,
       conflictingMaintenance: {
         id: firstMaint.id,
@@ -407,6 +486,7 @@ export function evaluateRoomAvailability(
       unavailableType: isReserved ? "RESERVED" : "BOOKED",
       hasProblem,
       openProblemsCount,
+      openProblems: mappedOpenProblems,
       conflictingBooking: {
         id: firstBooking.id,
         reference: firstBooking.reference,
@@ -433,6 +513,7 @@ export function evaluateRoomAvailability(
     unavailableType: null,
     hasProblem,
     openProblemsCount,
+    openProblems: mappedOpenProblems,
     conflictingBooking: null,
     conflictingMaintenance: null,
     calculatedStay: stay,
@@ -450,9 +531,9 @@ export const roomService = {
       include: {
         maintenance: {
           where: {
-            startsAt: { lte: now },
             endsAt: { gte: now },
           },
+          orderBy: { startsAt: "asc" },
         },
         bookings: {
           where: {
@@ -512,9 +593,9 @@ export const roomService = {
         type: true,
         maintenance: {
           where: {
-            startsAt: { lte: now },
             endsAt: { gte: now },
           },
+          orderBy: { startsAt: "asc" },
         },
         bookings: {
           where: {
@@ -556,7 +637,10 @@ export const roomService = {
         status: derived.status,
         hasProblem: derived.hasProblem,
         openProblemsCount: derived.openProblemsCount,
+        openProblems: derived.openProblems,
         maintenanceReason: derived.maintenanceReason,
+        activeMaintenance: derived.activeMaintenance,
+        upcomingMaintenance: derived.upcomingMaintenance,
         currentBooking: derived.currentBooking,
       };
     });

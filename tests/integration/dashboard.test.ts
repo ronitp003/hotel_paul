@@ -145,6 +145,20 @@ describe("Phase 1.7: Dashboard v1 (Integration)", () => {
     expect(summary.billing.totalBilled).toBeGreaterThanOrEqual(2100);
     expect(summary.billing.totalGst).toBeGreaterThanOrEqual(100);
     expect(summary.billing.monthName).toBeTruthy();
+
+    // Validate Low Stock alerts (Phase 2.5)
+    expect(typeof summary.lowStock.count).toBe("number");
+    expect(Array.isArray(summary.lowStock.items)).toBe(true);
+
+    // Validate 7-day Occupancy Forecast (Phase 2.5)
+    expect(summary.forecast.length).toBe(7);
+    expect(summary.forecast[0].label).toContain("Today");
+    expect(summary.forecast[1].label).toContain("Tomorrow");
+    expect(typeof summary.forecast[0].booked).toBe("number");
+    expect(typeof summary.forecast[0].maintenance).toBe("number");
+    expect(typeof summary.forecast[0].available).toBe("number");
+    expect(summary.forecast[0].totalRooms).toBe(summary.rooms.total);
+    expect(typeof summary.forecast[0].occupancyPercent).toBe("number");
   });
 
   it("serves valid summary data from GET /api/dashboard endpoint for authenticated sessions", async () => {

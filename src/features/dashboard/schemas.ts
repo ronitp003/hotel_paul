@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type BookingStatus } from "@prisma/client";
 
 export interface DashboardRoomCounts {
   total: number;
@@ -34,7 +35,27 @@ export interface DashboardMonthlyBilling {
   monthName: string;
 }
 
-import { type BookingStatus } from "@prisma/client";
+export interface DashboardLowStockAlert {
+  count: number;
+  items: Array<{
+    id: string;
+    name: string;
+    unit: string;
+    qtyStore: number;
+    reorderLevel: number;
+  }>;
+}
+
+export interface ForecastDay {
+  date: string; // ISO format "YYYY-MM-DD"
+  label: string; // e.g. "Today (30 Oct)", "Tomorrow (31 Oct)", "01 Nov"
+  dayOfWeek: string; // "Fri", "Sat", "Sun"
+  booked: number;
+  maintenance: number;
+  available: number;
+  totalRooms: number;
+  occupancyPercent: number;
+}
 
 export interface TodayGuestMovement {
   id: string;
@@ -53,6 +74,8 @@ export interface DashboardSummary {
   movements: DashboardTodayMovements;
   paymentsDue: DashboardPaymentsDue;
   billing: DashboardMonthlyBilling;
+  lowStock: DashboardLowStockAlert;
+  forecast: ForecastDay[];
   arrivingToday: TodayGuestMovement[];
   departingToday: TodayGuestMovement[];
 }
@@ -88,4 +111,28 @@ export const dashboardSummarySchema = z.object({
     totalGst: z.number(),
     monthName: z.string(),
   }),
+  lowStock: z.object({
+    count: z.number(),
+    items: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        unit: z.string(),
+        qtyStore: z.number(),
+        reorderLevel: z.number(),
+      })
+    ),
+  }),
+  forecast: z.array(
+    z.object({
+      date: z.string(),
+      label: z.string(),
+      dayOfWeek: z.string(),
+      booked: z.number(),
+      maintenance: z.number(),
+      available: z.number(),
+      totalRooms: z.number(),
+      occupancyPercent: z.number(),
+    })
+  ),
 });
