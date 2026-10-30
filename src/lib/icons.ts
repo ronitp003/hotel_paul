@@ -23,6 +23,7 @@ export {
   LuCheck as CheckIcon,
   LuX as CloseIcon,
   LuChevronDown as ChevronDownIcon,
+  LuChevronLeft as ChevronLeftIcon,
   LuChevronRight as ChevronRightIcon,
   LuClock as ClockIcon,
   LuIndianRupee as RupeeIcon,
