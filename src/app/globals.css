@@ -179,3 +179,15 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/* Base UI popup & focus-guard zero-footprint protection against space-y / flex margin shifts */
+[data-base-ui-focus-guard],
+span[data-type="outside"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: fixed !important;
+  pointer-events: none !important;
+}
+

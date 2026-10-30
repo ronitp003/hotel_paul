@@ -19,6 +19,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CancelInvoiceDialog } from "./cancel-invoice-dialog";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
 
 interface InvoiceItem {
   id: string;
@@ -389,28 +390,36 @@ export function PaymentsView({
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <select
-                  value={paymentKindFilter}
-                  onChange={(e) => setPaymentKindFilter(e.target.value)}
-                  className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
-                >
-                  <option value="ALL">All Types</option>
-                  <option value="ADVANCE">Advance</option>
-                  <option value="PAYMENT">Stay Payment</option>
-                  <option value="REFUND">Refund</option>
-                </select>
+                <div className="w-full sm:w-36">
+                  <SelectDropdown
+                    value={paymentKindFilter}
+                    onChange={setPaymentKindFilter}
+                    options={[
+                      { value: "ALL", label: "All Types" },
+                      { value: "ADVANCE", label: "Advance" },
+                      { value: "PAYMENT", label: "Stay Payment" },
+                      { value: "REFUND", label: "Refund" },
+                    ]}
+                    size="sm"
+                    groupLabel="Filter by Type"
+                  />
+                </div>
 
-                <select
-                  value={paymentModeFilter}
-                  onChange={(e) => setPaymentModeFilter(e.target.value)}
-                  className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
-                >
-                  <option value="ALL">All Modes</option>
-                  <option value="UPI">UPI</option>
-                  <option value="CASH">Cash</option>
-                  <option value="CARD">Card</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option>
-                </select>
+                <div className="w-full sm:w-36">
+                  <SelectDropdown
+                    value={paymentModeFilter}
+                    onChange={setPaymentModeFilter}
+                    options={[
+                      { value: "ALL", label: "All Modes" },
+                      { value: "UPI", label: "UPI" },
+                      { value: "CASH", label: "Cash" },
+                      { value: "CARD", label: "Card" },
+                      { value: "BANK_TRANSFER", label: "Bank Transfer" },
+                    ]}
+                    size="sm"
+                    groupLabel="Filter by Mode"
+                  />
+                </div>
               </div>
             </div>
 

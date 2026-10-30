@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { PaymentIcon, SpinnerIcon } from "@/lib/icons";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
 
 interface AddPaymentDialogProps {
   bookingId: string;
@@ -105,38 +106,38 @@ export function AddPaymentDialog({
               <Label htmlFor="payment-kind" className="text-xs">
                 Transaction Type
               </Label>
-              <select
+              <SelectDropdown
                 id="payment-kind"
                 value={kind}
-                onChange={(e) =>
-                  setKind(e.target.value as "PAYMENT" | "ADVANCE")
-                }
-                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"
-              >
-                <option value="PAYMENT">Stay Payment</option>
-                <option value="ADVANCE">Advance Deposit</option>
-              </select>
+                onChange={(val) => setKind(val as "PAYMENT" | "ADVANCE")}
+                options={[
+                  { value: "PAYMENT", label: "Stay Payment" },
+                  { value: "ADVANCE", label: "Advance Deposit" },
+                ]}
+                size="sm"
+                className="mt-1"
+              />
             </div>
 
             <div>
               <Label htmlFor="payment-mode" className="text-xs">
                 Payment Mode
               </Label>
-              <select
+              <SelectDropdown
                 id="payment-mode"
                 value={mode}
-                onChange={(e) =>
-                  setMode(
-                    e.target.value as "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
-                  )
+                onChange={(val) =>
+                  setMode(val as "CASH" | "UPI" | "CARD" | "BANK_TRANSFER")
                 }
-                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"
-              >
-                <option value="UPI">UPI / QR Code</option>
-                <option value="CASH">Cash</option>
-                <option value="CARD">Credit / Debit Card</option>
-                <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
-              </select>
+                options={[
+                  { value: "UPI", label: "UPI / QR Code" },
+                  { value: "CASH", label: "Cash" },
+                  { value: "CARD", label: "Credit / Debit Card" },
+                  { value: "BANK_TRANSFER", label: "Bank Transfer / NEFT" },
+                ]}
+                size="sm"
+                className="mt-1"
+              />
             </div>
 
             <div>

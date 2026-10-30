@@ -25,6 +25,7 @@ import {
   InvoiceIcon,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
 
 export interface BookingBillData {
   booking: {
@@ -622,24 +623,30 @@ export function CheckoutDialog({
                     <Label htmlFor="checkout-payment-mode" className="text-xs">
                       Payment Mode
                     </Label>
-                    <select
+                    <SelectDropdown
                       id="checkout-payment-mode"
                       value={paymentMode}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setPaymentMode(
-                          e.target.value as
-                            "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
+                          val as
+                            | "CASH"
+                            | "UPI"
+                            | "CARD"
+                            | "BANK_TRANSFER"
                         )
                       }
-                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"
-                    >
-                      <option value="UPI">UPI / QR Code</option>
-                      <option value="CASH">Cash</option>
-                      <option value="CARD">Credit / Debit Card</option>
-                      <option value="BANK_TRANSFER">
-                        Bank Transfer / NEFT
-                      </option>
-                    </select>
+                      options={[
+                        { value: "UPI", label: "UPI / QR Code" },
+                        { value: "CASH", label: "Cash" },
+                        { value: "CARD", label: "Credit / Debit Card" },
+                        {
+                          value: "BANK_TRANSFER",
+                          label: "Bank Transfer / NEFT",
+                        },
+                      ]}
+                      size="sm"
+                      className="mt-1"
+                    />
                   </div>
                 </div>
 
@@ -695,25 +702,27 @@ export function CheckoutDialog({
                     <Label htmlFor="checkout-refund-mode" className="text-xs">
                       Refund Mode
                     </Label>
-                    <select
+                    <SelectDropdown
                       id="checkout-refund-mode"
                       value={refundMode}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setRefundMode(
-                          e.target.value as
+                          val as
                             | "CASH"
                             | "UPI"
                             | "CARD"
                             | "BANK_TRANSFER"
                         )
                       }
-                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1 font-medium"
-                    >
-                      <option value="CASH">Cash Return</option>
-                      <option value="UPI">UPI Refund</option>
-                      <option value="BANK_TRANSFER">Bank Transfer</option>
-                      <option value="CARD">Card Reversal</option>
-                    </select>
+                      options={[
+                        { value: "CASH", label: "Cash Return" },
+                        { value: "UPI", label: "UPI Refund" },
+                        { value: "BANK_TRANSFER", label: "Bank Transfer" },
+                        { value: "CARD", label: "Card Reversal" },
+                      ]}
+                      size="sm"
+                      className="mt-1"
+                    />
                   </div>
 
                   <div>

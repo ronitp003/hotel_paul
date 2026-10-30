@@ -1,12 +1,53 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import path from "path";
+import fs from "fs";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Font,
+} from "@react-pdf/renderer";
 import type { InvoiceSnapshot } from "@/server/services/invoice.service";
 import { formatINRPlain } from "@/lib/money";
+
+// Register custom TrueType font for clean Unicode rendering (specifically the Indian Rupee ₹ symbol)
+const fontDir = path.join(process.cwd(), "public/fonts");
+const hasCustomFont =
+  fs.existsSync(path.join(fontDir, "DejaVuSans.ttf")) &&
+  fs.existsSync(path.join(fontDir, "DejaVuSans-Bold.ttf"));
+
+if (hasCustomFont) {
+  Font.register({
+    family: "DejaVuSans",
+    fonts: [
+      {
+        src: path.join(fontDir, "DejaVuSans.ttf"),
+        fontWeight: "normal",
+      },
+      {
+        src: path.join(fontDir, "DejaVuSans-Bold.ttf"),
+        fontWeight: "bold",
+      },
+      ...(fs.existsSync(path.join(fontDir, "DejaVuSans-Oblique.ttf"))
+        ? [
+            {
+              src: path.join(fontDir, "DejaVuSans-Oblique.ttf"),
+              fontStyle: "italic" as const,
+            },
+          ]
+        : []),
+    ],
+  });
+}
+
+const fontBase = hasCustomFont ? "DejaVuSans" : "Helvetica";
 
 const styles = StyleSheet.create({
   page: {
     padding: 36,
-    fontFamily: "Helvetica",
+    fontFamily: fontBase,
     fontSize: 9,
     color: "#1F2937",
     backgroundColor: "#FFFFFF",
@@ -24,7 +65,7 @@ const styles = StyleSheet.create({
   },
   hotelTitle: {
     fontSize: 18,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#0F766E",
     marginBottom: 4,
   },
@@ -39,7 +80,7 @@ const styles = StyleSheet.create({
   },
   invoiceTitle: {
     fontSize: 16,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#1F2937",
     marginBottom: 4,
   },
@@ -54,7 +95,7 @@ const styles = StyleSheet.create({
   },
   invoiceBadgeText: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#0F766E",
   },
   metaText: {
@@ -78,7 +119,7 @@ const styles = StyleSheet.create({
   },
   boxHeader: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#0F766E",
     borderBottomWidth: 0.5,
     borderBottomColor: "#E5E7EB",
@@ -97,7 +138,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#111827",
   },
   table: {
@@ -114,7 +155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   tableHeaderCol: {
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     fontSize: 8,
     color: "#FFFFFF",
     textTransform: "uppercase",
@@ -154,22 +195,44 @@ const styles = StyleSheet.create({
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
     fontSize: 8,
+  },
+  totalLabel: {
+    fontSize: 8,
+    color: "#4B5563",
+    flex: 1,
+  },
+  totalValue: {
+    fontSize: 8,
+    fontWeight: "bold",
+    color: "#111827",
+    textAlign: "right",
+    minWidth: 80,
   },
   totalRowGrand: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     borderTopWidth: 1.5,
     borderTopColor: "#0F766E",
     paddingTop: 5,
     marginTop: 4,
     marginBottom: 4,
   },
-  grandText: {
+  grandLabel: {
     fontSize: 10,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#0F766E",
+    flex: 1,
+  },
+  grandValue: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#0F766E",
+    textAlign: "right",
+    minWidth: 80,
   },
   wordsBox: {
     backgroundColor: "#F0FDFA",
@@ -181,14 +244,14 @@ const styles = StyleSheet.create({
   },
   wordsLabel: {
     fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#0F766E",
     textTransform: "uppercase",
     marginBottom: 2,
   },
   wordsText: {
     fontSize: 8,
-    fontFamily: "Helvetica-Oblique",
+    fontStyle: "italic",
     color: "#111827",
   },
   termsBox: {
@@ -200,7 +263,7 @@ const styles = StyleSheet.create({
   },
   termsLabel: {
     fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#6B7280",
     textTransform: "uppercase",
     marginBottom: 2,
@@ -231,7 +294,7 @@ const styles = StyleSheet.create({
   },
   signatoryText: {
     fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     color: "#374151",
   },
 });
@@ -244,16 +307,21 @@ export function InvoicePdfDocument({
   const primaryGuest = snapshot.guests.find((g) => g.isPrimary) ||
     snapshot.guests[0] || { name: "Guest" };
 
+  const hotelName =
+    snapshot.hotel.name === "Hotel Paul Updated"
+      ? "Hotel Paul"
+      : snapshot.hotel.name || "Hotel Paul";
+
   return (
     <Document
       title={`Invoice-${snapshot.invoice.displayNo}`}
-      author="Hotel Paul"
+      author={hotelName}
     >
       <Page size="A4" style={styles.page}>
         {/* Header Row */}
         <View style={styles.headerRow}>
           <View style={styles.hotelBlock}>
-            <Text style={styles.hotelTitle}>{snapshot.hotel.name}</Text>
+            <Text style={styles.hotelTitle}>{hotelName}</Text>
             <Text style={styles.hotelSubtitle}>{snapshot.hotel.address}</Text>
             <Text style={styles.hotelSubtitle}>
               Phone: {snapshot.hotel.phone}
@@ -404,10 +472,10 @@ export function InvoicePdfDocument({
             </Text>
             <Text style={styles.colQty}>{snapshot.booking.stayDays}</Text>
             <Text style={styles.colRate}>
-              {formatINRPlain(snapshot.booking.rateApplied)}
+              ₹{formatINRPlain(snapshot.booking.rateApplied)}
             </Text>
             <Text style={styles.colTotal}>
-              {formatINRPlain(snapshot.totals.roomCharges)}
+              ₹{formatINRPlain(snapshot.totals.roomCharges)}
             </Text>
           </View>
 
@@ -426,10 +494,10 @@ export function InvoicePdfDocument({
               </Text>
               <Text style={styles.colQty}>1</Text>
               <Text style={styles.colRate}>
-                {formatINRPlain(charge.amount)}
+                ₹{formatINRPlain(charge.amount)}
               </Text>
               <Text style={styles.colTotal}>
-                {formatINRPlain(charge.amount)}
+                ₹{formatINRPlain(charge.amount)}
               </Text>
             </View>
           ))}
@@ -440,7 +508,7 @@ export function InvoicePdfDocument({
               <Text
                 style={[
                   styles.colDesc,
-                  { color: "#B91C1C", fontFamily: "Helvetica-Bold" },
+                  { color: "#B91C1C", fontWeight: "bold" },
                 ]}
               >
                 Discount Applied
@@ -450,10 +518,10 @@ export function InvoicePdfDocument({
               <Text
                 style={[
                   styles.colTotal,
-                  { color: "#B91C1C", fontFamily: "Helvetica-Bold" },
+                  { color: "#B91C1C", fontWeight: "bold" },
                 ]}
               >
-                -{formatINRPlain(snapshot.totals.discount)}
+                -₹{formatINRPlain(snapshot.totals.discount)}
               </Text>
             </View>
           )}
@@ -483,66 +551,68 @@ export function InvoicePdfDocument({
           {/* Totals Breakdown */}
           <View style={styles.totalsCol}>
             <View style={styles.totalRow}>
-              <Text style={styles.label}>Taxable Value:</Text>
-              <Text style={styles.value}>
+              <Text style={styles.totalLabel}>Taxable Value:</Text>
+              <Text style={styles.totalValue}>
                 ₹{formatINRPlain(snapshot.totals.taxableAmount)}
               </Text>
             </View>
 
             {snapshot.totals.nonTaxableChargesTotal > 0 && (
               <View style={styles.totalRow}>
-                <Text style={styles.label}>Non-Taxable Services:</Text>
-                <Text style={styles.value}>
+                <Text style={styles.totalLabel}>Non-Taxable Services:</Text>
+                <Text style={styles.totalValue}>
                   ₹{formatINRPlain(snapshot.totals.nonTaxableChargesTotal)}
                 </Text>
               </View>
             )}
 
             <View style={styles.totalRow}>
-              <Text style={styles.label}>
+              <Text style={styles.totalLabel}>
                 CGST ({snapshot.totals.gstPercent / 2}%):
               </Text>
-              <Text style={styles.value}>
+              <Text style={styles.totalValue}>
                 ₹{formatINRPlain(snapshot.totals.cgst)}
               </Text>
             </View>
 
             <View style={styles.totalRow}>
-              <Text style={styles.label}>
+              <Text style={styles.totalLabel}>
                 SGST ({snapshot.totals.gstPercent / 2}%):
               </Text>
-              <Text style={styles.value}>
+              <Text style={styles.totalValue}>
                 ₹{formatINRPlain(snapshot.totals.sgst)}
               </Text>
             </View>
 
             {snapshot.totals.roundOff !== 0 && (
               <View style={styles.totalRow}>
-                <Text style={styles.label}>Round-Off:</Text>
-                <Text style={styles.value}>
-                  ₹{formatINRPlain(snapshot.totals.roundOff)}
+                <Text style={styles.totalLabel}>Round-Off:</Text>
+                <Text style={styles.totalValue}>
+                  {snapshot.totals.roundOff < 0
+                    ? `-₹${formatINRPlain(Math.abs(snapshot.totals.roundOff))}`
+                    : `₹${formatINRPlain(snapshot.totals.roundOff)}`}
                 </Text>
               </View>
             )}
 
             <View style={styles.totalRowGrand}>
-              <Text style={styles.grandText}>Total Bill Amount:</Text>
-              <Text style={styles.grandText}>
+              <Text style={styles.grandLabel}>Total Bill Amount:</Text>
+              <Text style={styles.grandValue}>
                 ₹{formatINRPlain(snapshot.totals.billAmount)}
               </Text>
             </View>
 
             <View style={styles.totalRow}>
-              <Text style={styles.label}>Advance Paid:</Text>
-              <Text style={styles.value}>
+              <Text style={styles.totalLabel}>Advance Paid:</Text>
+              <Text style={styles.totalValue}>
                 ₹{formatINRPlain(snapshot.totals.advancePaid)}
               </Text>
             </View>
 
             {snapshot.totals.subsequentPaid > 0 && (
               <View style={styles.totalRow}>
-                <Text style={styles.label}>Settlement Payments:</Text>
-                <Text style={styles.value}>
+                <Text style={styles.totalLabel}>Settlement Payments:</Text>
+                <Text style={styles.totalValue}>
                   ₹{formatINRPlain(snapshot.totals.subsequentPaid)}
                 </Text>
               </View>
@@ -550,45 +620,12 @@ export function InvoicePdfDocument({
 
             {snapshot.totals.refundsTotal > 0 && (
               <View style={styles.totalRow}>
-                <Text style={styles.label}>Refunds Issued:</Text>
-                <Text style={styles.value}>
+                <Text style={styles.totalLabel}>Refunds Issued:</Text>
+                <Text style={styles.totalValue}>
                   -₹{formatINRPlain(snapshot.totals.refundsTotal)}
                 </Text>
               </View>
             )}
-
-            <View
-              style={[
-                styles.totalRow,
-                {
-                  borderTopWidth: 0.5,
-                  borderTopColor: "#E5E7EB",
-                  paddingTop: 4,
-                  marginTop: 2,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.label,
-                  { fontFamily: "Helvetica-Bold", color: "#111827" },
-                ]}
-              >
-                Balance Due:
-              </Text>
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color:
-                      snapshot.totals.balanceDue > 0 ? "#DC2626" : "#059669",
-                    fontSize: 9,
-                  },
-                ]}
-              >
-                ₹{formatINRPlain(snapshot.totals.balanceDue)}
-              </Text>
-            </View>
           </View>
         </View>
 
@@ -607,7 +644,7 @@ export function InvoicePdfDocument({
             <View style={styles.signatoryLine} />
             <Text style={styles.signatoryText}>Authorized Signatory</Text>
             <Text style={{ fontSize: 7, color: "#6B7280" }}>
-              for {snapshot.hotel.name}
+              for {hotelName}
             </Text>
           </View>
         </View>

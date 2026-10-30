@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
 import { RoomCard } from "./room-card";
 import { AddRoomDialog } from "./add-room-dialog";
 import { EditRoomDialog } from "./edit-room-dialog";
@@ -261,19 +262,40 @@ export function RoomsManager({
             />
           </div>
 
-          <div className="w-full sm:w-48">
-            <select
-              className="flex h-9.5 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
+          <div className="w-full sm:w-52">
+            <SelectDropdown
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <option value="ALL">All Room Types</option>
-              {roomTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+              onChange={setTypeFilter}
+              options={[
+                {
+                  value: "ALL",
+                  label: "All Room Types",
+                  badge: (
+                    <Badge
+                      variant={typeFilter === "ALL" ? "default" : "secondary"}
+                      className="text-[10px] px-1.5 py-0 font-medium"
+                    >
+                      {initialRooms.length}
+                    </Badge>
+                  ),
+                },
+                ...roomTypes.map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                  badge: (
+                    <Badge
+                      variant={typeFilter === t.id ? "default" : "secondary"}
+                      className="text-[10px] px-1.5 py-0 font-medium"
+                    >
+                      {initialRooms.filter((r) => r.typeId === t.id).length}
+                    </Badge>
+                  ),
+                })),
+              ]}
+              placeholder="Filter by Room Type"
+              groupLabel="Filter by Room Type"
+              className="h-9.5"
+            />
           </div>
         </div>
 

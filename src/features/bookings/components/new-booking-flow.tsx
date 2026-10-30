@@ -54,6 +54,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
 
 interface GuestState {
   id: string;
@@ -456,10 +457,11 @@ export function NewBookingFlow({
       }
     }
 
-    // 3. Primary Guest Father / Husband Name (Mandatory)
-    if (!guests[0]?.fatherName?.trim()) {
-      errors.primaryFatherName = "Father / Husband name is required";
-    } else if (guests[0].fatherName.trim().length < 2) {
+    // 3. Primary Guest Father / Husband Name (Optional)
+    if (
+      guests[0]?.fatherName?.trim() &&
+      guests[0].fatherName.trim().length < 2
+    ) {
       errors.primaryFatherName = "Name must be at least 2 characters";
     }
 
@@ -495,9 +497,7 @@ export function NewBookingFlow({
         occErr.name = "Full name must be at least 2 characters";
       }
 
-      if (!occ.fatherName?.trim()) {
-        occErr.fatherName = "Father / Husband name is required";
-      } else if (occ.fatherName.trim().length < 2) {
+      if (occ.fatherName?.trim() && occ.fatherName.trim().length < 2) {
         occErr.fatherName = "Name must be at least 2 characters";
       }
 
@@ -1106,7 +1106,7 @@ export function NewBookingFlow({
 
               {/* Room Type Dropdown */}
               <div className="w-full sm:w-64">
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger
                     render={
                       <Button
@@ -1227,7 +1227,7 @@ export function NewBookingFlow({
 
               {/* Room Status Dropdown */}
               <div className="w-full sm:w-52">
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger
                     render={
                       <Button
@@ -1710,7 +1710,7 @@ export function NewBookingFlow({
                     htmlFor="primary-father"
                     className="text-xs font-semibold"
                   >
-                    Father / Husband Name *
+                    Father / Husband Name (Optional)
                   </Label>
                   <Input
                     id="primary-father"
@@ -1769,26 +1769,24 @@ export function NewBookingFlow({
                   >
                     Gender *
                   </Label>
-                  <select
+                  <SelectDropdown
                     id="primary-sex"
                     value={guests[0].sex}
-                    onChange={(e) =>
+                    onChange={(val) =>
                       handleUpdateGuest(
                         0,
                         "sex",
-                        e.target.value as "MALE" | "FEMALE" | "OTHER"
+                        val as "MALE" | "FEMALE" | "OTHER"
                       )
                     }
-                    className={cn(
-                      "flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                      step3Errors.primarySex &&
-                        "border-destructive focus-visible:ring-destructive"
-                    )}
-                  >
-                    <option value="MALE">Male</option>
-                    <option value="FEMALE">Female</option>
-                    <option value="OTHER">Other</option>
-                  </select>
+                    options={[
+                      { value: "MALE", label: "Male" },
+                      { value: "FEMALE", label: "Female" },
+                      { value: "OTHER", label: "Other" },
+                    ]}
+                    placeholder="Select gender"
+                    error={Boolean(step3Errors.primarySex)}
+                  />
                   {step3Errors.primarySex && (
                     <p className="text-[11px] text-destructive font-medium">
                       {step3Errors.primarySex}
@@ -1886,7 +1884,7 @@ export function NewBookingFlow({
                           htmlFor={`occ-father-${actualIdx}`}
                           className="text-xs font-semibold"
                         >
-                          Father / Husband Name *
+                          Father / Husband Name (Optional)
                         </Label>
                         <Input
                           id={`occ-father-${actualIdx}`}
@@ -1952,26 +1950,24 @@ export function NewBookingFlow({
                         >
                           Gender *
                         </Label>
-                        <select
+                        <SelectDropdown
                           id={`occ-gender-${actualIdx}`}
                           value={guest.sex}
-                          onChange={(e) =>
+                          onChange={(val) =>
                             handleUpdateGuest(
                               actualIdx,
                               "sex",
-                              e.target.value as "MALE" | "FEMALE" | "OTHER"
+                              val as "MALE" | "FEMALE" | "OTHER"
                             )
                           }
-                          className={cn(
-                            "flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                            occErr?.sex &&
-                              "border-destructive focus-visible:ring-destructive"
-                          )}
-                        >
-                          <option value="MALE">Male</option>
-                          <option value="FEMALE">Female</option>
-                          <option value="OTHER">Other</option>
-                        </select>
+                          options={[
+                            { value: "MALE", label: "Male" },
+                            { value: "FEMALE", label: "Female" },
+                            { value: "OTHER", label: "Other" },
+                          ]}
+                          placeholder="Select gender"
+                          error={Boolean(occErr?.sex)}
+                        />
                         {occErr?.sex && (
                           <p className="text-[11px] text-destructive font-medium">
                             {occErr.sex}
@@ -2029,20 +2025,21 @@ export function NewBookingFlow({
                 >
                   Booking Source
                 </Label>
-                <select
+                <SelectDropdown
                   id="booking-source"
                   value={bookingSource}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     setBookingSource(
-                      e.target.value as "WALK_IN" | "PHONE" | "REFERRAL"
+                      val as "WALK_IN" | "PHONE" | "REFERRAL"
                     )
                   }
-                  className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs"
-                >
-                  <option value="WALK_IN">Walk-In</option>
-                  <option value="PHONE">Phone Reservation</option>
-                  <option value="REFERRAL">Referral</option>
-                </select>
+                  options={[
+                    { value: "WALK_IN", label: "Walk-In" },
+                    { value: "PHONE", label: "Phone Reservation" },
+                    { value: "REFERRAL", label: "Referral" },
+                  ]}
+                  placeholder="Select booking source"
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -2358,25 +2355,30 @@ export function NewBookingFlow({
                     >
                       Payment Mode
                     </Label>
-                    <select
+                    <SelectDropdown
                       id="advance-mode"
                       value={advanceMode}
                       disabled={advanceAmount === 0}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setAdvanceMode(
-                          e.target.value as
-                            "CASH" | "UPI" | "CARD" | "BANK_TRANSFER"
+                          val as
+                            | "CASH"
+                            | "UPI"
+                            | "CARD"
+                            | "BANK_TRANSFER"
                         )
                       }
-                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-xs disabled:opacity-50"
-                    >
-                      <option value="CASH">Cash</option>
-                      <option value="UPI">UPI / QR Code</option>
-                      <option value="CARD">Credit / Debit Card</option>
-                      <option value="BANK_TRANSFER">
-                        Bank Transfer / NEFT
-                      </option>
-                    </select>
+                      options={[
+                        { value: "CASH", label: "Cash" },
+                        { value: "UPI", label: "UPI / QR Code" },
+                        { value: "CARD", label: "Credit / Debit Card" },
+                        {
+                          value: "BANK_TRANSFER",
+                          label: "Bank Transfer / NEFT",
+                        },
+                      ]}
+                      size="lg"
+                    />
                   </div>
                 </div>
               </div>
