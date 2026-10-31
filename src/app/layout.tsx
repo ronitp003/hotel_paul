@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/providers/query-provider";
+import { NavigationProvider } from "@/providers/navigation-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,8 +24,10 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         <QueryProvider>
-          {children}
-          <Toaster position="top-right" richColors />
+          <NavigationProvider>
+            {children}
+            <Toaster position="top-right" richColors />
+          </NavigationProvider>
         </QueryProvider>
       </body>
     </html>

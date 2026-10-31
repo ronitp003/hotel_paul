@@ -19,11 +19,11 @@ import { formatISTDateTime } from "@/lib/datetime";
 import {
   HistoryIcon,
   RestockIcon,
-  ArrowRightIcon,
   ProblemIcon,
   InventoryIcon,
+  TransferIcon,
+  CheckIcon,
 } from "@/lib/icons";
-import { StockLocation } from "@/features/inventory/schemas";
 
 interface ItemHistorySheetProps {
   item: FormattedInventoryItem | null;
@@ -77,78 +77,77 @@ export function ItemHistorySheet({
 
   if (!item) return null;
 
-  const renderBadge = (m: FormattedInventoryMovement) => {
-    // 1. Restock from supplier
-    if (!m.from && m.to) {
+  const renderActionBadge = (m: FormattedInventoryMovement) => {
+    const act = m.actionType;
+
+    if (act === "ADD_STOCK" || (!m.from && m.to === "STORE")) {
       return (
         <Badge
           variant="outline"
           className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold"
         >
           <RestockIcon className="size-3" />
-          Restocked (+{m.quantity} {item.unit})
+          Add Stock (+{m.quantity} {item.unit})
         </Badge>
       );
     }
 
-    // 2. Discarded / Scrapped
-    if (m.from && !m.to) {
+    if (act === "USE_STOCK" || (m.from === "STORE" && m.to === "ROOMS")) {
       return (
         <Badge
           variant="outline"
-          className="bg-zinc-500/10 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 gap-1 font-medium"
+          className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 gap-1 font-semibold"
         >
-          Discarded (-{m.quantity} {item.unit})
+          <TransferIcon className="size-3" />
+          Use / Issue Stock ({m.quantity} {item.unit})
         </Badge>
       );
     }
 
-    // 3. Marked Damaged
-    if (m.to === StockLocation.DAMAGED) {
+    if (act === "MARK_DAMAGED" || m.to === "DAMAGED") {
       return (
         <Badge
           variant="outline"
-          className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 gap-1 font-medium"
+          className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 gap-1 font-semibold"
         >
           <ProblemIcon className="size-3" />
-          Marked Damaged ({m.quantity} {item.unit})
+          Mark as Damaged ({m.quantity} {item.unit})
         </Badge>
       );
     }
 
-    // 4. Sent to Laundry
-    if (m.to === StockLocation.LAUNDRY) {
+    if (act === "MARK_DISCONTINUED" || m.to === "DISCONTINUED") {
       return (
         <Badge
           variant="outline"
-          className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30 gap-1 font-medium"
+          className="bg-zinc-500/10 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 gap-1 font-semibold"
         >
-          To Laundry ({m.quantity} {item.unit})
+          Discontinued ({m.quantity} {item.unit})
         </Badge>
       );
     }
 
-    // 5. Laundry return to Store
-    if (m.from === StockLocation.LAUNDRY && m.to === StockLocation.STORE) {
+    if (act === "RETURN_AVAILABLE" || m.to === "STORE") {
       return (
         <Badge
           variant="outline"
-          className="bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30 gap-1 font-medium"
+          className="bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30 gap-1 font-semibold"
         >
-          Cleaned & Stored ({m.quantity} {item.unit})
+          <CheckIcon className="size-3" />
+          Returned to Available (+{m.quantity} {item.unit})
         </Badge>
       );
     }
 
-    // 6. Generic Transfer
+    // Fallback generic movement
     return (
       <Badge
         variant="outline"
-        className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 gap-1 font-medium"
+        className="bg-muted text-muted-foreground border-border/60 gap-1 font-medium"
       >
-        <span>{m.from}</span>
-        <ArrowRightIcon className="size-2.5" />
-        <span>{m.to}</span>
+        <span>{m.from || "External"}</span>
+        <span>→</span>
+        <span>{m.to || "External"}</span>
         <span className="font-mono">({m.quantity})</span>
       </Badge>
     );
@@ -166,27 +165,27 @@ export function ItemHistorySheet({
               </SheetTitle>
             </div>
             <SheetDescription>
-              Complete immutable movement and transfer history for this item.
+              Complete history of stock additions, usage, damages, and returns.
             </SheetDescription>
           </SheetHeader>
 
-          {/* Quick counts banner */}
+          {/* 4 Category Stock Overview */}
           <div className="grid grid-cols-4 gap-2 pt-1 text-center text-xs">
             <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
-              <div className="text-[10px] text-muted-foreground uppercase font-bold">Store</div>
-              <div className="font-mono font-bold text-sm mt-0.5">{item.qtyStore}</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold">Available</div>
+              <div className="font-mono font-bold text-sm mt-0.5">{item.available}</div>
             </div>
             <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
-              <div className="text-[10px] text-muted-foreground uppercase font-bold">Rooms</div>
-              <div className="font-mono font-bold text-sm mt-0.5">{item.qtyRooms}</div>
-            </div>
-            <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
-              <div className="text-[10px] text-muted-foreground uppercase font-bold">Laundry</div>
-              <div className="font-mono font-bold text-sm mt-0.5">{item.qtyLaundry}</div>
+              <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold">In Use</div>
+              <div className="font-mono font-bold text-sm mt-0.5">{item.inUse}</div>
             </div>
             <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
               <div className="text-[10px] text-rose-600 dark:text-rose-400 uppercase font-bold">Damaged</div>
-              <div className="font-mono font-bold text-sm mt-0.5 text-rose-600 dark:text-rose-400">{item.qtyDamaged}</div>
+              <div className="font-mono font-bold text-sm mt-0.5 text-rose-600 dark:text-rose-400">{item.damaged}</div>
+            </div>
+            <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
+              <div className="text-[10px] text-zinc-500 uppercase font-bold">Discont.</div>
+              <div className="font-mono font-bold text-sm mt-0.5 text-zinc-500">{item.discontinued}</div>
             </div>
           </div>
         </div>
@@ -219,9 +218,9 @@ export function ItemHistorySheet({
           {!isLoading && !error && movements.length === 0 && (
             <div className="flex flex-col items-center justify-center text-center p-8 text-muted-foreground space-y-2">
               <InventoryIcon className="size-10 opacity-30" />
-              <p className="text-sm font-medium">No movement history yet.</p>
+              <p className="text-sm font-medium">No stock movement history yet.</p>
               <p className="text-xs max-w-xs">
-                Movements made via the &ldquo;Move Stock&rdquo; dialog or supplier restocks will appear here.
+                Stock updates performed via &ldquo;Update Stock&rdquo; will be logged here.
               </p>
             </div>
           )}
@@ -234,18 +233,26 @@ export function ItemHistorySheet({
                 className="rounded-xl border border-border/70 p-3.5 space-y-2 bg-card hover:border-foreground/20 transition-all text-xs"
               >
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>{renderBadge(m)}</div>
+                  <div>{renderActionBadge(m)}</div>
                   <span className="text-[11px] font-mono text-muted-foreground">
                     {formatISTDateTime(m.doneAt)}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+                {/* Previous -> Updated Quantity Tracker */}
+                <div className="flex items-center justify-between text-muted-foreground text-[11px] pt-0.5">
                   <span>
                     By <strong className="text-foreground">{m.doneByName}</strong>
                   </span>
+                  {m.previousQty !== null && m.updatedQty !== null && (
+                    <span className="font-mono text-[11px] bg-muted/50 px-1.5 py-0.5 rounded border border-border/30">
+                      Level: <span className="font-medium text-foreground">{m.previousQty}</span> →{" "}
+                      <span className="font-bold text-foreground">{m.updatedQty}</span> {item.unit}
+                    </span>
+                  )}
                 </div>
 
+                {/* Optional Note / Reason */}
                 {m.note && (
                   <p className="text-xs text-foreground/90 bg-muted/30 p-2 rounded-md italic border border-border/30">
                     &ldquo;{m.note}&rdquo;

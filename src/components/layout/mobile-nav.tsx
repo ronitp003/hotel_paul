@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 import type { Role } from "@/lib/constants";
-import { RoomIcon, NewBookingIcon } from "@/lib/icons";
+import { RoomIcon, NewBookingIcon, SpinnerIcon } from "@/lib/icons";
 import {
   Sheet,
   SheetContent,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 
 import { isNavItemActive } from "./sidebar";
+import { useNavigationState } from "@/providers/navigation-provider";
 
 interface MobileNavProps {
   open: boolean;
@@ -27,6 +28,7 @@ export function MobileNav({
   userRole = "OWNER",
 }: MobileNavProps) {
   const pathname = usePathname();
+  const { isNavigating, targetPath } = useNavigationState();
 
   const filteredItems = NAV_ITEMS.filter((item) =>
     item.roles.includes(userRole)
@@ -53,6 +55,11 @@ export function MobileNav({
             {filteredItems.map((item) => {
               const Icon = item.icon;
               const isActive = isNavItemActive(pathname, item.href);
+              const isPending =
+                isNavigating &&
+                targetPath !== null &&
+                isNavItemActive(targetPath, item.href) &&
+                !isActive;
 
               return (
                 <Link
@@ -63,9 +70,11 @@ export function MobileNav({
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     isActive
                       ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : isPending
+                      ? "bg-primary/15 text-primary font-semibold border border-primary/30"
                       : item.highlight
-                        ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                      ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   )}
                 >
                   <Icon
@@ -73,13 +82,18 @@ export function MobileNav({
                       "size-5 shrink-0 transition-colors",
                       isActive
                         ? "text-primary-foreground"
+                        : isPending
+                        ? "text-primary animate-pulse"
                         : item.highlight
-                          ? "text-primary"
-                          : "text-muted-foreground"
+                        ? "text-primary"
+                        : "text-muted-foreground"
                     )}
                     aria-hidden="true"
                   />
-                  <span>{item.title}</span>
+                  <span className="flex-1 truncate">{item.title}</span>
+                  {isPending && (
+                    <SpinnerIcon className="size-3.5 text-primary animate-spin shrink-0 ml-auto" />
+                  )}
                 </Link>
               );
             })}

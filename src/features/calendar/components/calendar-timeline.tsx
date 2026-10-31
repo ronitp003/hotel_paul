@@ -6,6 +6,10 @@ import {
   subDays,
   addWeeks,
   subWeeks,
+  addMonths,
+  subMonths,
+  startOfWeek,
+  endOfWeek,
   differenceInMilliseconds,
   isSameDay,
 } from "date-fns";
@@ -16,6 +20,8 @@ import {
   formatISTTime,
   startOfISTDay,
   endOfISTDay,
+  startOfISTMonth,
+  endOfISTMonth,
 } from "@/lib/datetime";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -30,10 +36,14 @@ import {
   SearchIcon,
   MaintenanceIcon,
   SpinnerIcon,
+  CircleAlertIcon,
 } from "@/lib/icons";
 import { useCalendarData } from "../hooks/use-calendar";
 import { BookingDetailDialog } from "./booking-detail-dialog";
 import { MaintenanceDetailDialog } from "./maintenance-detail-dialog";
+import { BookingHoverCard } from "./booking-hover-card";
+import { MaintenanceHoverCard } from "./maintenance-hover-card";
+import { CalendarMonthView } from "./calendar-month-view";
 import type {
   CalendarBookingEvent,
   CalendarMaintenanceEvent,
@@ -50,7 +60,7 @@ function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>)
   );
 }
 
-type ViewMode = "day" | "week";
+export type ViewMode = "day" | "week" | "month";
 
 interface CalendarTimelineProps {
   initialRooms?: CalendarRoomItem[];
@@ -114,20 +124,37 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
 
   // Compute timeline start and end in UTC based on selectedDate and viewMode
   const { timelineStart, timelineEnd, totalMs } = useMemo(() => {
-    const start = startOfISTDay(selectedDate);
-    let end: Date;
     if (viewMode === "day") {
-      end = endOfISTDay(selectedDate);
+      const start = startOfISTDay(selectedDate);
+      const end = endOfISTDay(selectedDate);
+      return {
+        timelineStart: start,
+        timelineEnd: end,
+        totalMs: differenceInMilliseconds(end, start),
+      };
+    } else if (viewMode === "week") {
+      // 7 full days starting from selectedDate
+      const start = startOfISTDay(selectedDate);
+      const end = endOfISTDay(addDays(selectedDate, 6));
+      return {
+        timelineStart: start,
+        timelineEnd: end,
+        totalMs: differenceInMilliseconds(end, start),
+      };
     } else {
-      // 7 full days
-      end = endOfISTDay(addDays(selectedDate, 6));
+      // Month grid (covers complete weeks for the full calendar view)
+      const monthStart = startOfISTMonth(selectedDate);
+      const monthEnd = endOfISTMonth(selectedDate);
+      const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+      const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+      const start = startOfISTDay(gridStart);
+      const end = endOfISTDay(gridEnd);
+      return {
+        timelineStart: start,
+        timelineEnd: end,
+        totalMs: differenceInMilliseconds(end, start),
+      };
     }
-    const ms = differenceInMilliseconds(end, start);
-    return {
-      timelineStart: start,
-      timelineEnd: end,
-      totalMs: ms,
-    };
   }, [selectedDate, viewMode]);
 
   // Fetch live calendar data via TanStack Query
@@ -156,20 +183,116 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
     });
   }, [timelineData, selectedTypeFilter, searchQuery]);
 
+  // Dynamic Occupancy Summary Calculation
+  const occupancyStats = useMemo(() => {
+    const totalRooms = filteredRooms.length;
+    if (totalRooms === 0) {
+      return {
+        totalRooms: 0,
+        occupiedCount: 0,
+        reservedCount: 0,
+        maintenanceCount: 0,
+        availableCount: 0,
+        occupancyRate: 0,
+      };
+    }
+
+    let evalStartIso: string;
+    let evalEndIso: string;
+
+    if (viewMode === "day") {
+      evalStartIso = startOfISTDay(selectedDate).toISOString();
+      evalEndIso = endOfISTDay(selectedDate).toISOString();
+    } else if (viewMode === "week") {
+      evalStartIso = timelineStart.toISOString();
+      evalEndIso = timelineEnd.toISOString();
+    } else {
+      evalStartIso = startOfISTMonth(selectedDate).toISOString();
+      evalEndIso = endOfISTMonth(selectedDate).toISOString();
+    }
+
+    const filteredRoomIdSet = new Set(filteredRooms.map((r) => r.id));
+    const occupiedRoomIds = new Set<string>();
+    const reservedRoomIds = new Set<string>();
+    const maintenanceRoomIds = new Set<string>();
+
+    if (timelineData?.bookings) {
+      for (const b of timelineData.bookings) {
+        if (!filteredRoomIdSet.has(b.roomId)) continue;
+        if (b.checkInAt <= evalEndIso && b.checkOutAt >= evalStartIso) {
+          if (b.status === "CHECKED_IN") {
+            occupiedRoomIds.add(b.roomId);
+          } else if (b.status === "RESERVED") {
+            reservedRoomIds.add(b.roomId);
+          }
+        }
+      }
+    }
+
+    if (timelineData?.maintenance) {
+      for (const m of timelineData.maintenance) {
+        if (!filteredRoomIdSet.has(m.roomId)) continue;
+        if (m.startsAt <= evalEndIso && m.endsAt >= evalStartIso) {
+          maintenanceRoomIds.add(m.roomId);
+        }
+      }
+    }
+
+    const occupiedCount = occupiedRoomIds.size;
+    let reservedCount = 0;
+    for (const rid of reservedRoomIds) {
+      if (!occupiedRoomIds.has(rid)) {
+        reservedCount++;
+      }
+    }
+    let maintenanceCount = 0;
+    for (const rid of maintenanceRoomIds) {
+      if (!occupiedRoomIds.has(rid) && !reservedRoomIds.has(rid)) {
+        maintenanceCount++;
+      }
+    }
+
+    const busyCount = occupiedCount + reservedCount + maintenanceCount;
+    const availableCount = Math.max(0, totalRooms - busyCount);
+    const occupancyRate = Math.round(
+      ((occupiedCount + reservedCount) / totalRooms) * 100
+    );
+
+    return {
+      totalRooms,
+      occupiedCount,
+      reservedCount,
+      maintenanceCount,
+      availableCount,
+      occupancyRate,
+    };
+  }, [
+    filteredRooms,
+    timelineData,
+    viewMode,
+    selectedDate,
+    timelineStart,
+    timelineEnd,
+  ]);
+
   // Navigation handlers
   const handlePrev = () => {
     if (viewMode === "day") {
       setSelectedDate((prev) => subDays(prev, 1));
-    } else {
+    } else if (viewMode === "week") {
       setSelectedDate((prev) => subWeeks(prev, 1));
+    } else {
+      setSelectedDate((prev) => subMonths(prev, 1));
     }
   };
 
   const handleNext = () => {
     if (viewMode === "day") {
       setSelectedDate((prev) => addDays(prev, 1));
-    } else {
+    } else if (viewMode === "week") {
       setSelectedDate((prev) => addWeeks(prev, 1));
+    } else {
+      setSelectedDate((prev) => addMonths(prev, 1));
     }
   };
 
@@ -177,7 +300,7 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
     setSelectedDate(startOfISTDay(new Date()));
   };
 
-  // Header column generation
+  // Header column generation for Day and Week views
   const headerColumns = useMemo(() => {
     if (viewMode === "day") {
       // 24 one-hour blocks: 00:00 to 23:00
@@ -191,7 +314,7 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
           isToday: isSameDay(toIST(d), toIST(todayIST)),
         };
       });
-    } else {
+    } else if (viewMode === "week") {
       // 7 day blocks
       return Array.from({ length: 7 }).map((_, dayIdx) => {
         const d = addDays(timelineStart, dayIdx);
@@ -203,16 +326,17 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
         };
       });
     }
+    return [];
   }, [viewMode, timelineStart, todayIST]);
 
   // Calculate percentage position for "Now" line (SSR-safe, client-only)
   const nowPercent = useMemo(() => {
-    if (nowMs === null) return null;
+    if (nowMs === null || viewMode === "month") return null;
     const startMs = timelineStart.getTime();
     const endMs = timelineEnd.getTime();
     if (nowMs < startMs || nowMs > endMs) return null;
     return ((nowMs - startMs) / totalMs) * 100;
-  }, [nowMs, timelineStart, timelineEnd, totalMs]);
+  }, [nowMs, timelineStart, timelineEnd, totalMs, viewMode]);
 
   // Group events by room
   const eventsByRoom = useMemo(() => {
@@ -261,10 +385,10 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
 
   return (
     <div className="space-y-4">
-      {/* Top Toolbar */}
-      <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between p-3.5 rounded-xl border border-border bg-card shadow-xs">
+      {/* 1. Calendar Toolbar */}
+      <div className="flex flex-col lg:flex-row gap-3.5 items-stretch lg:items-center justify-between p-3.5 rounded-xl border border-border bg-card shadow-xs">
         {/* Left: Nav Buttons & Date Title */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-1 border border-border rounded-lg p-0.5 bg-muted/40">
             <Button
               type="button"
@@ -297,12 +421,14 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2 pl-2">
+          <div className="flex items-center gap-2 pl-1.5">
             <CalendarIcon className="size-4 text-primary shrink-0" />
             <h2 className="text-sm sm:text-base font-bold text-foreground">
               {viewMode === "day"
                 ? formatIST(selectedDate, "EEEE, dd MMMM yyyy")
-                : `${formatISTDate(timelineStart)} — ${formatISTDate(timelineEnd)}`}
+                : viewMode === "week"
+                ? `${formatISTDate(timelineStart)} — ${formatISTDate(timelineEnd)}`
+                : formatIST(selectedDate, "MMMM yyyy")}
             </h2>
             {isFetching && (
               <SpinnerIcon className="size-3.5 text-muted-foreground animate-spin ml-1" />
@@ -310,17 +436,17 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
           </div>
         </div>
 
-        {/* Right: View Toggle, Filters, Room Search */}
+        {/* Right: View Toggle (Day/Week/Month), Room Type Filter, Room Search */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Day / Week View Mode Toggle */}
+          {/* Day / Week / Month View Mode Toggle */}
           <div className="flex items-center border border-border rounded-lg p-0.5 bg-muted/50">
             <Button
               type="button"
               variant={viewMode === "day" ? "default" : "ghost"}
               size="sm"
               className={cn(
-                "h-7 px-3 text-xs font-semibold rounded-md",
-                viewMode === "day" && "shadow-xs"
+                "h-7 px-3 text-xs font-semibold rounded-md transition-all",
+                viewMode === "day" && "shadow-xs font-bold"
               )}
               onClick={() => setViewMode("day")}
             >
@@ -331,12 +457,24 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
               variant={viewMode === "week" ? "default" : "ghost"}
               size="sm"
               className={cn(
-                "h-7 px-3 text-xs font-semibold rounded-md",
-                viewMode === "week" && "shadow-xs"
+                "h-7 px-3 text-xs font-semibold rounded-md transition-all",
+                viewMode === "week" && "shadow-xs font-bold"
               )}
               onClick={() => setViewMode("week")}
             >
               Week
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "month" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-7 px-3 text-xs font-semibold rounded-md transition-all",
+                viewMode === "month" && "shadow-xs font-bold"
+              )}
+              onClick={() => setViewMode("month")}
+            >
+              Month
             </Button>
           </div>
 
@@ -371,37 +509,73 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
         </div>
       </div>
 
-      {/* Legend & Summary Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="size-3 rounded-xs bg-blue-600 shrink-0" />
-            <span className="font-medium text-foreground">Occupied</span>
+      {/* 2. Occupancy Summary & Legend Bar */}
+      <div className="p-3 rounded-xl border border-border bg-card shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        {/* Dynamic Occupancy Stats (reflecting selected date/range and active filters) */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            {viewMode === "day"
+              ? "Day Occupancy"
+              : viewMode === "week"
+              ? "Week Overview"
+              : "Month Overview"}
+            :
+          </span>
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold border border-blue-500/20">
+            <span className="size-2 rounded-full bg-blue-600" />
+            <span>{occupancyStats.occupiedCount} Occupied</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="size-3 rounded-xs bg-amber-500 shrink-0" />
-            <span className="font-medium text-foreground">Reserved</span>
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold border border-amber-500/20">
+            <span className="size-2 rounded-full bg-amber-500" />
+            <span>{occupancyStats.reservedCount} Reserved</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="size-3 rounded-xs bg-slate-400 dark:bg-slate-600 shrink-0" />
-            <span className="font-medium text-foreground">Checked Out</span>
+
+          {occupancyStats.maintenanceCount > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-500/10 text-slate-700 dark:text-slate-300 font-semibold border border-slate-500/20">
+              <MaintenanceIcon className="size-3 text-slate-500" />
+              <span>{occupancyStats.maintenanceCount} Maint</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+            <span className="size-2 rounded-full bg-emerald-500" />
+            <span>{occupancyStats.availableCount} Available</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="size-3 rounded-xs bg-slate-700 dark:bg-slate-800 border border-slate-500 shrink-0" />
-            <span className="font-medium text-foreground">Maintenance</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-destructive shrink-0" />
-            <span>Problem reported</span>
-          </div>
+
+          {occupancyStats.totalRooms > 0 && (
+            <Badge
+              variant="secondary"
+              className="font-mono text-xs font-bold px-2 py-0.5 bg-muted"
+            >
+              {occupancyStats.occupancyRate}% Occ
+            </Badge>
+          )}
         </div>
 
-        <div>
-          Showing{" "}
-          <span className="font-semibold text-foreground">
-            {filteredRooms.length}
-          </span>{" "}
-          rooms
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-3.5 text-muted-foreground text-[11px] pt-1 md:pt-0 border-t md:border-t-0 border-border/50">
+          <div className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-xs bg-blue-600 shrink-0" />
+            <span>Occupied</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-xs bg-amber-500 shrink-0" />
+            <span>Reserved</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-xs bg-slate-400 dark:bg-slate-600 shrink-0" />
+            <span>Checked Out</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-xs bg-slate-700 dark:bg-slate-800 border border-slate-500 shrink-0" />
+            <span>Maintenance</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-destructive animate-pulse shrink-0" />
+            <span>Problem reported</span>
+          </div>
         </div>
       </div>
 
@@ -421,19 +595,35 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
         </div>
       )}
 
-      {/* Main Timeline Grid */}
-      <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar select-none">
+      {/* 3. Main Calendar View: Month Grid OR Day/Week Timeline */}
+      {viewMode === "month" ? (
+        <CalendarMonthView
+          selectedDate={selectedDate}
+          onSelectDate={(newDate) => {
+            setSelectedDate(newDate);
+            setViewMode("day");
+          }}
+          rooms={filteredRooms}
+          bookings={timelineData?.bookings || []}
+          maintenance={timelineData?.maintenance || []}
+          onSelectBooking={(b, room) => setSelectedBooking({ booking: b, room })}
+          onSelectMaintenance={(m, room) =>
+            setSelectedMaintenance({ maintenance: m, room })
+          }
+        />
+      ) : (
+        /* Timeline View for Day and Week */
+        <div className="rounded-xl border border-border bg-card shadow-xs overflow-auto max-h-[calc(100vh-270px)] min-h-[480px] custom-scrollbar select-none relative">
           <div
             className="min-w-[900px] lg:min-w-[1200px]"
             style={{
               width: viewMode === "day" ? "1800px" : "1400px",
             }}
           >
-            {/* Header Row */}
-            <div className="flex border-b border-border bg-muted/60 sticky top-0 z-30">
-              {/* Sticky Room Column Header */}
-              <div className="sticky left-0 z-40 w-44 sm:w-52 shrink-0 bg-muted/90 backdrop-blur-xs p-3 border-r border-border font-semibold text-xs text-foreground flex items-center justify-between shadow-xs">
+            {/* Header Row: Sticky top */}
+            <div className="flex border-b border-border bg-muted/95 backdrop-blur-xs sticky top-0 z-30">
+              {/* Sticky Room Column Header: Sticky top AND left */}
+              <div className="sticky left-0 top-0 z-40 w-44 sm:w-52 shrink-0 bg-muted/95 backdrop-blur-xs p-3 border-r border-border font-semibold text-xs text-foreground flex items-center justify-between shadow-xs">
                 <span>Room</span>
                 <Badge
                   variant="secondary"
@@ -444,12 +634,20 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
               </div>
 
               {/* Time Column Headers */}
-              <div className="flex-1 grid relative" style={{ gridTemplateColumns: `repeat(${headerColumns.length}, minmax(0, 1fr))` }}>
+              <div
+                className="flex-1 grid relative"
+                style={{
+                  gridTemplateColumns: `repeat(${headerColumns.length}, minmax(0, 1fr))`,
+                }}
+              >
                 {headerColumns.map((col) => (
                   <div
                     key={col.id}
                     className={cn(
-                      "p-2 text-center border-r border-border/60 last:border-r-0 flex flex-col justify-center",
+                      "p-2 text-center border-r last:border-r-0 flex flex-col justify-center",
+                      viewMode === "week"
+                        ? "border-border/80"
+                        : "border-border/50",
                       col.isToday && "bg-primary/5 text-primary font-semibold"
                     )}
                   >
@@ -461,15 +659,15 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
                     </span>
                   </div>
                 ))}
+
+                {/* Current Time Indicator Pip in Header */}
                 {nowPercent !== null && (
                   <div
                     suppressHydrationWarning
-                    className="absolute top-0 bottom-0 pointer-events-none z-30"
+                    className="absolute top-0 bottom-0 pointer-events-none z-30 flex flex-col items-center"
                     style={{ left: `${nowPercent}%` }}
                   >
-                    <span className="text-[9px] bg-red-500 text-white font-mono font-bold px-1 py-0.5 rounded-xs -translate-x-1/2 absolute top-1 shadow-xs">
-                      NOW
-                    </span>
+                    <span className="size-2 rounded-full bg-red-500 ring-2 ring-background shadow-xs -translate-x-1/2 absolute top-1.5 animate-pulse" />
                   </div>
                 )}
               </div>
@@ -491,7 +689,6 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
               </div>
             ) : (
               <div className="divide-y divide-border/60 relative">
-
                 {filteredRooms.map((room) => {
                   const roomBookings = eventsByRoom.bookingMap[room.id] || [];
                   const roomMaintenance =
@@ -514,7 +711,7 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
                                 title="Open problem reported"
                                 className="inline-flex"
                               >
-                                <span className="size-2 rounded-full bg-destructive animate-pulse" />
+                                <CircleAlertIcon className="size-3 text-destructive animate-pulse" />
                               </span>
                             )}
                           </div>
@@ -531,7 +728,7 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
 
                       {/* Timeline Canvas for this room */}
                       <div className="flex-1 relative h-16 bg-background/50">
-                        {/* Background Grid Lines */}
+                        {/* Background Grid Lines & Date Separators */}
                         <div
                           className="absolute inset-0 grid pointer-events-none"
                           style={{
@@ -542,12 +739,26 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
                             <div
                               key={col.id}
                               className={cn(
-                                "border-r border-border/30 last:border-r-0 h-full",
+                                "border-r last:border-r-0 h-full",
+                                viewMode === "week"
+                                  ? "border-border/70"
+                                  : "border-border/30",
                                 col.isToday && "bg-primary/[0.02]"
                               )}
                             />
                           ))}
                         </div>
+
+                        {/* Current Time Indicator Line */}
+                        {nowPercent !== null && (
+                          <div
+                            suppressHydrationWarning
+                            className="absolute top-0 bottom-0 pointer-events-none z-20"
+                            style={{ left: `${nowPercent}%` }}
+                          >
+                            <div className="w-[1.5px] h-full bg-red-500/80 shadow-[0_0_4px_rgba(239,68,68,0.5)]" />
+                          </div>
+                        )}
 
                         {/* Maintenance Bars */}
                         {roomMaintenance.map((m) => {
@@ -555,39 +766,32 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
                           if (!pos) return null;
 
                           return (
-                            <div
+                            <MaintenanceHoverCard
                               key={m.id}
-                              onClick={() =>
-                                setSelectedMaintenance({ maintenance: m, room })
-                              }
-                              style={{
-                                left: `${pos.left}%`,
-                                width: `${pos.width}%`,
-                              }}
-                              title={`Maintenance: ${m.reason} (${formatIST(
-                                m.startsAt,
-                                "dd MMM, hh:mm a"
-                              )} - ${formatIST(m.endsAt, "dd MMM, hh:mm a")})`}
-                              className="absolute top-2 bottom-2 z-10 rounded-md bg-slate-700/90 hover:bg-slate-700 text-white border border-slate-500 cursor-pointer p-1.5 overflow-hidden flex items-center gap-1.5 transition-transform hover:scale-[1.01] shadow-xs select-none"
+                              maintenance={m}
+                              room={room}
                             >
-                              <MaintenanceIcon className="size-3.5 shrink-0 text-slate-300" />
-                              <span className="text-xs font-semibold truncate leading-none">
-                                {m.reason || "Maintenance"}
-                              </span>
-                            </div>
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMaintenance({ maintenance: m, room });
+                                }}
+                                style={{
+                                  left: `${pos.left}%`,
+                                  width: `${pos.width}%`,
+                                }}
+                                className="absolute top-2 bottom-2 z-10 rounded-md bg-slate-700/90 hover:bg-slate-700 text-white border border-slate-500 cursor-pointer p-1.5 overflow-hidden flex items-center gap-1.5 transition-transform hover:scale-[1.01] shadow-xs select-none"
+                              >
+                                <MaintenanceIcon className="size-3.5 shrink-0 text-slate-300" />
+                                <span className="text-xs font-semibold truncate leading-none">
+                                  {m.reason || "Maintenance"}
+                                </span>
+                              </div>
+                            </MaintenanceHoverCard>
                           );
                         })}
-
-                        {/* Now Line Marker */}
-                        {nowPercent !== null && (
-                          <div
-                            suppressHydrationWarning
-                            className="absolute top-0 bottom-0 pointer-events-none z-20"
-                            style={{ left: `${nowPercent}%` }}
-                          >
-                            <div className="w-0.5 h-full bg-red-500/80 shadow-xs" />
-                          </div>
-                        )}
 
                         {/* Booking Bars */}
                         {roomBookings.map((b) => {
@@ -601,49 +805,56 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
                           const isReserved = b.status === "RESERVED";
 
                           const barStyle = isCheckedIn
-                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-xs border border-blue-400/30"
                             : isReserved
-                            ? "bg-amber-500 hover:bg-amber-600 text-white shadow-xs"
-                            : "bg-slate-400 dark:bg-slate-600 hover:bg-slate-500 text-white";
+                            ? "bg-amber-500 hover:bg-amber-600 text-white shadow-xs border border-amber-300/30"
+                            : "bg-slate-400 dark:bg-slate-600 hover:bg-slate-500 text-white border border-slate-300/20";
 
                           return (
-                            <div
+                            <BookingHoverCard
                               key={b.id}
-                              onClick={() =>
-                                setSelectedBooking({ booking: b, room })
-                              }
-                              style={{
-                                left: `${pos.left}%`,
-                                width: `${pos.width}%`,
-                              }}
-                              title={`${b.primaryGuestName} (${b.status}) • ${formatIST(
-                                b.checkInAt,
-                                "hh:mm a"
-                              )} → ${formatIST(b.checkOutAt, "hh:mm a")}`}
-                              className={cn(
-                                "absolute top-2 bottom-2 z-10 rounded-md cursor-pointer px-2 py-1 overflow-hidden flex items-center justify-between gap-1 transition-all hover:scale-[1.01] hover:z-20 select-none",
-                                barStyle
-                              )}
+                              booking={b}
+                              room={room}
                             >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-xs font-bold truncate leading-none">
-                                  {b.primaryGuestName}
-                                </span>
-                                <span className="text-[10px] opacity-80 font-mono hidden sm:inline-block truncate">
-                                  ({formatISTTime(b.checkInAt)} -{" "}
-                                  {formatISTTime(b.checkOutAt)})
-                                </span>
-                              </div>
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedBooking({ booking: b, room });
+                                }}
+                                style={{
+                                  left: `${pos.left}%`,
+                                  width: `${pos.width}%`,
+                                }}
+                                className={cn(
+                                  "absolute top-1.5 bottom-1.5 z-10 rounded-md cursor-pointer px-2.5 py-1 overflow-hidden flex flex-col justify-center gap-0.5 transition-all hover:scale-[1.01] hover:z-20 select-none shadow-xs",
+                                  barStyle
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    {room.hasOpenProblem && (
+                                      <CircleAlertIcon className="size-2.5 text-red-200 animate-pulse shrink-0" />
+                                    )}
+                                    <span className="text-xs font-bold truncate leading-tight tracking-tight">
+                                      {b.primaryGuestName}
+                                    </span>
+                                  </div>
 
-                              {b.balanceDue > 0 && isCheckedIn && (
-                                <Badge
-                                  variant="destructive"
-                                  className="text-[9px] px-1 py-0 h-4 bg-red-700 text-white shrink-0 ml-1 font-mono"
-                                >
-                                  Due {formatINR(b.balanceDue)}
-                                </Badge>
-                              )}
-                            </div>
+                                  {b.balanceDue > 0 && isCheckedIn && (
+                                    <span className="text-[9px] px-1 py-0 rounded-xs bg-red-700/95 text-white font-mono font-bold shrink-0 shadow-2xs">
+                                      Due {formatINR(b.balanceDue)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="text-[10px] text-white/80 font-mono font-medium truncate leading-none">
+                                  {formatISTTime(b.checkInAt)} →{" "}
+                                  {formatISTTime(b.checkOutAt)}
+                                </div>
+                              </div>
+                            </BookingHoverCard>
                           );
                         })}
                       </div>
@@ -654,7 +865,7 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
             )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Booking Details Dialog */}
       <BookingDetailDialog

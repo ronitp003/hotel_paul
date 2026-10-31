@@ -3,6 +3,17 @@ import { StockLocation } from "@prisma/client";
 
 export { StockLocation };
 
+export const StockActionType = {
+  ADD_STOCK: "ADD_STOCK",
+  USE_STOCK: "USE_STOCK",
+  MARK_DAMAGED: "MARK_DAMAGED",
+  MARK_DISCONTINUED: "MARK_DISCONTINUED",
+  RETURN_AVAILABLE: "RETURN_AVAILABLE",
+} as const;
+
+export type StockActionType =
+  (typeof StockActionType)[keyof typeof StockActionType];
+
 export const createInventoryItemSchema = z.object({
   name: z
     .string()
@@ -12,22 +23,51 @@ export const createInventoryItemSchema = z.object({
   unit: z
     .string()
     .trim()
-    .min(1, "Unit is required")
+    .min(1, "Unit of measure is required")
     .max(20, "Unit cannot exceed 20 characters")
     .default("pcs"),
   reorderLevel: z.coerce
     .number()
-    .int("Reorder level must be an integer")
-    .min(0, "Reorder level cannot be negative")
+    .int("Low stock alert level must be an integer")
+    .min(0, "Low stock alert level cannot be negative")
+    .optional()
     .default(0),
+  initialAvailableStock: z.coerce
+    .number()
+    .int("Initial available stock must be an integer")
+    .min(0, "Initial available stock cannot be negative")
+    .optional(),
   initialQtyStore: z.coerce
     .number()
     .int("Store stock must be an integer")
     .min(0, "Store stock cannot be negative")
-    .default(0),
+    .optional(),
 });
 
 export type CreateInventoryItemInput = z.infer<typeof createInventoryItemSchema>;
+
+export const updateStockSchema = z.object({
+  itemId: z.string().min(1, "Item is required"),
+  actionType: z.enum([
+    "ADD_STOCK",
+    "USE_STOCK",
+    "MARK_DAMAGED",
+    "MARK_DISCONTINUED",
+    "RETURN_AVAILABLE",
+  ]),
+  quantity: z.coerce
+    .number()
+    .int("Quantity must be a whole number")
+    .positive("Quantity must be at least 1"),
+  note: z
+    .string()
+    .trim()
+    .max(255, "Note cannot exceed 255 characters")
+    .optional()
+    .nullable(),
+});
+
+export type UpdateStockInput = z.infer<typeof updateStockSchema>;
 
 export const updateInventoryItemSchema = z.object({
   id: z.string().min(1, "Item ID is required"),

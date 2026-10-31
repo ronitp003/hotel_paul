@@ -16,6 +16,7 @@ import { ROLES } from "@/lib/constants";
 import {
   createInventoryItemAction,
   updateInventoryItemAction,
+  updateStockAction,
   moveStockAction,
   getItemMovementsAction,
   toggleInventoryItemActiveAction,
@@ -432,5 +433,126 @@ describe("Phase 2.4: Inventory Management (Integration)", () => {
 
     updated = await inventoryService.getItem(item.id);
     expect(updated.isActive).toBe(false);
+  });
+
+  it("handles simplified updateStockAction for all 5 actions and tracks history with previous/updated quantities", async () => {
+    // 1. Create item with 20 pcs available, alert level 10
+    const itemName = `Hotel Luxury Towel ${Date.now()}`;
+    const createRes = await createInventoryItemAction({
+      name: itemName,
+      unit: "pcs",
+      reorderLevel: 10,
+      initialAvailableStock: 20,
+    });
+    expect(createRes.ok).toBe(true);
+    const item = createRes.data as { id: string };
+    createdItemIds.push(item.id);
+
+    // Initial check
+    let current = await inventoryService.getItem(item.id);
+    expect(current.available).toBe(20);
+    expect(current.inUse).toBe(0);
+    expect(current.damaged).toBe(0);
+    expect(current.discontinued).toBe(0);
+    expect(current.totalTracked).toBe(20);
+    expect(current.isLowStock).toBe(false);
+
+    // Action 1: Add Stock (+10) -> Available: 30
+    const addRes = await updateStockAction({
+      itemId: item.id,
+      actionType: "ADD_STOCK",
+      quantity: 10,
+      note: "Restocked from vendor shipment",
+    });
+    expect(addRes.ok).toBe(true);
+    current = await inventoryService.getItem(item.id);
+    expect(current.available).toBe(30);
+
+    // Action 2: Use / Issue Stock (15) -> Available: 15, In Use: 15
+    const useRes = await updateStockAction({
+      itemId: item.id,
+      actionType: "USE_STOCK",
+      quantity: 15,
+      note: "Issued to floor 1 rooms",
+    });
+    expect(useRes.ok).toBe(true);
+    current = await inventoryService.getItem(item.id);
+    expect(current.available).toBe(15);
+    expect(current.inUse).toBe(15);
+    expect(current.isLowStock).toBe(false);
+
+    // Action 3: Mark as Damaged (2) -> Available: 13, Damaged: 2
+    const damageRes = await updateStockAction({
+      itemId: item.id,
+      actionType: "MARK_DAMAGED",
+      quantity: 2,
+      note: "Torn towel discarded by guest",
+    });
+    expect(damageRes.ok).toBe(true);
+    current = await inventoryService.getItem(item.id);
+    expect(current.available).toBe(13);
+    expect(current.damaged).toBe(2);
+
+    // Issue 5 more -> Available drops to 8 (<= 10 reorderLevel) -> isLowStock triggers!
+    await updateStockAction({
+      itemId: item.id,
+      actionType: "USE_STOCK",
+      quantity: 5,
+    });
+    current = await inventoryService.getItem(item.id);
+    expect(current.available).toBe(8);
+    expect(current.isLowStock).toBe(true);
+    // Damaged (2) and In Use (20) must NOT count towards available stock
+    expect(current.totalTracked).toBe(30); // 8 available + 20 inUse + 2 damaged
+
+    // Action 4: Mark as Discontinued (1) -> Discontinued: 1
+    const discRes = await updateStockAction({
+      itemId: item.id,
+      actionType: "MARK_DISCONTINUED",
+      quantity: 1,
+      note: "Faded old batch piece decommissioned",
+    });
+    expect(discRes.ok).toBe(true);
+    current = await inventoryService.getItem(item.id);
+    expect(current.discontinued).toBe(1);
+
+    // Action 5: Return to Available Stock (5 returned from In Use) -> Available: 7 + 5 = 12
+    const returnRes = await updateStockAction({
+      itemId: item.id,
+      actionType: "RETURN_AVAILABLE",
+      quantity: 5,
+      note: "Surplus towels returned to store buffer",
+    });
+    expect(returnRes.ok).toBe(true);
+    current = await inventoryService.getItem(item.id);
+    expect(current.available).toBe(12);
+    expect(current.isLowStock).toBe(false); // 12 > 10
+
+    // Verify Movement History contains actionType, previousQty, and updatedQty
+    const historyRes = await getItemMovementsAction({ itemId: item.id });
+    expect(historyRes.ok).toBe(true);
+    const movements = historyRes.data as Array<{
+      actionType: string | null;
+      quantity: number;
+      previousQty: number | null;
+      updatedQty: number | null;
+      note: string | null;
+    }>;
+
+    expect(movements.length).toBe(7); // initial + 6 updates
+    const latestMove = movements[0];
+    expect(latestMove.actionType).toBe("RETURN_AVAILABLE");
+    expect(latestMove.quantity).toBe(5);
+    expect(latestMove.previousQty).toBe(7);
+    expect(latestMove.updatedQty).toBe(12);
+
+    // Test validation: Disallow issuing more than available
+    const failUseRes = await updateStockAction({
+      itemId: item.id,
+      actionType: "USE_STOCK",
+      quantity: 999,
+    });
+    expect(failUseRes.ok).toBe(false);
+    expect(failUseRes.code).toBe("INSUFFICIENT_STOCK");
   });
 });

@@ -70,6 +70,7 @@ enum StockLocation {
   ROOMS
   LAUNDRY
   DAMAGED
+  DISCONTINUED
 }
 
 // ───────── Better Auth Models ─────────
@@ -314,28 +315,32 @@ model InvoiceCorrection {
 
 // ───────── Inventory ─────────
 model InventoryItem {
-  id           String              @id @default(cuid())
-  name         String              @unique
-  unit         String              @default("pcs")
-  reorderLevel Int                 @default(0)
-  qtyStore     Int                 @default(0)
-  qtyRooms     Int                 @default(0)
-  qtyLaundry   Int                 @default(0)
-  qtyDamaged   Int                 @default(0)
-  movements    InventoryMovement[]
-  isActive     Boolean             @default(true)
+  id              String              @id @default(cuid())
+  name            String              @unique
+  unit            String              @default("pcs")
+  reorderLevel    Int                 @default(0)
+  qtyStore        Int                 @default(0)
+  qtyRooms        Int                 @default(0)
+  qtyLaundry      Int                 @default(0)
+  qtyDamaged      Int                 @default(0)
+  qtyDiscontinued Int                 @default(0)
+  movements       InventoryMovement[]
+  isActive        Boolean             @default(true)
 }
 
 model InventoryMovement {
-  id       String         @id @default(cuid())
-  itemId   String
-  item     InventoryItem  @relation(fields: [itemId], references: [id])
-  from     StockLocation?
-  to       StockLocation?
-  quantity Int
-  note     String?
-  doneById String
-  doneAt   DateTime       @default(now())
+  id          String         @id @default(cuid())
+  itemId      String
+  item        InventoryItem  @relation(fields: [itemId], references: [id])
+  actionType  String?
+  from        StockLocation?
+  to          StockLocation?
+  quantity    Int
+  previousQty Int?
+  updatedQty  Int?
+  note        String?
+  doneById    String
+  doneAt      DateTime       @default(now())
 
   @@index([itemId, doneAt])
 }

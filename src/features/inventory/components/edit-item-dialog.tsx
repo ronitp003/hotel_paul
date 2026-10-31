@@ -24,14 +24,16 @@ interface EditItemDialogProps {
   item: FormattedInventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: (item: FormattedInventoryItem) => void;
 }
 
 interface EditItemDialogFormProps {
   item: FormattedInventoryItem;
   onClose: () => void;
+  onSuccess?: (item: FormattedInventoryItem) => void;
 }
 
-function EditItemDialogForm({ item, onClose }: EditItemDialogFormProps) {
+function EditItemDialogForm({ item, onClose, onSuccess }: EditItemDialogFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -77,7 +79,9 @@ function EditItemDialogForm({ item, onClose }: EditItemDialogFormProps) {
         return;
       }
 
+      const updatedItem = res.data as FormattedInventoryItem;
       toast.success(`Inventory item "${trimmedName}" updated successfully.`);
+      onSuccess?.(updatedItem);
       onClose();
       router.refresh();
     });
@@ -188,6 +192,7 @@ export function EditItemDialog({
   item,
   open,
   onOpenChange,
+  onSuccess,
 }: EditItemDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -197,6 +202,7 @@ export function EditItemDialog({
             key={item.id}
             item={item}
             onClose={() => onOpenChange(false)}
+            onSuccess={onSuccess}
           />
         )}
       </DialogContent>

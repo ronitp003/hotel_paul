@@ -11,6 +11,7 @@ import {
 } from "@react-pdf/renderer";
 import type { InvoiceSnapshot } from "@/server/services/invoice.service";
 import { formatINRPlain } from "@/lib/money";
+import { formatISTDateTime, formatISTDate } from "@/lib/datetime";
 
 // Register custom TrueType font for clean Unicode rendering (specifically the Indian Rupee ₹ symbol)
 const fontDir = path.join(process.cwd(), "public/fonts");
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     flex: 5,
   },
   totalsCol: {
-    flex: 4,
+    flex: 4.5,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 4,
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    paddingVertical: 2.5,
     fontSize: 8,
   },
   totalLabel: {
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#111827",
     textAlign: "right",
-    minWidth: 80,
+    width: 90,
   },
   totalRowGrand: {
     flexDirection: "row",
@@ -217,9 +218,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderTopWidth: 1.5,
     borderTopColor: "#0F766E",
-    paddingTop: 5,
-    marginTop: 4,
-    marginBottom: 4,
+    paddingTop: 6,
+    marginTop: 6,
+    marginBottom: 2,
   },
   grandLabel: {
     fontSize: 10,
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#0F766E",
     textAlign: "right",
-    minWidth: 80,
+    width: 90,
   },
   wordsBox: {
     backgroundColor: "#F0FDFA",
@@ -338,12 +339,7 @@ export function InvoicePdfDocument({
               </Text>
             </View>
             <Text style={styles.metaText}>
-              Date:{" "}
-              {new Date(snapshot.invoice.issuedAt).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
+              Date: {formatISTDate(snapshot.invoice.issuedAt)}
             </Text>
             <Text style={styles.metaText}>
               Booking Ref: {snapshot.booking.reference}
@@ -414,28 +410,18 @@ export function InvoicePdfDocument({
             <View style={styles.boxRow}>
               <Text style={styles.label}>Arrival:</Text>
               <Text style={styles.value}>
-                {new Date(
+                {formatISTDateTime(
                   snapshot.booking.actualCheckInAt || snapshot.booking.checkInAt
-                ).toLocaleString("en-IN", {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                )}
               </Text>
             </View>
             <View style={styles.boxRow}>
               <Text style={styles.label}>Departure:</Text>
               <Text style={styles.value}>
-                {new Date(
+                {formatISTDateTime(
                   snapshot.booking.actualCheckOutAt ||
                     snapshot.booking.checkOutAt
-                ).toLocaleString("en-IN", {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                )}
               </Text>
             </View>
             <View style={styles.boxRow}>
@@ -595,13 +581,6 @@ export function InvoicePdfDocument({
               </View>
             )}
 
-            <View style={styles.totalRowGrand}>
-              <Text style={styles.grandLabel}>Total Bill Amount:</Text>
-              <Text style={styles.grandValue}>
-                ₹{formatINRPlain(snapshot.totals.billAmount)}
-              </Text>
-            </View>
-
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Advance Paid:</Text>
               <Text style={styles.totalValue}>
@@ -609,14 +588,12 @@ export function InvoicePdfDocument({
               </Text>
             </View>
 
-            {snapshot.totals.subsequentPaid > 0 && (
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Settlement Payments:</Text>
-                <Text style={styles.totalValue}>
-                  ₹{formatINRPlain(snapshot.totals.subsequentPaid)}
-                </Text>
-              </View>
-            )}
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Settlement Payments:</Text>
+              <Text style={styles.totalValue}>
+                ₹{formatINRPlain(snapshot.totals.subsequentPaid || 0)}
+              </Text>
+            </View>
 
             {snapshot.totals.refundsTotal > 0 && (
               <View style={styles.totalRow}>
@@ -626,6 +603,13 @@ export function InvoicePdfDocument({
                 </Text>
               </View>
             )}
+
+            <View style={styles.totalRowGrand}>
+              <Text style={styles.grandLabel}>Total Bill Amount:</Text>
+              <Text style={styles.grandValue}>
+                ₹{formatINRPlain(snapshot.totals.billAmount)}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -636,8 +620,7 @@ export function InvoicePdfDocument({
               Issued by: {snapshot.invoice.issuedByName}
             </Text>
             <Text style={{ fontSize: 7, color: "#9CA3AF" }}>
-              Generated on{" "}
-              {new Date(snapshot.invoice.issuedAt).toLocaleString("en-IN")}
+              Generated on {formatISTDateTime(snapshot.invoice.issuedAt)}
             </Text>
           </View>
           <View style={styles.signatoryBlock}>

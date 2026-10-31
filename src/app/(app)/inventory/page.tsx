@@ -7,7 +7,7 @@ import { InventoryManager } from "@/features/inventory/components/inventory-mana
 
 export const metadata: Metadata = {
   title: "Inventory | Hotel Paul",
-  description: "Track and manage hotel linen, room supplies, laundry cycles, and stock reorders.",
+  description: "Track and manage hotel inventory, available stock, room usage, and supplies.",
 };
 
 export default async function InventoryPage() {
@@ -22,7 +22,7 @@ export default async function InventoryPage() {
     <div className="space-y-6">
       <PageHeader
         title="Inventory"
-        description="Track hotel linen, amenities, and room supplies across store, guest rooms, laundry, and scrap."
+        description="Monitor available stock, track guest room usage, record damaged items, and manage hotel supplies."
       />
 
       <InventoryManager initialItems={items} summary={summary} />

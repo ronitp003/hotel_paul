@@ -17,11 +17,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SelectDropdown } from "@/components/ui/select-dropdown";
 import { SpinnerIcon, AddIcon, ProblemIcon } from "@/lib/icons";
 import { createInventoryItemAction } from "@/server/actions/inventory.actions";
+import type { FormattedInventoryItem } from "@/server/services/inventory.service";
 import { toast } from "sonner";
 
 interface AddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: (item: FormattedInventoryItem) => void;
 }
 
 const COMMON_UNITS = [
@@ -35,23 +37,27 @@ const COMMON_UNITS = [
   { value: "custom", label: "Other / Custom" },
 ];
 
-export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
+export function AddItemDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: AddItemDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [name, setName] = useState("");
   const [unitSelection, setUnitSelection] = useState("pcs");
   const [customUnit, setCustomUnit] = useState("");
-  const [reorderLevel, setReorderLevel] = useState("10");
-  const [initialQtyStore, setInitialQtyStore] = useState("0");
+  const [initialAvailableStock, setInitialAvailableStock] = useState("0");
+  const [reorderLevel, setReorderLevel] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setName("");
     setUnitSelection("pcs");
     setCustomUnit("");
-    setReorderLevel("10");
-    setInitialQtyStore("0");
+    setInitialAvailableStock("0");
+    setReorderLevel("");
     setError(null);
   };
 
@@ -75,28 +81,31 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
     const resolvedUnit =
       unitSelection === "custom" ? customUnit.trim() : unitSelection;
     if (!resolvedUnit) {
-      setError("Please specify a unit.");
+      setError("Please specify a unit of measure.");
       return;
     }
 
-    const reorderVal = parseInt(reorderLevel, 10);
-    if (isNaN(reorderVal) || reorderVal < 0) {
-      setError("Reorder level must be a non-negative number.");
+    const initialStockVal = parseInt(initialAvailableStock, 10);
+    if (isNaN(initialStockVal) || initialStockVal < 0) {
+      setError("Initial available stock is required and cannot be negative.");
       return;
     }
 
-    const initialQtyVal = parseInt(initialQtyStore, 10);
-    if (isNaN(initialQtyVal) || initialQtyVal < 0) {
-      setError("Initial store stock cannot be negative.");
-      return;
+    let alertLevelVal = 0;
+    if (reorderLevel.trim() !== "") {
+      alertLevelVal = parseInt(reorderLevel, 10);
+      if (isNaN(alertLevelVal) || alertLevelVal < 0) {
+        setError("Low stock alert level must be a non-negative number.");
+        return;
+      }
     }
 
     startTransition(async () => {
       const res = await createInventoryItemAction({
         name: trimmedName,
         unit: resolvedUnit,
-        reorderLevel: reorderVal,
-        initialQtyStore: initialQtyVal,
+        initialAvailableStock: initialStockVal,
+        reorderLevel: alertLevelVal,
       });
 
       if (!res.ok) {
@@ -104,7 +113,9 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
         return;
       }
 
+      const createdItem = res.data as FormattedInventoryItem;
       toast.success(`Inventory item "${trimmedName}" created successfully.`);
+      onSuccess?.(createdItem);
       resetForm();
       onOpenChange(false);
       router.refresh();
@@ -121,7 +132,7 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
               Add Inventory Item
             </DialogTitle>
             <DialogDescription>
-              Create a new tracked inventory item (e.g. Towels, Bedsheets, Remotes, Water Bottles).
+              Create a new inventory item to track hotel amenities, linen, or room supplies.
             </DialogDescription>
           </DialogHeader>
 
@@ -132,14 +143,15 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
             </Alert>
           )}
 
-          <div className="space-y-3 py-1">
+          <div className="space-y-3.5 py-1">
+            {/* Item Name (required) */}
             <div className="space-y-1.5">
               <Label htmlFor="item-name">
                 Item Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="item-name"
-                placeholder="e.g. Double Bedsheets, Bath Towel, TV Remote"
+                placeholder="e.g. Bath Towel, Double Bedsheet, TV Remote"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={isPending}
@@ -149,37 +161,63 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="item-unit">Unit of Measure</Label>
-                <SelectDropdown
-                  value={unitSelection}
-                  onChange={(val) => setUnitSelection(val)}
-                  options={COMMON_UNITS}
-                  disabled={isPending}
-                />
-              </div>
-
-              {unitSelection === "custom" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="custom-unit">Custom Unit</Label>
-                  <Input
-                    id="custom-unit"
-                    placeholder="e.g. packs, liters"
-                    value={customUnit}
-                    onChange={(e) => setCustomUnit(e.target.value)}
-                    disabled={isPending}
-                    maxLength={20}
-                    required
-                  />
-                </div>
-              )}
+            {/* Unit of Measure (required) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="item-unit">
+                Unit of Measure <span className="text-destructive">*</span>
+              </Label>
+              <SelectDropdown
+                value={unitSelection}
+                onChange={(val) => setUnitSelection(val)}
+                options={COMMON_UNITS}
+                disabled={isPending}
+              />
             </div>
 
+            {/* Custom Unit Input when Other / Custom is selected */}
+            {unitSelection === "custom" && (
+              <div className="space-y-1.5 animate-in fade-in-50 duration-200">
+                <Label htmlFor="custom-unit">
+                  Custom Unit Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="custom-unit"
+                  placeholder="e.g. Liters, Cartons, Boxes"
+                  value={customUnit}
+                  onChange={(e) => setCustomUnit(e.target.value)}
+                  disabled={isPending}
+                  maxLength={20}
+                  required
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Initial Available Stock (required) */}
+              <div className="space-y-1.5">
+                <Label htmlFor="initial-stock">
+                  Initial Available Stock <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="initial-stock"
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  step="1"
+                  value={initialAvailableStock}
+                  onChange={(e) => setInitialAvailableStock(e.target.value)}
+                  disabled={isPending}
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Starting stock ready for immediate use.
+                </p>
+              </div>
+
+              {/* Low Stock Alert Level (optional) */}
               <div className="space-y-1.5">
                 <Label htmlFor="reorder-level">
-                  Reorder Level <span className="text-xs text-muted-foreground font-normal">(Alert trigger)</span>
+                  Low Stock Alert Level <span className="text-xs text-muted-foreground font-normal">(optional)</span>
                 </Label>
                 <Input
                   id="reorder-level"
@@ -187,30 +225,13 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
                   inputMode="numeric"
                   min="0"
                   step="1"
+                  placeholder="e.g. 5 (or leave blank)"
                   value={reorderLevel}
                   onChange={(e) => setReorderLevel(e.target.value)}
                   disabled={isPending}
-                  required
                 />
-                <p className="text-xs text-muted-foreground">
-                  Flagged as Low Stock if store stock drops to or below this.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="initial-stock">Initial Store Stock</Label>
-                <Input
-                  id="initial-stock"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  step="1"
-                  value={initialQtyStore}
-                  onChange={(e) => setInitialQtyStore(e.target.value)}
-                  disabled={isPending}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Current stock physically present in the store room.
+                <p className="text-[11px] text-muted-foreground">
+                  Alerts when available stock drops to this level.
                 </p>
               </div>
             </div>
@@ -227,7 +248,7 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <SpinnerIcon className="size-4 animate-spin mr-2" />}
-              Create Item
+              Add Item
             </Button>
           </DialogFooter>
         </form>

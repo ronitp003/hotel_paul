@@ -38,4 +38,10 @@ describe("Sidebar Navigation Route Matching (isNavItemActive)", () => {
     expect(isNavItemActive("/rooms/101", "/rooms")).toBe(true);
     expect(isNavItemActive("/rooms-archive", "/rooms")).toBe(false);
   });
+
+  it("handles routes with query parameters like /register?tab=analytics", () => {
+    expect(isNavItemActive("/register", "/register?tab=analytics")).toBe(true);
+    expect(isNavItemActive("/register/guest", "/register?tab=analytics")).toBe(true);
+    expect(isNavItemActive("/rooms", "/register?tab=analytics")).toBe(false);
+  });
 });

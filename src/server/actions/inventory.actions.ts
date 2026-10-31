@@ -8,6 +8,7 @@ import {
   createInventoryItemSchema,
   updateInventoryItemSchema,
   toggleInventoryItemActiveSchema,
+  updateStockSchema,
   moveStockSchema,
   getItemHistorySchema,
 } from "@/features/inventory/schemas";
@@ -121,6 +122,31 @@ export async function moveStockAction(input: unknown): Promise<ActionResult> {
       );
     }
     console.error("moveStockAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}
+
+export async function updateStockAction(input: unknown): Promise<ActionResult> {
+  try {
+    const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
+    const data = updateStockSchema.parse(input);
+    const result = await inventoryService.updateStock(data, actor);
+
+    revalidatePath("/inventory");
+    revalidatePath("/dashboard");
+
+    return successResult(result);
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    if (err instanceof ZodError) {
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
+    }
+    console.error("updateStockAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }

@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatCard } from "@/components/shared/stat-card";
 import { AddItemDialog } from "./add-item-dialog";
 import { EditItemDialog } from "./edit-item-dialog";
-import { MoveStockDialog } from "./move-stock-dialog";
+import { UpdateStockDialog } from "./update-stock-dialog";
 import { ItemHistorySheet } from "./item-history-sheet";
 import type {
   FormattedInventoryItem,
@@ -24,6 +23,7 @@ import {
   EditIcon,
   SearchIcon,
   CloseIcon,
+  CheckIcon,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -32,22 +32,90 @@ interface InventoryManagerProps {
   summary: InventorySummary;
 }
 
-type FilterTab = "ALL" | "LOW_STOCK" | "ACTIVE" | "INACTIVE";
+type FilterTab = "ALL" | "LOW_STOCK" | "DAMAGED" | "DISCONTINUED";
 
 export function InventoryManager({
   initialItems,
-  summary,
+  summary: serverSummary,
 }: InventoryManagerProps) {
-  const [items] = useState<FormattedInventoryItem[]>(initialItems);
+  const [items, setItems] = useState<FormattedInventoryItem[]>(initialItems);
+  const [prevInitialItems, setPrevInitialItems] = useState(initialItems);
   const [search, setSearch] = useState("");
   const [filterTab, setFilterTab] = useState<FilterTab>("ALL");
 
+  // Keep items synced if server revalidation passes new initialItems
+  if (initialItems !== prevInitialItems) {
+    setPrevInitialItems(initialItems);
+    setItems(initialItems);
+  }
+
   // Dialog & Sheet States
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isMoveOpen, setIsMoveOpen] = useState(false);
-  const [movePreselectedItemId, setMovePreselectedItemId] = useState<string | null>(null);
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+  const [updatePreselectedItemId, setUpdatePreselectedItemId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<FormattedInventoryItem | null>(null);
   const [historyItem, setHistoryItem] = useState<FormattedInventoryItem | null>(null);
+
+  // Dynamic summary derived directly from active items state for instant UI responsiveness
+  const summary = useMemo(() => {
+    let lowStockCount = 0;
+    let availableStock = 0;
+    let activeItems = 0;
+
+    for (const item of items) {
+      if (item.isActive) {
+        activeItems++;
+        if (item.isLowStock) {
+          lowStockCount++;
+        }
+      }
+      availableStock += item.available;
+    }
+
+    return {
+      totalItems: items.length,
+      activeItems,
+      availableStock,
+      lowStockCount,
+      totalStoreUnits: availableStock,
+      totalRoomsUnits: serverSummary.totalRoomsUnits,
+      totalLaundryUnits: serverSummary.totalLaundryUnits,
+      totalDamagedUnits: serverSummary.totalDamagedUnits,
+      totalDiscontinuedUnits: serverSummary.totalDiscontinuedUnits,
+    };
+  }, [items, serverSummary]);
+
+  const handleItemCreated = (newItem: FormattedInventoryItem) => {
+    setItems((prev) => {
+      const exists = prev.some((i) => i.id === newItem.id);
+      if (exists) {
+        return prev.map((i) => (i.id === newItem.id ? newItem : i));
+      }
+      return [newItem, ...prev].sort((a, b) => a.name.localeCompare(b.name));
+    });
+  };
+
+  const handleItemUpdated = (updatedItem: FormattedInventoryItem) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === updatedItem.id ? updatedItem : i))
+    );
+    if (editingItem?.id === updatedItem.id) {
+      setEditingItem(updatedItem);
+    }
+    if (historyItem?.id === updatedItem.id) {
+      setHistoryItem(updatedItem);
+    }
+  };
+
+  // Counts for simple filter tabs
+  const filterCounts = useMemo(() => {
+    return {
+      all: items.length,
+      lowStock: items.filter((i) => i.isLowStock).length,
+      damaged: items.filter((i) => i.damaged > 0).length,
+      discontinued: items.filter((i) => i.discontinued > 0).length,
+    };
+  }, [items]);
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -64,20 +132,20 @@ export function InventoryManager({
       if (filterTab === "LOW_STOCK") {
         return item.isLowStock;
       }
-      if (filterTab === "ACTIVE") {
-        return item.isActive;
+      if (filterTab === "DAMAGED") {
+        return item.damaged > 0;
       }
-      if (filterTab === "INACTIVE") {
-        return !item.isActive;
+      if (filterTab === "DISCONTINUED") {
+        return item.discontinued > 0;
       }
 
       return true;
     });
   }, [items, search, filterTab]);
 
-  const handleOpenMoveForItem = (itemId: string) => {
-    setMovePreselectedItemId(itemId);
-    setIsMoveOpen(true);
+  const handleOpenUpdateForItem = (itemId: string) => {
+    setUpdatePreselectedItemId(itemId);
+    setIsUpdateOpen(true);
   };
 
   const handleOpenHistory = (item: FormattedInventoryItem) => {
@@ -90,22 +158,40 @@ export function InventoryManager({
 
   return (
     <div className="space-y-6">
-      {/* 4 Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 3 Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* 1. Total Items */}
         <StatCard
-          title="Tracked Items"
+          title="Total Items"
           value={summary.totalItems}
-          icon={<InventoryIcon className="size-5" />}
+          icon={<InventoryIcon className="size-5 text-primary" />}
           hint={`${summary.activeItems} active for operations`}
         />
 
+        {/* 2. Available Stock */}
+        <StatCard
+          title="Available Stock"
+          value={summary.availableStock}
+          icon={<CheckIcon className="size-5 text-emerald-600 dark:text-emerald-400" />}
+          hint="Units available for guest rooms & service"
+          badge={
+            <Badge
+              variant="outline"
+              className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+            >
+              Ready to Use
+            </Badge>
+          }
+        />
+
+        {/* 3. Low Stock Items */}
         <StatCard
           title="Low Stock Items"
           value={summary.lowStockCount}
           icon={<ProblemIcon className="size-5 text-amber-500" />}
           hint={
             summary.lowStockCount > 0
-              ? "Store inventory at or below threshold"
+              ? "Items at or below alert threshold"
               : "All stock levels healthy"
           }
           badge={
@@ -121,55 +207,16 @@ export function InventoryManager({
                 variant="outline"
                 className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
               >
-                Adequate
+                Healthy
               </Badge>
             )
           }
         />
-
-        <StatCard
-          title="Store Stock"
-          value={summary.totalStoreUnits}
-          icon={<InventoryIcon className="size-5 text-primary" />}
-          hint="Units available in main storage"
-        />
-
-        <StatCard
-          title="In Circulation"
-          value={summary.totalRoomsUnits + summary.totalLaundryUnits}
-          icon={<TransferIcon className="size-5 text-indigo-500" />}
-          hint={`${summary.totalRoomsUnits} in rooms · ${summary.totalLaundryUnits} at laundry`}
-        />
       </div>
-
-      {/* Low Stock Warning Banner */}
-      {summary.lowStockCount > 0 && filterTab !== "LOW_STOCK" && (
-        <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <ProblemIcon className="size-5 text-amber-600 dark:text-amber-400 shrink-0" />
-            <div>
-              <AlertTitle className="font-semibold text-sm">
-                Low Stock Alert Triggered
-              </AlertTitle>
-              <AlertDescription className="text-xs text-amber-800 dark:text-amber-300">
-                {summary.lowStockCount} item(s) have reached or fallen below their reorder threshold in the store room.
-              </AlertDescription>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setFilterTab("LOW_STOCK")}
-            className="border-amber-500/40 bg-background text-xs font-medium hover:bg-amber-500/20"
-          >
-            View Low Stock ({summary.lowStockCount})
-          </Button>
-        </Alert>
-      )}
 
       {/* Controls & Search Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Search & Tabs */}
+        {/* Search & Simple Filters */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
           <div className="relative max-w-sm w-full">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -190,6 +237,7 @@ export function InventoryManager({
             )}
           </div>
 
+          {/* Simple Filters: All, Low Stock, Damaged, Discontinued */}
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg border border-border/50 text-xs self-start sm:self-auto overflow-x-auto max-w-full">
             <button
               type="button"
@@ -201,7 +249,7 @@ export function InventoryManager({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              All ({items.length})
+              All ({filterCounts.all})
             </button>
             <button
               type="button"
@@ -214,35 +262,35 @@ export function InventoryManager({
               )}
             >
               Low Stock
-              {summary.lowStockCount > 0 && (
+              {filterCounts.lowStock > 0 && (
                 <span className="inline-flex items-center justify-center size-4 text-[10px] font-bold rounded-full bg-rose-500 text-white">
-                  {summary.lowStockCount}
+                  {filterCounts.lowStock}
                 </span>
               )}
             </button>
             <button
               type="button"
-              onClick={() => setFilterTab("ACTIVE")}
+              onClick={() => setFilterTab("DAMAGED")}
               className={cn(
                 "px-2.5 py-1 rounded-md font-medium transition-all shrink-0",
-                filterTab === "ACTIVE"
+                filterTab === "DAMAGED"
                   ? "bg-background text-foreground shadow-xs font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Active
+              Damaged ({filterCounts.damaged})
             </button>
             <button
               type="button"
-              onClick={() => setFilterTab("INACTIVE")}
+              onClick={() => setFilterTab("DISCONTINUED")}
               className={cn(
                 "px-2.5 py-1 rounded-md font-medium transition-all shrink-0",
-                filterTab === "INACTIVE"
+                filterTab === "DISCONTINUED"
                   ? "bg-background text-foreground shadow-xs font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Inactive
+              Discontinued ({filterCounts.discontinued})
             </button>
           </div>
         </div>
@@ -253,19 +301,19 @@ export function InventoryManager({
             variant="outline"
             size="sm"
             onClick={() => {
-              setMovePreselectedItemId(null);
-              setIsMoveOpen(true);
+              setUpdatePreselectedItemId(null);
+              setIsUpdateOpen(true);
             }}
-            className="gap-1.5 h-9"
+            className="gap-1.5 h-9 font-medium"
           >
             <TransferIcon className="size-4" />
-            Move Stock
+            Update Stock
           </Button>
 
           <Button
             size="sm"
             onClick={() => setIsAddOpen(true)}
-            className="gap-1.5 h-9"
+            className="gap-1.5 h-9 font-medium"
           >
             <AddIcon className="size-4" />
             Add Item
@@ -273,32 +321,30 @@ export function InventoryManager({
         </div>
       </div>
 
-      {/* Desktop / Tablet Table View */}
-      <div className="hidden md:block rounded-xl border border-border/70 overflow-hidden bg-card">
+      {/* Desktop / Tablet Simplified Table View */}
+      <div className="hidden md:block rounded-xl border border-border/70 overflow-hidden bg-card shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
               <tr className="border-b border-border/70 bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                <th className="py-3 px-4">Item Name</th>
-                <th className="py-3 px-4 text-center">Store</th>
-                <th className="py-3 px-4 text-center">In Rooms</th>
-                <th className="py-3 px-4 text-center">Laundry</th>
-                <th className="py-3 px-4 text-center">Damaged</th>
-                <th className="py-3 px-4 text-center">Total Usable</th>
-                <th className="py-3 px-4 text-center">Reorder Level</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4 font-semibold">Item Name</th>
+                <th className="py-3.5 px-4 text-center font-semibold">Available</th>
+                <th className="py-3.5 px-4 text-center font-semibold">In Use</th>
+                <th className="py-3.5 px-4 text-center font-semibold">Damaged</th>
+                <th className="py-3.5 px-4 text-center font-semibold">Discontinued</th>
+                <th className="py-3.5 px-4 text-center font-semibold">Status</th>
+                <th className="py-3.5 px-4 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
                     <InventoryIcon className="size-8 mx-auto mb-2 opacity-30" />
                     <p className="font-medium">No inventory items found.</p>
                     <p className="text-xs mt-1">
                       {search || filterTab !== "ALL"
-                        ? "Try adjusting your search query or active filter."
+                        ? "Try adjusting your search query or selected filter."
                         : "Click 'Add Item' to start tracking hotel linen and amenities."}
                     </p>
                   </td>
@@ -313,13 +359,13 @@ export function InventoryManager({
                       !item.isActive && "opacity-60 bg-muted/10"
                     )}
                   >
-                    {/* Item Name & Unit */}
+                    {/* Item Name */}
                     <td className="py-3.5 px-4 font-medium">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">
+                        <span className="font-semibold text-foreground text-sm">
                           {item.name}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground font-normal">
                           ({item.unit})
                         </span>
                         {!item.isActive && (
@@ -330,43 +376,41 @@ export function InventoryManager({
                       </div>
                     </td>
 
-                    {/* Store Stock */}
+                    {/* Available Stock */}
                     <td className="py-3.5 px-4 text-center font-mono">
                       <span
                         className={cn(
-                          "font-bold px-2 py-0.5 rounded-md",
+                          "font-bold px-2 py-0.5 rounded-md inline-block",
                           item.isLowStock
                             ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 font-extrabold"
                             : "text-foreground"
                         )}
                       >
-                        {item.qtyStore}
+                        {item.available}
                       </span>
                     </td>
 
-                    {/* In Rooms */}
+                    {/* In Use Stock */}
                     <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
-                      {item.qtyRooms}
+                      {item.inUse}
                     </td>
 
-                    {/* Laundry */}
+                    {/* Damaged Stock */}
+                    <td className="py-3.5 px-4 text-center font-mono">
+                      <span
+                        className={cn(
+                          item.damaged > 0
+                            ? "text-rose-600 dark:text-rose-400 font-semibold"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {item.damaged > 0 ? item.damaged : "-"}
+                      </span>
+                    </td>
+
+                    {/* Discontinued Stock */}
                     <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
-                      {item.qtyLaundry}
-                    </td>
-
-                    {/* Damaged */}
-                    <td className="py-3.5 px-4 text-center font-mono text-rose-600 dark:text-rose-400">
-                      {item.qtyDamaged > 0 ? item.qtyDamaged : "-"}
-                    </td>
-
-                    {/* Total Usable */}
-                    <td className="py-3.5 px-4 text-center font-mono font-medium text-foreground">
-                      {item.totalInCirculation}
-                    </td>
-
-                    {/* Reorder Level */}
-                    <td className="py-3.5 px-4 text-center font-mono text-xs text-muted-foreground">
-                      {item.reorderLevel > 0 ? item.reorderLevel : "None"}
+                      {item.discontinued > 0 ? item.discontinued : "-"}
                     </td>
 
                     {/* Status Badge */}
@@ -384,7 +428,7 @@ export function InventoryManager({
                           variant="outline"
                           className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px]"
                         >
-                          Normal
+                          In Stock
                         </Badge>
                       )}
                     </td>
@@ -395,20 +439,20 @@ export function InventoryManager({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 px-2 text-xs gap-1"
-                          onClick={() => handleOpenMoveForItem(item.id)}
-                          title="Move Stock"
+                          className="h-8 px-2 text-xs gap-1 font-medium text-foreground hover:text-primary"
+                          onClick={() => handleOpenUpdateForItem(item.id)}
+                          title="Update Stock"
                         >
                           <TransferIcon className="size-3.5" />
-                          <span className="hidden lg:inline">Move</span>
+                          <span className="hidden lg:inline">Update</span>
                         </Button>
 
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 px-2 text-xs gap-1"
+                          className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
                           onClick={() => handleOpenHistory(item)}
-                          title="View Movement History"
+                          title="View History"
                         >
                           <HistoryIcon className="size-3.5" />
                           <span className="hidden lg:inline">History</span>
@@ -417,7 +461,7 @@ export function InventoryManager({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 px-2 text-xs"
+                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
                           onClick={() => handleOpenEdit(item)}
                           title="Edit Item"
                         >
@@ -459,7 +503,7 @@ export function InventoryManager({
                     </span>
                   </h4>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
-                    Reorder Threshold: {item.reorderLevel > 0 ? `${item.reorderLevel} ${item.unit}` : "None"}
+                    Alert Threshold: {item.reorderLevel > 0 ? `${item.reorderLevel} ${item.unit}` : "None"}
                   </div>
                 </div>
 
@@ -477,37 +521,47 @@ export function InventoryManager({
                       variant="outline"
                       className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]"
                     >
-                      Normal
+                      In Stock
                     </Badge>
                   )}
                 </div>
               </div>
 
-              {/* Quantities Grid */}
+              {/* 4 Stock Categories Grid */}
               <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
                 <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
-                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Store</div>
+                  <div className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase font-bold">
+                    Available
+                  </div>
                   <div
                     className={cn(
                       "font-mono font-bold text-sm mt-0.5",
                       item.isLowStock && "text-rose-600 dark:text-rose-400"
                     )}
                   >
-                    {item.qtyStore}
+                    {item.available}
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
-                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Rooms</div>
-                  <div className="font-mono font-bold text-sm mt-0.5">{item.qtyRooms}</div>
+                  <div className="text-[9px] text-blue-600 dark:text-blue-400 uppercase font-bold">
+                    In Use
+                  </div>
+                  <div className="font-mono font-bold text-sm mt-0.5">{item.inUse}</div>
                 </div>
                 <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
-                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Laundry</div>
-                  <div className="font-mono font-bold text-sm mt-0.5">{item.qtyLaundry}</div>
-                </div>
-                <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
-                  <div className="text-[9px] text-rose-600 dark:text-rose-400 uppercase font-bold">Damaged</div>
+                  <div className="text-[9px] text-rose-600 dark:text-rose-400 uppercase font-bold">
+                    Damaged
+                  </div>
                   <div className="font-mono font-bold text-sm mt-0.5 text-rose-600 dark:text-rose-400">
-                    {item.qtyDamaged}
+                    {item.damaged}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-2 border border-border/40">
+                  <div className="text-[9px] text-zinc-500 uppercase font-bold">
+                    Discont.
+                  </div>
+                  <div className="font-mono font-bold text-sm mt-0.5 text-zinc-500">
+                    {item.discontinued}
                   </div>
                 </div>
               </div>
@@ -517,16 +571,16 @@ export function InventoryManager({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 h-8 text-xs gap-1"
-                  onClick={() => handleOpenMoveForItem(item.id)}
+                  className="flex-1 h-8 text-xs gap-1 font-medium"
+                  onClick={() => handleOpenUpdateForItem(item.id)}
                 >
                   <TransferIcon className="size-3" />
-                  Move
+                  Update
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 h-8 text-xs gap-1"
+                  className="flex-1 h-8 text-xs gap-1 font-medium"
                   onClick={() => handleOpenHistory(item)}
                 >
                   <HistoryIcon className="size-3" />
@@ -546,22 +600,28 @@ export function InventoryManager({
         )}
       </div>
 
-      {/* Add Item Dialog */}
-      <AddItemDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
+      {/* Simplified Add Item Dialog */}
+      <AddItemDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        onSuccess={handleItemCreated}
+      />
 
       {/* Edit Item Dialog */}
       <EditItemDialog
         item={editingItem}
         open={Boolean(editingItem)}
         onOpenChange={(open) => !open && setEditingItem(null)}
+        onSuccess={handleItemUpdated}
       />
 
-      {/* Move Stock Dialog */}
-      <MoveStockDialog
+      {/* Simplified Update Stock Dialog */}
+      <UpdateStockDialog
         items={items.filter((i) => i.isActive)}
-        preselectedItemId={movePreselectedItemId}
-        open={isMoveOpen}
-        onOpenChange={setIsMoveOpen}
+        preselectedItemId={updatePreselectedItemId}
+        open={isUpdateOpen}
+        onOpenChange={setIsUpdateOpen}
+        onSuccess={handleItemUpdated}
       />
 
       {/* Item History Slide-over Sheet */}
