@@ -41,6 +41,10 @@ export interface BookingRow {
   rateApplied: number;
   advancePaid: number;
   createdAt?: Date;
+  groupBookingId?: string | null;
+  isGroupMaster?: boolean;
+  groupRoomNumbers?: string[];
+  groupRoomCount?: number;
 }
 
 interface BookingsTableProps {
@@ -68,7 +72,10 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
     if (search.trim()) {
       const q = search.toLowerCase().trim();
       const matchRef = b.reference.toLowerCase().includes(q);
-      const matchRoom = b.roomNumber.toLowerCase().includes(q);
+      const matchRoom =
+        b.roomNumber.toLowerCase().includes(q) ||
+        (b.groupRoomNumbers &&
+          b.groupRoomNumbers.some((rn) => rn.toLowerCase().includes(q)));
       const matchGuest = b.guestName.toLowerCase().includes(q);
       if (!matchRef && !matchRoom && !matchGuest) return false;
     }
@@ -380,23 +387,52 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                       className="hover:bg-muted/30 transition-colors"
                     >
                       <td className="px-4 py-3 font-mono font-bold">
-                        <Link
-                          href={`/bookings/${b.id}`}
-                          className="text-primary hover:underline"
-                        >
-                          {b.reference}
-                        </Link>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Link
+                            href={`/bookings/${b.id}`}
+                            className="text-primary hover:underline"
+                          >
+                            {b.reference}
+                          </Link>
+                          {b.groupBookingId && (
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                              Group ({b.groupRoomCount || 2})
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <RoomIcon className="size-3.5 text-muted-foreground" />
-                          <span className="font-bold text-foreground font-mono">
-                            {b.roomNumber}
-                          </span>
-                          <span className="text-muted-foreground">
-                            ({b.roomTypeName})
-                          </span>
-                        </div>
+                        {b.groupBookingId && b.groupRoomNumbers && b.groupRoomNumbers.length > 1 ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <RoomIcon className="size-3.5 text-primary shrink-0" />
+                              <div className="flex flex-wrap gap-1 items-center">
+                                {b.groupRoomNumbers.map((rn) => (
+                                  <Badge
+                                    key={rn}
+                                    variant="outline"
+                                    className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-muted/60 text-foreground border-border"
+                                  >
+                                    {rn}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground pl-5">
+                              {b.groupRoomCount} rooms
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <RoomIcon className="size-3.5 text-muted-foreground" />
+                            <span className="font-bold text-foreground font-mono">
+                              {b.roomNumber}
+                            </span>
+                            <span className="text-muted-foreground">
+                              ({b.roomTypeName})
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col">
@@ -420,10 +456,24 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                       </td>
                       <td className="px-4 py-3">{getStatusBadge(b.status)}</td>
                       <td className="px-4 py-3 text-right font-mono font-semibold">
-                        {formatINR(b.rateApplied)}
+                        <div>
+                          <span>{formatINR(b.rateApplied)}</span>
+                          {b.groupRoomCount && b.groupRoomCount > 1 && (
+                            <span className="block text-[10px] text-muted-foreground font-sans font-normal">
+                              Total
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                        {b.advancePaid > 0 ? formatINR(b.advancePaid) : "—"}
+                        <div>
+                          <span>{b.advancePaid > 0 ? formatINR(b.advancePaid) : "—"}</span>
+                          {b.groupRoomCount && b.groupRoomCount > 1 && b.advancePaid > 0 && (
+                            <span className="block text-[10px] text-muted-foreground font-sans font-normal">
+                              Group total
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -444,7 +494,8 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                                 setCheckoutTarget({
                                   id: b.id,
                                   reference: b.reference,
-                                  roomNumber: b.roomNumber,
+                                  roomNumber:
+                                    b.groupRoomNumbers?.join(", ") || b.roomNumber,
                                 })
                               }
                               className="h-7 px-2.5 text-xs font-semibold"

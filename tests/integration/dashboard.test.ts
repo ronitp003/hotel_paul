@@ -141,10 +141,11 @@ describe("Phase 1.7: Dashboard v1 (Integration)", () => {
     expect(foundDeparture?.guestName).toBe("Rajesh Sharma");
 
     // Validate MTD billing & GST calculation
-    expect(summary.billing.invoicesCount).toBeGreaterThanOrEqual(1);
-    expect(summary.billing.totalBilled).toBeGreaterThanOrEqual(2100);
-    expect(summary.billing.totalGst).toBeGreaterThanOrEqual(100);
-    expect(summary.billing.monthName).toBeTruthy();
+    expect(summary.billing).not.toBeNull();
+    expect(summary.billing?.invoicesCount).toBeGreaterThanOrEqual(1);
+    expect(summary.billing?.totalBilled).toBeGreaterThanOrEqual(2100);
+    expect(summary.billing?.totalGst).toBeGreaterThanOrEqual(100);
+    expect(summary.billing?.monthName).toBeTruthy();
 
     // Validate Low Stock alerts (Phase 2.5)
     expect(typeof summary.lowStock.count).toBe("number");
@@ -161,7 +162,7 @@ describe("Phase 1.7: Dashboard v1 (Integration)", () => {
     expect(typeof summary.forecast[0].occupancyPercent).toBe("number");
   });
 
-  it("serves valid summary data from GET /api/dashboard endpoint for authenticated sessions", async () => {
+  it("serves valid summary data from GET /api/dashboard endpoint for authenticated sessions and hides billing for RECEPTIONIST", async () => {
     vi.spyOn(sessionModule, "requireSession").mockResolvedValue({
       actor: {
         id: "test-dash-actor",
@@ -178,5 +179,6 @@ describe("Phase 1.7: Dashboard v1 (Integration)", () => {
     const json = await response.json();
     const parsed = dashboardSummarySchema.safeParse(json);
     expect(parsed.success).toBe(true);
+    expect(json.billing).toBeNull();
   });
 });

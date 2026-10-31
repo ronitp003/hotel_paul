@@ -168,16 +168,17 @@ model RoomType {
 }
 
 model Room {
-  id            String            @id @default(cuid())
-  number        String            @unique
-  typeId        String
-  type          RoomType          @relation(fields: [typeId], references: [id])
-  pricePerNight Decimal           @db.Decimal(12, 2)
-  isActive      Boolean           @default(true)
-  bookings      Booking[]
-  maintenance   RoomMaintenance[]
-  problems      RoomProblem[]
-  createdAt     DateTime          @default(now())
+  id              String            @id @default(cuid())
+  number          String            @unique
+  typeId          String
+  type            RoomType          @relation(fields: [typeId], references: [id])
+  pricePerNight   Decimal           @db.Decimal(12, 2)
+  isActive        Boolean           @default(true)
+  bookings        Booking[]
+  maintenance     RoomMaintenance[]
+  problems        RoomProblem[]
+  allocatedGuests BookingGuest[]
+  createdAt       DateTime          @default(now())
 }
 
 model RoomMaintenance {
@@ -212,6 +213,8 @@ model RoomProblem {
 model Booking {
   id                 String         @id @default(cuid())
   reference          String         @unique
+  groupBookingId     String?
+  isGroupMaster      Boolean        @default(false)
   roomId             String
   room               Room           @relation(fields: [roomId], references: [id])
   status             BookingStatus  @default(RESERVED)
@@ -238,21 +241,25 @@ model Booking {
 
   @@index([roomId, checkInAt, checkOutAt])
   @@index([status])
+  @@index([groupBookingId])
 }
 
 model BookingGuest {
-  id         String   @id @default(cuid())
-  bookingId  String
-  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  isPrimary  Boolean  @default(false)
-  name       String
-  fatherName String?
-  age        Int?
-  sex        Sex?
-  mobile     String?
+  id              String   @id @default(cuid())
+  bookingId       String
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  allocatedRoomId String?
+  allocatedRoom   Room?    @relation(fields: [allocatedRoomId], references: [id])
+  isPrimary       Boolean  @default(false)
+  name            String
+  fatherName      String?
+  age             Int?
+  sex             Sex?
+  mobile          String?
 
   @@index([name])
   @@index([mobile])
+  @@index([allocatedRoomId])
 }
 
 // ───────── Money ─────────

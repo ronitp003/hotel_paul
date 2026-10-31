@@ -348,18 +348,112 @@ export const billingService = {
 
     const stay = calculateStay(checkIn, checkOut, settings.hotel.graceMinutes);
 
+    // Query all sibling bookings in the group if this is a group reservation
+    let groupBookings = [booking];
+    if (booking.groupBookingId) {
+      groupBookings = await prisma.booking.findMany({
+        where: { groupBookingId: booking.groupBookingId },
+        include: {
+          room: { include: { type: true } },
+          guests: true,
+          charges: { orderBy: { createdAt: "asc" } },
+          payments: { orderBy: { receivedAt: "asc" } },
+          invoice: true,
+        },
+        orderBy: { reference: "asc" },
+      });
+    }
+
+    const isGroup = groupBookings.length > 1;
+
+    const groupRooms = groupBookings.map((gb) => {
+      const gbCheckIn = isCheckedOut
+        ? (gb.actualCheckOutAt && gb.actualCheckOutAt > gb.checkOutAt
+            ? (gb.actualCheckInAt || gb.checkInAt)
+            : gb.checkInAt)
+        : (isOverstay || isEarly)
+          ? (gb.actualCheckInAt || gb.checkInAt)
+          : gb.checkInAt;
+
+      const gbCheckOut = isCheckedOut
+        ? (gb.actualCheckOutAt && gb.actualCheckOutAt > gb.checkOutAt
+            ? gb.actualCheckOutAt!
+            : gb.checkOutAt)
+        : (isOverstay || isEarly)
+          ? new Date()
+          : gb.checkOutAt;
+
+      const gbStay = calculateStay(gbCheckIn, gbCheckOut, settings.hotel.graceMinutes);
+      const roomCharge = new Decimal(gb.rateApplied).mul(gbStay.days);
+
+      return {
+        bookingId: gb.id,
+        reference: gb.reference,
+        roomId: gb.roomId,
+        roomNumber: gb.room.number,
+        roomTypeName: gb.room.type.name,
+        stayDays: gbStay.days,
+        rateApplied: Number(gb.rateApplied),
+        roomCharge: roomCharge.toNumber(),
+        status: gb.status,
+        isGroupMaster: gb.isGroupMaster,
+        guests: gb.guests.map((g) => ({
+          id: g.id,
+          name: g.name,
+          mobile: g.mobile,
+          isPrimary: g.isPrimary,
+          allocatedRoomId: g.allocatedRoomId,
+        })),
+      };
+    });
+
+    const totalRoomChargesOverride = isGroup
+      ? groupRooms.reduce(
+          (acc, r) => acc.add(new Decimal(r.roomCharge)),
+          new Decimal(0)
+        )
+      : undefined;
+
+    const allCharges = isGroup
+      ? groupBookings.flatMap((gb) => gb.charges)
+      : booking.charges;
+
+    const allPayments = isGroup
+      ? groupBookings.flatMap((gb) => gb.payments)
+      : booking.payments;
+
+    const totalDiscount = isGroup
+      ? groupBookings.reduce(
+          (acc, gb) => acc.add(new Decimal(gb.discount)),
+          new Decimal(0)
+        )
+      : booking.discount;
+
+    const masterBooking = isGroup
+      ? groupBookings.find((gb) => gb.isGroupMaster) || groupBookings[0]
+      : booking;
+
+    const effectiveRateForSlab = isGroup
+      ? groupBookings.reduce(
+          (max, gb) => Decimal.max(max, new Decimal(gb.rateApplied)),
+          new Decimal(0)
+        )
+      : booking.rateApplied;
+
     const calculation = calculateBill({
-      rateApplied: booking.rateApplied,
+      rateApplied: effectiveRateForSlab,
+      totalRoomChargesOverride,
       days: stay.days,
-      discount: booking.discount,
-      gstPercentOverride: booking.gstPercentOverride,
-      charges: booking.charges.map((c) => ({
+      discount: totalDiscount,
+      gstPercentOverride:
+        booking.gstPercentOverride ?? masterBooking.gstPercentOverride,
+      charges: allCharges.map((c) => ({
         id: c.id,
         description: c.description,
         amount: c.amount,
         isTaxable: c.isTaxable,
       })),
-      payments: booking.payments.map((p) => ({
+      payments: allPayments.map((p) => ({
         id: p.id,
         amount: p.amount,
         kind: p.kind as "ADVANCE" | "PAYMENT" | "REFUND",
@@ -382,6 +476,8 @@ export const billingService = {
         status: booking.status,
         roomNumber: booking.room.number,
         roomTypeName: booking.room.type.name,
+        groupBookingId: booking.groupBookingId,
+        isGroupMaster: booking.isGroupMaster,
         checkInAt: booking.checkInAt,
         checkOutAt: booking.checkOutAt,
         actualCheckInAt: booking.actualCheckInAt,
@@ -408,14 +504,14 @@ export const billingService = {
         minutes: stay.minutes,
         graceMinutesApplied: stay.isGracePeriodApplied,
       },
-      charges: booking.charges.map((c) => ({
+      charges: allCharges.map((c) => ({
         id: c.id,
         description: c.description,
         amount: Number(c.amount),
         isTaxable: c.isTaxable,
         createdAt: c.createdAt,
       })),
-      payments: booking.payments.map((p) => ({
+      payments: allPayments.map((p) => ({
         id: p.id,
         kind: p.kind,
         mode: p.mode,
@@ -446,6 +542,8 @@ export const billingService = {
         netPaid: calculation.netPaid.toNumber(),
         balanceDue: calculation.balanceDue.toNumber(),
       },
+      isGroup,
+      groupRooms,
     };
   },
 };

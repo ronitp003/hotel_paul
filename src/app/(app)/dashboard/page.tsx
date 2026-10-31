@@ -9,8 +9,8 @@ export const metadata = {
 };
 
 export default async function DashboardPage() {
-  await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
-  const summary = await dashboardService.getDashboardSummary();
+  const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
+  const summary = await dashboardService.getDashboardSummary(actor.role);
 
-  return <DashboardView data={summary} />;
+  return <DashboardView data={summary} userRole={actor.role} />;
 }

@@ -520,9 +520,9 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
           </div>
 
           {occupancyStats.maintenanceCount > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-500/10 text-slate-700 dark:text-slate-300 font-semibold border border-slate-500/20">
-              <MaintenanceIcon className="size-3 text-slate-500" />
-              <span>{occupancyStats.maintenanceCount} Maint</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-700 dark:text-purple-400 font-semibold border border-purple-500/20">
+              <MaintenanceIcon className="size-3 text-purple-600 dark:text-purple-400" />
+              <span>{occupancyStats.maintenanceCount} Maintenance</span>
             </div>
           )}
 
@@ -556,7 +556,14 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
             <span>Checked Out</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-xs bg-slate-700 dark:bg-slate-800 border border-slate-500 shrink-0" />
+            <span
+              style={{
+                backgroundColor: "var(--maintenance-bg, #f3e8ff)",
+                backgroundImage:
+                  "repeating-linear-gradient(-45deg, var(--maintenance-stripe, rgba(147, 51, 234, 0.28)), var(--maintenance-stripe, rgba(147, 51, 234, 0.28)) 2px, transparent 2px, transparent 5px)",
+              }}
+              className="size-2.5 rounded-xs bg-maintenance-striped border border-purple-500 dark:border-purple-400 shrink-0"
+            />
             <span>Maintenance</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -768,12 +775,15 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
                                 style={{
                                   left: `${pos.left}%`,
                                   width: `${pos.width}%`,
+                                  backgroundColor: "var(--maintenance-bg, #f3e8ff)",
+                                  backgroundImage:
+                                    "repeating-linear-gradient(-45deg, var(--maintenance-stripe, rgba(147, 51, 234, 0.22)), var(--maintenance-stripe, rgba(147, 51, 234, 0.22)) 8px, transparent 8px, transparent 16px)",
                                 }}
-                                className="absolute top-2 bottom-2 z-10 rounded-md bg-slate-700/90 hover:bg-slate-700 text-white border border-slate-500 cursor-pointer p-1.5 overflow-hidden flex items-center gap-1.5 transition-transform hover:scale-[1.01] shadow-xs select-none"
+                                className="absolute top-2 bottom-2 z-10 rounded-md bg-maintenance-striped hover:opacity-95 text-purple-950 dark:text-purple-100 border border-purple-400 dark:border-purple-500 cursor-pointer p-1.5 overflow-hidden flex items-center gap-1.5 transition-transform hover:scale-[1.01] shadow-xs select-none"
                               >
-                                <MaintenanceIcon className="size-3.5 shrink-0 text-slate-300" />
-                                <span className="text-xs font-semibold truncate leading-none">
-                                  {m.reason || "Maintenance"}
+                                <MaintenanceIcon className="size-3.5 shrink-0 text-purple-800 dark:text-purple-300" />
+                                <span className="text-xs font-bold text-purple-950 dark:text-purple-100 truncate leading-none">
+                                  {m.reason ? `Maintenance • ${m.reason}` : "Maintenance"}
                                 </span>
                               </div>
                             </MaintenanceHoverCard>
@@ -827,6 +837,11 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
                                     <span className="text-xs font-bold truncate leading-tight tracking-tight">
                                       {b.primaryGuestName}
                                     </span>
+                                    {b.groupBookingId && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1 py-0.2 rounded bg-white/25 text-white font-bold shrink-0">
+                                        Group
+                                      </span>
+                                    )}
                                   </div>
 
                                   {b.balanceDue > 0 && isCheckedIn && (

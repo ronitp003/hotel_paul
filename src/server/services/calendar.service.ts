@@ -32,6 +32,10 @@ export interface CalendarBookingEvent {
   balanceDue: number;
   source: string;
   companyName: string | null;
+  groupBookingId: string | null;
+  isGroupMaster: boolean;
+  groupRoomNumbers?: string[];
+  groupRoomCount?: number;
 }
 
 export interface CalendarMaintenanceEvent {
@@ -101,6 +105,30 @@ export const calendarService = {
       orderBy: { checkInAt: "asc" },
     });
 
+    // Fetch all sibling room numbers for any group bookings in the timeline
+    const groupBookingIds = Array.from(
+      new Set(bookingsData.map((b) => b.groupBookingId).filter(Boolean) as string[])
+    );
+
+    const groupRoomsMap = new Map<string, string[]>();
+    if (groupBookingIds.length > 0) {
+      const allGroupBookings = await prisma.booking.findMany({
+        where: { groupBookingId: { in: groupBookingIds } },
+        select: {
+          groupBookingId: true,
+          room: { select: { number: true } },
+        },
+        orderBy: { room: { number: "asc" } },
+      });
+
+      for (const gb of allGroupBookings) {
+        if (!gb.groupBookingId) continue;
+        const list = groupRoomsMap.get(gb.groupBookingId) || [];
+        list.push(gb.room.number);
+        groupRoomsMap.set(gb.groupBookingId, list);
+      }
+    }
+
     const bookings: CalendarBookingEvent[] = bookingsData.map((b) => {
       const primaryGuest = b.guests.find((g) => g.isPrimary) || b.guests[0];
       const primaryGuestName = primaryGuest ? primaryGuest.name : "Unnamed Guest";
@@ -131,6 +159,10 @@ export const calendarService = {
       const estimatedTotal = Math.max(0, rate + chargesSum - discount);
       const balanceDue = Math.max(0, estimatedTotal - netPaid);
 
+      const groupRoomNumbers = b.groupBookingId
+        ? groupRoomsMap.get(b.groupBookingId) || []
+        : [];
+
       return {
         id: b.id,
         reference: b.reference,
@@ -150,6 +182,10 @@ export const calendarService = {
         balanceDue,
         source: b.source,
         companyName: b.companyName,
+        groupBookingId: b.groupBookingId,
+        isGroupMaster: b.isGroupMaster,
+        groupRoomNumbers: groupRoomNumbers.length > 0 ? groupRoomNumbers : undefined,
+        groupRoomCount: groupRoomNumbers.length > 0 ? groupRoomNumbers.length : undefined,
       };
     });
 

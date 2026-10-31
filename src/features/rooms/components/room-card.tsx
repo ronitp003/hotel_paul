@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatINR } from "@/lib/money";
-import { formatISTDateTime, formatISTDate, formatIST } from "@/lib/datetime";
+import { formatISTDateTime, formatIST } from "@/lib/datetime";
 import {
   GuestIcon,
   ClockIcon,
@@ -24,6 +23,7 @@ import {
   EditIcon,
   ChevronRightIcon,
   RoomIcon,
+  CheckIcon,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { RoomWithStatus } from "@/server/services/room.service";
@@ -48,16 +48,40 @@ export function RoomCard({
 
   const isOwner = userRole === "OWNER";
 
-  // Left border accent based on derived status
-  const borderAccentClass = !room.isActive
-    ? "border-l-4 border-l-muted-foreground/40 opacity-80"
+  // Status badge styling
+  const statusConfig = !room.isActive
+    ? {
+        label: "Disabled",
+        dotClass: "bg-muted-foreground",
+        badgeClass: "bg-muted text-muted-foreground border-border",
+      }
     : room.status === "OCCUPIED"
-      ? "border-l-4 border-l-status-occupied"
+      ? {
+          label: "Occupied",
+          dotClass: "bg-blue-600 dark:bg-blue-400",
+          badgeClass:
+            "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+        }
       : room.status === "RESERVED"
-        ? "border-l-4 border-l-status-reserved"
+        ? {
+            label: "Reserved",
+            dotClass: "bg-amber-600 dark:bg-amber-400",
+            badgeClass:
+              "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+          }
         : room.status === "MAINTENANCE"
-          ? "border-l-4 border-l-status-maintenance"
-          : "border-l-4 border-l-status-available";
+          ? {
+              label: "Maintenance",
+              dotClass: "bg-slate-500",
+              badgeClass:
+                "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20",
+            }
+          : {
+              label: "Available",
+              dotClass: "bg-emerald-600 dark:bg-emerald-400",
+              badgeClass:
+                "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+            };
 
   return (
     <>
@@ -65,223 +89,214 @@ export function RoomCard({
         onClick={() => {
           setIsDetailsOpen(true);
         }}
-        className={cn(
-          "relative overflow-hidden transition-all duration-150 ease-out cursor-pointer flex flex-col justify-between select-none group border rounded-xl hover:shadow-md hover:border-border/80 motion-reduce:transition-none bg-card py-0 gap-0",
-          borderAccentClass
-        )}
+        className="relative overflow-hidden transition-all duration-150 ease-out cursor-pointer flex flex-col justify-between select-none group border border-border/80 rounded-xl hover:shadow-xs hover:border-border motion-reduce:transition-none bg-card py-0 gap-0"
       >
-        <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
-          {/* Header Row: Room Number & Status Badge */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-2xl font-black tracking-tight text-foreground font-mono leading-none">
-              {room.number}
-            </span>
+        <CardContent className="p-3.5 sm:p-4 flex flex-col justify-between h-full">
+          <div>
+            {/* Top Row: Room Number & Status Badge */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <span
+                  className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-foreground leading-none truncate block"
+                  title={`Room ${room.number}`}
+                >
+                  {room.number}
+                </span>
+                <p
+                  className="text-xs text-muted-foreground mt-1 truncate font-medium"
+                  title={room.typeName}
+                >
+                  {room.typeName}
+                </p>
+              </div>
 
-            <div className="shrink-0 flex items-center gap-1.5">
-              {room.status === "AVAILABLE" &&
-                room.upcomingMaintenance &&
-                room.upcomingMaintenance.length > 0 && (
+              <div className="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
+                {room.hasProblem && (
                   <span
-                    title={`Scheduled Maintenance: ${room.upcomingMaintenance[0].reason}`}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-status-maintenance/15 text-status-maintenance text-[11px] font-semibold border border-status-maintenance/30 shrink-0"
+                    title={`${room.openProblemsCount} unresolved problem(s)`}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 shrink-0"
                   >
-                    <MaintenanceIcon className="size-3" aria-hidden="true" />
+                    <ProblemIcon
+                      className="size-2.5 shrink-0"
+                      aria-hidden="true"
+                    />
                     <span>
-                      Maint:{" "}
-                      {formatIST(
-                        new Date(room.upcomingMaintenance[0].startsAt),
-                        "d MMM"
-                      )}
+                      {room.openProblemsCount > 1
+                        ? `${room.openProblemsCount} Issues`
+                        : "Issue"}
                     </span>
                   </span>
                 )}
-              <StatusBadge
-                status={room.status}
-                label={
-                  room.status === "MAINTENANCE" ? "Maintenance" : undefined
-                }
-              />
-            </div>
-          </div>
-
-          {/* Subheader Row: Category & Problem Alert */}
-          <div className="flex items-center justify-between gap-2 min-w-0">
-            <span
-              className="text-xs font-semibold text-muted-foreground tracking-wide uppercase truncate"
-              title={room.typeName}
-            >
-              {room.typeName}
-            </span>
-
-            {room.hasProblem && (
-              <span
-                title={`${room.openProblemsCount} unresolved problem(s)`}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-status-problem/15 text-status-problem text-[11px] font-bold border border-status-problem/30 shrink-0"
-              >
-                <ProblemIcon className="size-3" aria-hidden="true" />
-                <span>
-                  {room.openProblemsCount}{" "}
-                  {room.openProblemsCount === 1 ? "issue" : "issues"}
-                </span>
-              </span>
-            )}
-          </div>
-
-          {/* Pricing Row: Price / night */}
-          <div className="flex items-baseline gap-1 pt-0.5">
-            <span className="text-xl font-bold text-foreground tabular-nums tracking-tight">
-              {formatINR(room.pricePerNight)}
-            </span>
-            <span className="text-xs text-muted-foreground font-medium">
-              / night
-            </span>
-          </div>
-
-          {/* Dynamic Context Banner */}
-          <div className="mt-auto pt-1">
-            {room.status === "OCCUPIED" && room.currentBooking && (
-              <div className="rounded-lg bg-status-occupied/10 border border-status-occupied/20 p-2.5 space-y-1 text-xs">
-                <div className="flex items-center gap-1.5 font-semibold text-status-occupied truncate">
-                  <GuestIcon className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span className="truncate">
-                    {room.currentBooking.guestName}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
-                  <span>
-                    Depart:{" "}
-                    {formatISTDate(new Date(room.currentBooking.checkOutAt))}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {room.status === "RESERVED" && room.currentBooking && (
-              <div className="rounded-lg bg-status-reserved/10 border border-status-reserved/25 p-2.5 space-y-1 text-xs">
-                <div className="flex items-center gap-1.5 font-semibold text-status-reserved truncate">
-                  <GuestIcon className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span className="truncate">
-                    {room.currentBooking.guestName}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
-                  <span>
-                    Expected:{" "}
-                    {formatISTDate(new Date(room.currentBooking.checkInAt))}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {room.status === "MAINTENANCE" && (
-              <div className="rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 p-2.5 space-y-1 text-xs">
-                <div className="flex items-center gap-1.5 font-semibold text-status-maintenance">
-                  <MaintenanceIcon
-                    className="size-3.5 shrink-0"
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border leading-none shrink-0",
+                    statusConfig.badgeClass
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full shrink-0",
+                      statusConfig.dotClass
+                    )}
                     aria-hidden="true"
                   />
-                  <span>Under Maintenance</span>
-                </div>
-                <p
-                  className="text-[11px] text-muted-foreground line-clamp-1"
-                  title={room.maintenanceReason || "Scheduled repair work"}
-                >
-                  {room.maintenanceReason || "Scheduled repair work"}
-                </p>
-              </div>
-            )}
-
-            {!room.isActive && (
-              <div className="rounded-md bg-muted/60 border border-border px-2.5 py-1.5 text-xs flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-medium">
-                  Inactive in system
+                  <span>{statusConfig.label}</span>
                 </span>
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] uppercase font-bold py-0"
-                >
-                  Disabled
-                </Badge>
               </div>
-            )}
+            </div>
 
-            {room.status === "AVAILABLE" && room.isActive && (
-              room.upcomingMaintenance && room.upcomingMaintenance.length > 0 ? (
-                <div className="rounded-lg bg-status-maintenance/10 border border-status-maintenance/25 p-2.5 space-y-1 text-xs">
-                  <div className="flex items-center justify-between gap-1">
-                    <div className="flex items-center gap-1.5 font-semibold text-status-maintenance">
-                      <MaintenanceIcon className="size-3.5 shrink-0" aria-hidden="true" />
-                      <span>Upcoming Maintenance</span>
-                    </div>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-status-maintenance/15 text-status-maintenance font-bold">
-                      {formatIST(new Date(room.upcomingMaintenance[0].startsAt), "dd MMM")}
+            {/* Pricing Row: Price / night */}
+            <div className="flex items-baseline gap-1 mt-3">
+              <span className="text-lg font-bold font-mono text-foreground tracking-tight tabular-nums">
+                {formatINR(room.pricePerNight)}
+              </span>
+              <span className="text-xs text-muted-foreground font-normal">
+                / night
+              </span>
+            </div>
+
+            {/* Inline Status Message with Small Icon */}
+            <div className="mt-2 text-xs text-muted-foreground min-w-0">
+              {room.status === "OCCUPIED" ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <GuestIcon
+                    className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
+                    aria-hidden="true"
+                  />
+                  {room.currentBooking ? (
+                    <span className="truncate">
+                      <strong className="font-semibold text-foreground/90">
+                        {room.currentBooking.guestName}
+                      </strong>
+                      <span className="text-[11px] text-muted-foreground font-normal ml-1">
+                        • Out{" "}
+                        {formatIST(
+                          new Date(room.currentBooking.checkOutAt),
+                          "d MMM"
+                        )}
+                      </span>
                     </span>
-                  </div>
-                  <p
-                    className="text-[11px] text-muted-foreground line-clamp-1"
+                  ) : (
+                    <span className="truncate font-medium text-foreground/80">
+                      Guest in room
+                    </span>
+                  )}
+                </div>
+              ) : room.status === "RESERVED" ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <ClockIcon
+                    className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
+                    aria-hidden="true"
+                  />
+                  {room.currentBooking ? (
+                    <span className="truncate">
+                      <strong className="font-semibold text-foreground/90">
+                        {room.currentBooking.guestName}
+                      </strong>
+                      <span className="text-[11px] text-muted-foreground font-normal ml-1">
+                        • In{" "}
+                        {formatIST(
+                          new Date(room.currentBooking.checkInAt),
+                          "d MMM"
+                        )}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="truncate font-medium text-foreground/80">
+                      Reserved
+                    </span>
+                  )}
+                </div>
+              ) : room.status === "MAINTENANCE" ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <MaintenanceIcon
+                    className="size-3.5 shrink-0 text-slate-500"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="truncate font-medium text-foreground/80"
+                    title={room.maintenanceReason || "Under maintenance"}
+                  >
+                    {room.maintenanceReason || "Under maintenance"}
+                  </span>
+                </div>
+              ) : !room.isActive ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <RoomIcon
+                    className="size-3.5 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="truncate font-medium text-muted-foreground">
+                    Inactive in system
+                  </span>
+                </div>
+              ) : room.upcomingMaintenance &&
+                room.upcomingMaintenance.length > 0 ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <MaintenanceIcon
+                    className="size-3.5 shrink-0 text-slate-500"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="truncate font-medium text-foreground/80"
                     title={room.upcomingMaintenance[0].reason}
                   >
-                    {room.upcomingMaintenance[0].reason}
-                  </p>
+                    Maint:{" "}
+                    {formatIST(
+                      new Date(room.upcomingMaintenance[0].startsAt),
+                      "d MMM"
+                    )}
+                  </span>
                 </div>
               ) : (
-                <div className="rounded-md bg-status-available/5 border border-status-available/15 px-2.5 py-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-status-available shrink-0 animate-pulse" />
-                  <span className="font-medium text-foreground/80">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <CheckIcon
+                    className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                    aria-hidden="true"
+                  />
+                  <span className="truncate font-medium text-foreground/80">
                     Available for check-in
                   </span>
                 </div>
-              )
-            )}
+              )}
+            </div>
           </div>
-        </CardContent>
 
-        {/* Card Footer Actions */}
-        <div className="px-3.5 py-2 border-t border-border/70 bg-muted/25 flex items-center justify-between text-xs text-muted-foreground">
-          <span className="text-[11px] font-medium">
-            {room.status === "OCCUPIED"
-              ? "Guest in room"
-              : room.status === "RESERVED"
-                ? "Reserved"
-                : room.status === "MAINTENANCE"
-                  ? "Out of service"
-                  : !room.isActive
-                    ? "Not bookable"
-                    : room.upcomingMaintenance && room.upcomingMaintenance.length > 0
-                      ? `Vacant (Maint: ${formatIST(new Date(room.upcomingMaintenance[0].startsAt), "d MMM")})`
-                      : "Vacant clean"}
-          </span>
-
+          {/* Bottom Section: Subtle Divider & Minimal Actions */}
           <div
-            className="flex items-center gap-1"
+            className={cn(
+              "mt-3.5 pt-2 border-t border-border/60 flex items-center text-xs",
+              isOwner && onEdit ? "justify-between" : "justify-end"
+            )}
             onClick={(e) => e.stopPropagation()}
           >
             {isOwner && onEdit && (
               <Button
+                type="button"
                 variant="ghost"
-                size="icon-sm"
-                className="size-7 hover:bg-background hover:text-foreground text-muted-foreground transition-colors"
-                title="Edit room settings"
+                size="sm"
                 onClick={() => onEdit(room)}
+                className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors gap-1 -ml-1"
               >
-                <EditIcon className="size-3.5" aria-hidden="true" />
-                <span className="sr-only">Edit room {room.number}</span>
+                <EditIcon className="size-3" aria-hidden="true" />
+                <span>Edit</span>
               </Button>
             )}
             <Button
+              type="button"
               variant="ghost"
-              size="icon-sm"
-              className="size-7 hover:bg-background hover:text-foreground text-muted-foreground transition-colors"
-              title="View room details"
+              size="sm"
               onClick={() => setIsDetailsOpen(true)}
+              className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors gap-1 -mr-1"
             >
-              <ChevronRightIcon className="size-3.5" aria-hidden="true" />
-              <span className="sr-only">View room {room.number} details</span>
+              <span>View Details</span>
+              <ChevronRightIcon
+                className="size-3 text-muted-foreground"
+                aria-hidden="true"
+              />
             </Button>
           </div>
-        </div>
+        </CardContent>
       </Card>
 
       {/* Quick Summary Dialog */}

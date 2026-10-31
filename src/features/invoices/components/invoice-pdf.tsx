@@ -401,12 +401,27 @@ export function InvoicePdfDocument({
           {/* Stay Info */}
           <View style={styles.boxContainer}>
             <Text style={styles.boxHeader}>Stay & Room Details</Text>
-            <View style={styles.boxRow}>
-              <Text style={styles.label}>Room Number:</Text>
-              <Text style={styles.value}>
-                {snapshot.booking.roomNumber} ({snapshot.booking.roomTypeName})
-              </Text>
-            </View>
+            {snapshot.rooms && snapshot.rooms.length > 1 ? (
+              <>
+                <View style={styles.boxRow}>
+                  <Text style={styles.label}>Rooms Booked:</Text>
+                  <Text style={styles.value}>
+                    {snapshot.rooms.map((r) => r.roomNumber).join(", ")} ({snapshot.rooms.length} rooms)
+                  </Text>
+                </View>
+                <View style={styles.boxRow}>
+                  <Text style={styles.label}>Reservation Type:</Text>
+                  <Text style={styles.value}>Group Booking</Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.boxRow}>
+                <Text style={styles.label}>Room Number:</Text>
+                <Text style={styles.value}>
+                  {snapshot.booking.roomNumber} ({snapshot.booking.roomTypeName})
+                </Text>
+              </View>
+            )}
             <View style={styles.boxRow}>
               <Text style={styles.label}>Arrival:</Text>
               <Text style={styles.value}>
@@ -450,20 +465,43 @@ export function InvoicePdfDocument({
             </Text>
           </View>
 
-          {/* Room Tariff Row */}
-          <View style={styles.tableRow}>
-            <Text style={styles.colDesc}>
-              Room Accommodation (Room {snapshot.booking.roomNumber} -{" "}
-              {snapshot.booking.roomTypeName})
-            </Text>
-            <Text style={styles.colQty}>{snapshot.booking.stayDays}</Text>
-            <Text style={styles.colRate}>
-              ₹{formatINRPlain(snapshot.booking.rateApplied)}
-            </Text>
-            <Text style={styles.colTotal}>
-              ₹{formatINRPlain(snapshot.totals.roomCharges)}
-            </Text>
-          </View>
+          {/* Room Tariff Row(s) */}
+          {snapshot.rooms && snapshot.rooms.length > 0 ? (
+            snapshot.rooms.map((roomItem, rIdx) => (
+              <View
+                key={roomItem.bookingId || rIdx}
+                style={[
+                  styles.tableRow,
+                  rIdx % 2 === 1 ? styles.tableRowEven : {},
+                ]}
+              >
+                <Text style={styles.colDesc}>
+                  Room Accommodation (Room {roomItem.roomNumber} - {roomItem.roomTypeName})
+                </Text>
+                <Text style={styles.colQty}>{roomItem.stayDays}</Text>
+                <Text style={styles.colRate}>
+                  ₹{formatINRPlain(roomItem.rateApplied)}
+                </Text>
+                <Text style={styles.colTotal}>
+                  ₹{formatINRPlain(roomItem.roomCharges)}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.tableRow}>
+              <Text style={styles.colDesc}>
+                Room Accommodation (Room {snapshot.booking.roomNumber} -{" "}
+                {snapshot.booking.roomTypeName})
+              </Text>
+              <Text style={styles.colQty}>{snapshot.booking.stayDays}</Text>
+              <Text style={styles.colRate}>
+                ₹{formatINRPlain(snapshot.booking.rateApplied)}
+              </Text>
+              <Text style={styles.colTotal}>
+                ₹{formatINRPlain(snapshot.totals.roomCharges)}
+              </Text>
+            </View>
+          )}
 
           {/* Additional Charges Rows */}
           {snapshot.charges.map((charge, idx) => (

@@ -25,6 +25,7 @@ export interface BillPaymentInput {
 export interface CalculateBillInput {
   rateApplied: Decimal | number | string;
   days: number;
+  totalRoomChargesOverride?: Decimal | number | string;
   discount?: Decimal | number | string;
   gstPercentOverride?: Decimal | number | string | null;
   charges?: BillChargeInput[];
@@ -207,7 +208,10 @@ export function calculateBill(
 ): BillCalculationResult {
   const rateApplied = new Decimal(input.rateApplied || 0);
   const days = Math.max(1, input.days || 1);
-  const roomCharges = rateApplied.times(days);
+  const roomCharges =
+    input.totalRoomChargesOverride !== undefined
+      ? new Decimal(input.totalRoomChargesOverride)
+      : rateApplied.times(days);
 
   let taxableChargesTotal = new Decimal(0);
   let nonTaxableChargesTotal = new Decimal(0);

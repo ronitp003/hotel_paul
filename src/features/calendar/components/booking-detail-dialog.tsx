@@ -58,16 +58,26 @@ export function BookingDetailDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="space-y-1">
-          <div className="flex items-center justify-between gap-2 pr-6">
+          <div className="flex items-center justify-between gap-2 pr-6 flex-wrap">
             <span className="font-mono text-xs font-semibold text-muted-foreground tracking-wider">
               {booking.reference}
             </span>
-            <Badge
-              variant={statusVariant}
-              className={`text-[11px] font-semibold px-2 py-0.5 ${statusColorClass}`}
-            >
-              {booking.status}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              {booking.groupBookingId && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-bold px-2 py-0.5 bg-primary/10 text-primary border-primary/30"
+                >
+                  Group
+                </Badge>
+              )}
+              <Badge
+                variant={statusVariant}
+                className={`text-[11px] font-semibold px-2 py-0.5 ${statusColorClass}`}
+              >
+                {booking.status}
+              </Badge>
+            </div>
           </div>
           <DialogTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
             <GuestIcon className="size-5 text-primary shrink-0" />
@@ -105,6 +115,41 @@ export function BookingDetailDialog({
               <span className="text-[11px] text-muted-foreground">/night</span>
             </div>
           </div>
+
+          {/* Group Rooms Badges (if group reservation) */}
+          {booking.groupBookingId &&
+            booking.groupRoomNumbers &&
+            booking.groupRoomNumbers.length > 1 && (
+              <div className="p-2.5 rounded-lg border border-primary/25 bg-primary/5 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-primary flex items-center gap-1.5">
+                    <GuestIcon className="size-3.5 text-primary" />
+                    All Group Rooms ({booking.groupRoomNumbers.length})
+                  </span>
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    {booking.groupBookingId}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1 items-center pt-0.5">
+                  {booking.groupRoomNumbers.map((rn) => {
+                    const isCurrent = rn === (roomNumber || booking.roomId);
+                    return (
+                      <Badge
+                        key={rn}
+                        variant="outline"
+                        className={`text-[10px] font-mono px-2 py-0.5 ${
+                          isCurrent
+                            ? "bg-primary text-primary-foreground font-bold border-primary shadow-xs"
+                            : "bg-background text-foreground border-border"
+                        }`}
+                      >
+                        Room {rn} {isCurrent ? "(this)" : ""}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
           {/* Timestamps */}
           <div className="grid grid-cols-2 gap-2.5 p-3 rounded-lg border border-border bg-card">

@@ -87,7 +87,11 @@
   --status-occupied: #2563eb;
   --status-available: #16a34a;
   --status-reserved: #f59e0b;
-  --status-maintenance: #64748b;
+  --status-maintenance: #7e22ce;
+  --maintenance-bg: #f3e8ff;
+  --maintenance-stripe: rgba(147, 51, 234, 0.22);
+  --maintenance-border: #c084fc;
+  --maintenance-text: #4c1d95;
   --status-problem: #dc2626;
   --status-unavailable: #a8a29e;
   --money-due: #dc2626;
@@ -127,7 +131,11 @@
   --status-occupied: #3b82f6;
   --status-available: #22c55e;
   --status-reserved: #fbbf24;
-  --status-maintenance: #94a3b8;
+  --status-maintenance: #a855f7;
+  --maintenance-bg: #3b0764;
+  --maintenance-stripe: rgba(192, 132, 252, 0.22);
+  --maintenance-border: #a855f7;
+  --maintenance-text: #faf5ff;
   --status-problem: #ef4444;
   --status-unavailable: #78716c;
   --money-due: #ef4444;
@@ -189,5 +197,39 @@ span[data-type="outside"] {
   height: 0 !important;
   position: fixed !important;
   pointer-events: none !important;
+}
+
+/* Maintenance diagonal stripes pattern */
+@utility bg-maintenance-striped {
+  background-color: var(--maintenance-bg, #f3e8ff);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--maintenance-stripe, rgba(147, 51, 234, 0.22)),
+    var(--maintenance-stripe, rgba(147, 51, 234, 0.22)) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+.bg-maintenance-striped {
+  background-color: var(--maintenance-bg, #f3e8ff) !important;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--maintenance-stripe, rgba(147, 51, 234, 0.22)),
+    var(--maintenance-stripe, rgba(147, 51, 234, 0.22)) 8px,
+    transparent 8px,
+    transparent 16px
+  ) !important;
+}
+
+.dark .bg-maintenance-striped {
+  background-color: var(--maintenance-bg, #3b0764) !important;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--maintenance-stripe, rgba(192, 132, 252, 0.22)),
+    var(--maintenance-stripe, rgba(192, 132, 252, 0.22)) 8px,
+    transparent 8px,
+    transparent 16px
+  ) !important;
 }
 

@@ -23,6 +23,7 @@ import {
   RupeeIcon,
   AddIcon,
   DeleteIcon,
+  ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
   CheckIcon,
@@ -134,13 +135,17 @@ export function NewBookingFlow({
   const [statusFilter, setStatusFilter] =
     useState<RoomStatusFilter>("AVAILABLE");
   const [rooms, setRooms] = useState<AvailableRoomResult[]>(initialRooms);
-  const [selectedRoomId, setSelectedRoomId] = useState<string>(
-    preselectedRoomId || ""
+  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>(() =>
+    preselectedRoomId ? [preselectedRoomId] : []
   );
+  const [customRates, setCustomRates] = useState<Record<string, string>>({});
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [searchFilter, setSearchFilter] = useState<string>("");
 
-  const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
+  const selectedRooms = rooms.filter((r) => selectedRoomIds.includes(r.id));
+  const selectedRoomId = selectedRoomIds[0] || "";
+  const selectedRoom =
+    selectedRooms[0] || rooms.find((r) => r.id === selectedRoomId);
 
   // ───────── Step 3: Guests & Visit ─────────
   const [guests, setGuests] = useState<GuestState[]>([
@@ -208,19 +213,46 @@ export function NewBookingFlow({
   >("CASH");
 
   // Effective rate applied
+  const totalRoomTariffPerNight = selectedRooms.reduce((acc, r) => {
+    const rateStr = customRates[r.id];
+    const rate =
+      rateStr !== undefined && rateStr !== "" && !isNaN(Number(rateStr))
+        ? Number(rateStr)
+        : r.pricePerNight;
+    return acc + rate;
+  }, 0);
+
   const effectiveRate =
-    customRate !== "" && !isNaN(Number(customRate))
-      ? Number(customRate)
-      : (selectedRoom?.pricePerNight ?? 0);
+    selectedRooms.length > 1
+      ? totalRoomTariffPerNight
+      : customRate !== "" && !isNaN(Number(customRate))
+        ? Number(customRate)
+        : (selectedRoom?.pricePerNight ?? 0);
 
   const discount = Math.max(0, Number(discountStr) || 0);
   const advanceAmount = Math.max(0, Number(advanceAmountStr) || 0);
 
   // Live bill calculation
-  const roomCharges = effectiveRate * currentStay.days;
+  const roomCharges =
+    selectedRooms.length > 1
+      ? totalRoomTariffPerNight * currentStay.days
+      : effectiveRate * currentStay.days;
   const taxableAmount = Math.max(0, roomCharges - discount);
+
+  const maxRoomRate =
+    selectedRooms.length > 0
+      ? Math.max(
+          ...selectedRooms.map((r) => {
+            const rateStr = customRates[r.id];
+            return rateStr !== undefined && rateStr !== "" && !isNaN(Number(rateStr))
+              ? Number(rateStr)
+              : r.pricePerNight;
+          })
+        )
+      : effectiveRate;
+
   // GST Slab: 5% up to ₹7,500/night; 18% above
-  const gstPercent = effectiveRate > 7500 ? 18 : 5;
+  const gstPercent = maxRoomRate > 7500 ? 18 : 5;
   const cgstAmount =
     Math.round(((taxableAmount * gstPercent) / 200) * 100) / 100;
   const sgstAmount = cgstAmount;
@@ -236,6 +268,8 @@ export function NewBookingFlow({
     primaryGuestName: string;
     advancePaid: number;
     balanceDue: number;
+    groupBookingId?: string | null;
+    groupRoomCount?: number;
   } | null>(null);
 
   // Refresh available rooms when dates change or user triggers
@@ -259,13 +293,12 @@ export function NewBookingFlow({
       );
       if (res.ok && res.data) {
         setRooms(res.data.rooms);
-        // If selected room is no longer available in the new window, reset it
-        const stillAvail = res.data.rooms.find(
-          (r) => r.id === selectedRoomId && r.isAvailable
+        // Keep still available selected rooms
+        setSelectedRoomIds((prev) =>
+          prev.filter((id) =>
+            res.data?.rooms.some((r) => r.id === id && r.isAvailable)
+          )
         );
-        if (!stillAvail) {
-          setSelectedRoomId("");
-        }
         setCurrentStep(2);
       } else {
         toast.error(res.message || "Failed to check room availability.");
@@ -576,8 +609,8 @@ export function NewBookingFlow({
 
   // Open Verification Modal from Step 4
   const handleOpenVerifyModal = (action: "RESERVE" | "CHECK_IN") => {
-    if (!selectedRoomId || !selectedRoom?.isAvailable) {
-      toast.error("Please select an available room.");
+    if (selectedRoomIds.length === 0) {
+      toast.error("Please select at least one available room.");
       setCurrentStep(2);
       return;
     }
@@ -603,8 +636,8 @@ export function NewBookingFlow({
 
   // Submit Booking / Check-in
   const handleSubmitBooking = async (action: "RESERVE" | "CHECK_IN") => {
-    if (!selectedRoomId) {
-      toast.error("Please select a room first.");
+    if (selectedRoomIds.length === 0) {
+      toast.error("Please select at least one room.");
       setCurrentStep(2);
       return;
     }
@@ -623,13 +656,30 @@ export function NewBookingFlow({
 
     startTransition(async () => {
       try {
+        const roomList = selectedRooms.map((r) => {
+          const rateStr = customRates[r.id];
+          const rate =
+            rateStr !== undefined && rateStr !== "" && !isNaN(Number(rateStr))
+              ? Number(rateStr)
+              : selectedRooms.length === 1 &&
+                  customRate !== "" &&
+                  !isNaN(Number(customRate))
+                ? Number(customRate)
+                : r.pricePerNight;
+          return {
+            roomId: r.id,
+            rateApplied: rate,
+          };
+        });
+
         const payload = {
-          roomId: selectedRoomId,
+          roomId: selectedRoomIds[0],
+          rooms: roomList,
           checkInAt: fromISTInput(checkInStr).toISOString(),
           checkOutAt: fromISTInput(checkOutStr).toISOString(),
           action,
           source: bookingSource,
-          rateApplied: effectiveRate,
+          rateApplied: roomList[0]?.rateApplied ?? effectiveRate,
           discount,
           advanceAmount,
           advanceMode: advanceAmount > 0 ? advanceMode : null,
@@ -652,19 +702,25 @@ export function NewBookingFlow({
         if (res.ok && res.data) {
           toast.success(
             action === "CHECK_IN"
-              ? `Guest checked in! Reference: ${res.data.reference}`
-              : `Reservation confirmed! Reference: ${res.data.reference}`
+              ? `Guest checked in! Reference: ${res.data.reference}${res.data.groupBookingId ? ` (${res.data.groupRoomCount ?? roomList.length} rooms)` : ""}`
+              : `Reservation confirmed! Reference: ${res.data.reference}${res.data.groupBookingId ? ` (${res.data.groupRoomCount ?? roomList.length} rooms)` : ""}`
           );
 
           setVerifyAction(null);
           setCreatedBooking({
             reference: res.data.reference,
             status: res.data.status,
-            roomNumber: res.data.roomNumber,
-            roomTypeName: res.data.roomTypeName,
+            roomNumber: res.data.groupBookingId
+              ? selectedRooms.map((r) => r.number).join(", ")
+              : res.data.roomNumber,
+            roomTypeName: res.data.groupBookingId
+              ? `${selectedRooms.length} Rooms (${res.data.roomTypeName})`
+              : res.data.roomTypeName,
             primaryGuestName: res.data.primaryGuestName,
             advancePaid: res.data.advancePaid,
             balanceDue: res.data.balanceDue,
+            groupBookingId: res.data.groupBookingId,
+            groupRoomCount: res.data.groupRoomCount,
           });
         } else {
           toast.error(res.message || "Failed to create booking.");
@@ -784,12 +840,14 @@ export function NewBookingFlow({
               particulars, and collect advance.
             </p>
           </div>
-          {selectedRoom && (
+          {selectedRooms.length > 0 && (
             <Badge
               variant="outline"
               className="self-start sm:self-auto bg-primary/10 text-primary border-primary/20 text-xs py-1 px-3"
             >
-              Room {selectedRoom.number} Selected ({selectedRoom.typeName})
+              {selectedRooms.length === 1
+                ? `Room ${selectedRooms[0].number} Selected (${selectedRooms[0].typeName})`
+                : `${selectedRooms.length} Rooms Selected (${selectedRooms.map((r) => r.number).join(", ")})`}
             </Badge>
           )}
         </div>
@@ -821,8 +879,10 @@ export function NewBookingFlow({
                   if (
                     step < currentStep ||
                     (step === 2 && checkInStr && checkOutStr) ||
-                    (step === 3 && selectedRoomId) ||
-                    (step === 4 && selectedRoomId && validateStep3())
+                    (step === 3 && selectedRoomIds.length > 0) ||
+                    (step === 4 &&
+                      selectedRoomIds.length > 0 &&
+                      validateStep3())
                   ) {
                     setCurrentStep(step);
                   }
@@ -830,8 +890,9 @@ export function NewBookingFlow({
                 disabled={
                   step > currentStep &&
                   ((step === 2 && (!checkInStr || !checkOutStr)) ||
-                    (step === 3 && !selectedRoomId) ||
-                    (step === 4 && (!selectedRoomId || currentStep < 3)))
+                    (step === 3 && selectedRoomIds.length === 0) ||
+                    (step === 4 &&
+                      (selectedRoomIds.length === 0 || currentStep < 3)))
                 }
                 className={cn(
                   "flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all",
@@ -1332,7 +1393,7 @@ export function NewBookingFlow({
           </div>
 
           {/* Rooms Grid with bottom clearance so room cards are never obscured by sticky footer */}
-          <div className="space-y-3 pb-8">
+          <div className="space-y-3 pb-16 sm:pb-20">
             {filteredRooms.length === 0 ? (
               <div className="p-8 text-center rounded-xl border border-dashed border-border text-muted-foreground space-y-2">
                 <RoomIcon className="size-8 mx-auto text-muted-foreground/50" />
@@ -1347,7 +1408,7 @@ export function NewBookingFlow({
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredRooms.map((room) => {
-                  const isSelected = selectedRoomId === room.id;
+                  const isSelected = selectedRoomIds.includes(room.id);
                   const isAvail = room.isAvailable;
 
                   return (
@@ -1355,7 +1416,11 @@ export function NewBookingFlow({
                       key={room.id}
                       onClick={() => {
                         if (isAvail) {
-                          setSelectedRoomId(room.id);
+                          setSelectedRoomIds((prev) =>
+                            prev.includes(room.id)
+                              ? prev.filter((id) => id !== room.id)
+                              : [...prev, room.id]
+                          );
                         }
                       }}
                       className={cn(
@@ -1524,108 +1589,199 @@ export function NewBookingFlow({
             )}
           </div>
 
-          {/* ───────── STICKY BOOKING FOOTER ───────── */}
-          <div className="sticky bottom-0 z-20 -mx-6 -mb-6 p-4 sm:px-6 sm:py-4 bg-card/95 backdrop-blur-md border-t border-border rounded-b-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              {/* Left Action: Back to Dates (Desktop & Tablet) */}
-              <div className="hidden sm:block">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentStep(1)}
-                  className="h-10 px-4 text-xs sm:text-sm font-medium border-border hover:bg-muted shrink-0"
-                >
-                  ← Back to Dates
-                </Button>
-              </div>
-
-              {/* Center: Selected Room Summary & Live Price */}
-              <div className="flex-1 sm:px-4">
-                {selectedRoom && selectedRoom.isAvailable ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-center gap-2 sm:gap-6 text-center sm:text-left">
-                    <div className="flex items-center justify-center sm:justify-start gap-2.5">
-                      <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground font-mono font-bold text-sm shadow-xs">
-                        {selectedRoom.number}
-                      </span>
-                      <div className="text-left">
-                        <div className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
-                          <span>Room {selectedRoom.number}</span>
-                          <span className="text-muted-foreground font-normal">
-                            •
-                          </span>
-                          <span className="text-muted-foreground font-medium">
-                            {selectedRoom.typeName}
-                          </span>
+          {/* ───────── FLOATING CAPSULE-STYLE BOOKING DOCK ───────── */}
+          <div className="sticky bottom-4 sm:bottom-6 z-30 flex justify-center pointer-events-none mt-4 sm:mt-6 px-2 sm:px-0">
+            <div className="pointer-events-auto w-full max-w-4xl bg-card/95 backdrop-blur-md border border-border/80 shadow-[0_10px_35px_-5px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_-5px_rgba(0,0,0,0.5)] rounded-2xl sm:rounded-full p-2.5 sm:px-5 sm:py-2.5 transition-all">
+              {/* Mobile Layout (< sm) */}
+              <div className="flex flex-col gap-2 sm:hidden">
+                {selectedRooms.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="size-6 rounded-full bg-primary/10 text-primary font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-primary/20">
+                          {selectedRooms.length}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-foreground truncate">
+                            {selectedRooms.length === 1
+                              ? `Room ${selectedRooms[0].number}`
+                              : `${selectedRooms.length} Rooms Selected`}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {selectedRooms.map((r) => r.number).join(", ")}
+                          </p>
                         </div>
-                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                          Selected for check-in
-                        </span>
                       </div>
-                    </div>
-
-                    <div className="hidden md:block h-8 w-px bg-border/80" />
-
-                    <div className="flex items-center justify-center sm:justify-start gap-3 sm:gap-4 text-xs">
-                      <div>
-                        <span className="text-muted-foreground block text-[11px]">
-                          Duration
-                        </span>
-                        <strong className="text-foreground font-semibold">
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-muted-foreground block font-medium">
                           {currentStay.days}{" "}
-                          {currentStay.days === 1 ? "Day" : "Days"}
-                        </strong>
-                      </div>
-                      <div className="h-5 w-px bg-border/80" />
-                      <div>
-                        <span className="text-muted-foreground block text-[11px]">
-                          Est. Total
+                          {currentStay.days === 1 ? "day" : "days"} • Est. Total
                         </span>
-                        <span className="text-sm sm:text-base font-bold text-primary">
-                          {formatINR(
-                            selectedRoom.pricePerNight * currentStay.days
-                          )}
+                        <span className="text-xs font-bold text-primary font-mono">
+                          {formatINR(roomCharges)}
                         </span>
                       </div>
                     </div>
-                  </div>
+                    <div className="flex items-center gap-2 pt-1.5 border-t border-border/60">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCurrentStep(1)}
+                        className="h-8 px-3 text-xs font-medium text-muted-foreground hover:text-foreground rounded-full shrink-0"
+                      >
+                        <ChevronLeftIcon className="size-3.5 mr-1" />
+                        Dates
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (selectedRooms.length > 0) {
+                            setCurrentStep(3);
+                          } else {
+                            toast.error(
+                              "Please select at least one available room to proceed."
+                            );
+                          }
+                        }}
+                        className="flex-1 h-8 px-4 font-semibold text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs flex items-center justify-center gap-1"
+                      >
+                        <span>Next: Guest Info</span>
+                        <ChevronRightIcon className="size-3.5" />
+                      </Button>
+                    </div>
+                  </>
                 ) : (
-                  <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-xs sm:text-sm py-1">
-                    <InfoIcon className="size-4 shrink-0 text-muted-foreground/80" />
-                    <span>
-                      Please select an available room from the list to continue.
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentStep(1)}
+                      className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground rounded-full shrink-0"
+                    >
+                      <ChevronLeftIcon className="size-3.5 mr-1" />
+                      Dates
+                    </Button>
+                    <span className="text-[11px] text-muted-foreground truncate px-1 text-center">
+                      Select room(s) to continue
                     </span>
+                    <Button
+                      type="button"
+                      disabled
+                      size="sm"
+                      className="h-8 px-3 text-xs rounded-full opacity-50 bg-muted text-muted-foreground shrink-0 cursor-not-allowed"
+                    >
+                      Next
+                    </Button>
                   </div>
                 )}
               </div>
 
-              {/* Action Buttons: Mobile & Desktop */}
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Desktop & Tablet Layout (>= sm) */}
+              <div className="hidden sm:flex sm:items-center sm:justify-between sm:gap-3 md:gap-4">
+                {/* Left Action: Back to Dates */}
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setCurrentStep(1)}
-                  className="sm:hidden flex-1 h-10 px-3 text-xs font-medium border-border"
+                  className="h-9 px-3.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-full shrink-0 gap-1.5 transition-colors"
                 >
-                  ← Dates
+                  <ChevronLeftIcon className="size-3.5" />
+                  <span>Back to Dates</span>
                 </Button>
 
+                {/* Divider */}
+                <div className="hidden sm:block h-6 w-px bg-border/80 shrink-0" />
+
+                {/* Center: Selected Room Summary & Live Price */}
+                <div className="flex-1 min-w-0 px-1">
+                  {selectedRooms.length > 0 ? (
+                    <div className="flex items-center justify-between gap-3 md:gap-6">
+                      {/* Room Badges & Count */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="size-7 rounded-full bg-primary/10 text-primary font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-primary/20">
+                          {selectedRooms.length}
+                        </span>
+                        <div className="min-w-0 text-left">
+                          <div className="text-xs font-bold text-foreground flex items-center gap-1.5 truncate">
+                            <span>
+                              {selectedRooms.length === 1
+                                ? `Room ${selectedRooms[0].number}`
+                                : `${selectedRooms.length} Rooms Selected`}
+                            </span>
+                            <span className="text-muted-foreground font-normal">
+                              •
+                            </span>
+                            <span
+                              className="text-muted-foreground font-medium text-xs truncate max-w-[140px] md:max-w-[200px] lg:max-w-[260px]"
+                              title={selectedRooms.map((r) => r.number).join(", ")}
+                            >
+                              {selectedRooms.map((r) => r.number).join(", ")}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium block truncate">
+                            {selectedRooms.length > 1
+                              ? "Multi-room group booking"
+                              : "Selected for check-in"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="hidden md:block h-6 w-px bg-border/80 shrink-0" />
+
+                      {/* Duration & Price */}
+                      <div className="flex items-center gap-3 md:gap-4 text-xs shrink-0">
+                        <div className="text-left">
+                          <span className="text-muted-foreground block text-[10px] uppercase tracking-wider font-medium">
+                            Duration
+                          </span>
+                          <strong className="text-foreground font-semibold text-xs">
+                            {currentStay.days}{" "}
+                            {currentStay.days === 1 ? "Day" : "Days"}
+                          </strong>
+                        </div>
+                        <div className="h-5 w-px bg-border/80 shrink-0" />
+                        <div className="text-left">
+                          <span className="text-muted-foreground block text-[10px] uppercase tracking-wider font-medium">
+                            Est. Total
+                          </span>
+                          <span className="text-sm font-bold text-primary font-mono">
+                            {formatINR(roomCharges)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs py-1">
+                      <InfoIcon className="size-4 shrink-0 text-muted-foreground/80" />
+                      <span>
+                        Please select one or more available rooms to continue.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Action: Next Button */}
                 <Button
                   type="button"
-                  disabled={!selectedRoomId || !selectedRoom?.isAvailable}
+                  disabled={selectedRooms.length === 0}
                   onClick={() => {
-                    if (selectedRoomId && selectedRoom?.isAvailable) {
+                    if (selectedRooms.length > 0) {
                       setCurrentStep(3);
                     } else {
                       toast.error(
-                        "Please select an available room to proceed."
+                        "Please select at least one available room to proceed."
                       );
                     }
                   }}
                   className={cn(
-                    "flex-1 sm:flex-initial h-10 px-5 sm:px-6 font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-1.5",
-                    selectedRoomId && selectedRoom?.isAvailable
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "opacity-60 cursor-not-allowed"
+                    "h-9 px-5 sm:px-6 font-semibold text-xs sm:text-sm rounded-full shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0",
+                    selectedRooms.length > 0
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-sm"
+                      : "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
                   )}
                 >
                   <span>Next: Guest Information</span>
@@ -2296,47 +2452,133 @@ export function NewBookingFlow({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="rate-input" className="text-xs font-semibold">
-                    Rate per Night (₹) *
-                  </Label>
-                  <Input
-                    id="rate-input"
-                    type="number"
-                    min={0}
-                    placeholder={String(selectedRoom?.pricePerNight ?? 0)}
-                    value={customRate}
-                    onChange={(e) => setCustomRate(e.target.value)}
-                    className="h-10 font-mono text-base font-bold"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    Standard tariff:{" "}
-                    {formatINR(selectedRoom?.pricePerNight ?? 0)}/night
-                  </span>
-                </div>
+              {selectedRooms.length > 1 ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Custom Tariff per Room ({selectedRooms.length} Rooms)
+                      </span>
+                      <span className="text-xs font-mono font-semibold text-primary">
+                        Total: {formatINR(totalRoomTariffPerNight)} / night
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedRooms.map((r, i) => {
+                        const currentVal =
+                          customRates[r.id] ?? String(r.pricePerNight);
+                        return (
+                          <div
+                            key={r.id}
+                            className="p-3 rounded-lg border border-border bg-card space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-foreground">
+                                Room {r.number}{" "}
+                                <span className="font-normal text-muted-foreground">
+                                  ({r.typeName})
+                                </span>
+                              </span>
+                              {i === 0 && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] py-0 px-1.5"
+                                >
+                                  Master
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                ₹
+                              </span>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={currentVal}
+                                onChange={(e) =>
+                                  setCustomRates((prev) => ({
+                                    ...prev,
+                                    [r.id]: e.target.value,
+                                  }))
+                                }
+                                className="h-8 text-sm font-mono font-semibold"
+                                placeholder={String(r.pricePerNight)}
+                              />
+                              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                / night
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="discount-input"
-                    className="text-xs font-semibold"
-                  >
-                    Special Discount (₹)
-                  </Label>
-                  <Input
-                    id="discount-input"
-                    type="number"
-                    min={0}
-                    placeholder="0"
-                    value={discountStr}
-                    onChange={(e) => setDiscountStr(e.target.value)}
-                    className="h-10 font-mono"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    Direct flat discount on billable room charge
-                  </span>
+                  <div className="sm:w-1/2 space-y-1.5">
+                    <Label
+                      htmlFor="discount-input"
+                      className="text-xs font-semibold"
+                    >
+                      Special Discount on Combined Bill (₹)
+                    </Label>
+                    <Input
+                      id="discount-input"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={discountStr}
+                      onChange={(e) => setDiscountStr(e.target.value)}
+                      className="h-10 font-mono"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Direct flat discount on billable room charge
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="rate-input" className="text-xs font-semibold">
+                      Rate per Night (₹) *
+                    </Label>
+                    <Input
+                      id="rate-input"
+                      type="number"
+                      min={0}
+                      placeholder={String(selectedRoom?.pricePerNight ?? 0)}
+                      value={customRate}
+                      onChange={(e) => setCustomRate(e.target.value)}
+                      className="h-10 font-mono text-base font-bold"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Standard tariff:{" "}
+                      {formatINR(selectedRoom?.pricePerNight ?? 0)}/night
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="discount-input"
+                      className="text-xs font-semibold"
+                    >
+                      Special Discount (₹)
+                    </Label>
+                    <Input
+                      id="discount-input"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={discountStr}
+                      onChange={(e) => setDiscountStr(e.target.value)}
+                      className="h-10 font-mono"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Direct flat discount on billable room charge
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Advance Payment Section */}
               <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-4">
@@ -2424,22 +2666,56 @@ export function NewBookingFlow({
                   Stay & Bill Breakdown
                 </h3>
                 <span className="text-xs text-muted-foreground">
-                  Room {selectedRoom?.number} • {currentStay.days}{" "}
-                  {currentStay.days === 1 ? "day" : "days"}
+                  {selectedRooms.length > 1
+                    ? `${selectedRooms.length} Rooms (Group) • ${currentStay.days} ${currentStay.days === 1 ? "day" : "days"}`
+                    : `Room ${selectedRoom?.number} • ${currentStay.days} ${currentStay.days === 1 ? "day" : "days"}`}
                 </span>
               </div>
 
               {/* Line items */}
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>
-                    Room Charges ({currentStay.days}d ×{" "}
-                    {formatINR(effectiveRate)})
-                  </span>
-                  <span className="font-mono text-foreground">
-                    {formatINR(roomCharges)}
-                  </span>
-                </div>
+                {selectedRooms.length > 1 ? (
+                  <div className="space-y-1.5 pb-2 border-b border-border/50">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                      Accommodation Breakdown:
+                    </span>
+                    {selectedRooms.map((r) => {
+                      const rateStr = customRates[r.id];
+                      const rRate =
+                        rateStr !== undefined && rateStr !== "" && !isNaN(Number(rateStr))
+                          ? Number(rateStr)
+                          : r.pricePerNight;
+                      const rTotal = rRate * currentStay.days;
+                      return (
+                        <div
+                          key={r.id}
+                          className="flex justify-between text-muted-foreground text-[11px]"
+                        >
+                          <span>
+                            Room {r.number} ({r.typeName}) × {currentStay.days}d
+                          </span>
+                          <span className="font-mono text-foreground">
+                            {formatINR(rTotal)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div className="flex justify-between text-xs font-semibold text-foreground pt-1">
+                      <span>Combined Room Charges</span>
+                      <span className="font-mono">{formatINR(roomCharges)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>
+                      Room Charges ({currentStay.days}d ×{" "}
+                      {formatINR(effectiveRate)})
+                    </span>
+                    <span className="font-mono text-foreground">
+                      {formatINR(roomCharges)}
+                    </span>
+                  </div>
+                )}
 
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
@@ -2544,7 +2820,7 @@ export function NewBookingFlow({
           }
         }}
       >
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl max-h-[88vh] overflow-y-auto p-6 sm:p-7 space-y-4 custom-scrollbar pr-3 sm:pr-4">
           <DialogHeader className="space-y-1.5 border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <Badge
@@ -2567,71 +2843,157 @@ export function NewBookingFlow({
                 : "Verify Reservation Details"}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Please review all booking, guest, and financial details carefully.
-              If anything needs correction, click &ldquo;Back to Edit&rdquo; to
-              fix it before confirming.
+              Please review all booking, stay, and financial details carefully before confirming.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3.5 text-xs">
-            {/* Section 1: Room & Stay Window */}
-            <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                <RoomIcon className="size-3.5" />
-                Room & Stay Window
-              </span>
-              <div className="grid grid-cols-2 gap-2 pt-1 font-mono">
-                <div>
-                  <span className="text-muted-foreground font-sans block text-[11px]">
-                    Room Assigned
+          <div className="space-y-4 text-xs">
+            {/* Section 1: Selected Rooms */}
+            <div className="p-4 rounded-xl border border-border bg-card space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <RoomIcon className="size-4" />
+                  {selectedRooms.length > 1
+                    ? `Selected Rooms (${selectedRooms.length} Rooms)`
+                    : "Room Assigned"}
+                </span>
+                {selectedRooms.length > 1 && (
+                  <Badge variant="outline" className="text-[11px] font-mono font-bold text-primary border-primary/30">
+                    Total: {formatINR(totalRoomTariffPerNight)} / night
+                  </Badge>
+                )}
+              </div>
+
+              {selectedRooms.length > 1 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {selectedRooms.map((r, i) => {
+                    const rateStr = customRates[r.id];
+                    const rRate =
+                      rateStr !== undefined && rateStr !== "" && !isNaN(Number(rateStr))
+                        ? Number(rateStr)
+                        : r.pricePerNight;
+                    return (
+                      <div
+                        key={r.id}
+                        className="p-3 rounded-lg bg-muted/30 border border-border/80 flex items-center justify-between"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-foreground text-sm">
+                              Room {r.number}
+                            </span>
+                            {i === 0 ? (
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-bold">
+                                Master Room
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground">
+                                Additional Room
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground block">
+                            {r.typeName}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-foreground text-sm block">
+                            {formatINR(rRate)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            per night
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/80">
+                    <span className="text-[11px] text-muted-foreground block mb-0.5">
+                      Assigned Room & Type
+                    </span>
+                    <span className="font-bold text-foreground text-base font-mono">
+                      Room {selectedRoom?.number}
+                    </span>
+                    <span className="text-xs text-muted-foreground block">
+                      {selectedRoom?.typeName}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/80">
+                    <span className="text-[11px] text-muted-foreground block mb-0.5">
+                      Nightly Tariff
+                    </span>
+                    <span className="font-bold text-foreground text-base font-mono">
+                      {formatINR(effectiveRate)}
+                    </span>
+                    <span className="text-xs text-muted-foreground block">
+                      per night
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 2: Stay Schedule & Duration */}
+            <div className="p-4 rounded-xl border border-border bg-card space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <CalendarIcon className="size-4" />
+                  Stay Schedule & Duration (IST)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary text-primary-foreground font-mono font-bold text-xs px-2.5 py-0.5">
+                    {currentStay.days} {currentStay.days === 1 ? "Night" : "Nights"} ({currentStay.hours}h)
+                  </Badge>
+                  {currentStay.isGracePeriodApplied && (
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px]">
+                      Grace Absorbed
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/80 space-y-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Scheduled Check-In
                   </span>
-                  <span className="font-bold text-foreground text-sm">
-                    Room {selectedRoom?.number} ({selectedRoom?.typeName})
+                  <span className="font-mono font-bold text-foreground text-sm block">
+                    {checkInStr ? formatISTDateTime(fromISTInput(checkInStr)) : "—"}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Indian Standard Time (IST)
                   </span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground font-sans block text-[11px]">
-                    Effective Tariff
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/80 space-y-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Scheduled Check-Out
                   </span>
-                  <span className="font-bold text-foreground text-sm">
-                    {formatINR(effectiveRate)} / night
+                  <span className="font-mono font-bold text-foreground text-sm block">
+                    {checkOutStr ? formatISTDateTime(fromISTInput(checkOutStr)) : "—"}
                   </span>
-                </div>
-                <div className="col-span-2 pt-1.5 border-t border-border/50">
-                  <span className="text-muted-foreground font-sans block text-[11px]">
-                    Stay Window (IST)
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {checkInStr
-                      ? formatISTDateTime(fromISTInput(checkInStr))
-                      : ""}{" "}
-                    →{" "}
-                    {checkOutStr
-                      ? formatISTDateTime(fromISTInput(checkOutStr))
-                      : ""}
-                  </span>
-                  <span className="text-muted-foreground text-[11px] ml-1.5 font-sans">
-                    ({currentStay.days}{" "}
-                    {currentStay.days === 1 ? "day" : "days"},{" "}
-                    {currentStay.hours}h)
+                  <span className="text-[11px] text-muted-foreground">
+                    Indian Standard Time (IST)
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Section 2: Guest Particulars */}
-            <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                <GuestIcon className="size-3.5" />
+            {/* Section 3: Guest Particulars */}
+            <div className="p-4 rounded-xl border border-border bg-card space-y-3 shadow-2xs">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5 border-b border-border/60 pb-2">
+                <GuestIcon className="size-4" />
                 Guest Particulars
               </span>
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
                     <span className="text-muted-foreground block text-[11px]">
                       Primary Guest
                     </span>
-                    <strong className="text-foreground">
+                    <strong className="text-foreground text-sm">
                       {guests[0]?.name}
                     </strong>
                   </div>
@@ -2639,7 +3001,7 @@ export function NewBookingFlow({
                     <span className="text-muted-foreground block text-[11px]">
                       Mobile Number
                     </span>
-                    <span className="font-mono">
+                    <span className="font-mono font-medium">
                       {guests[0]?.mobile || "—"}
                     </span>
                   </div>
@@ -2684,7 +3046,7 @@ export function NewBookingFlow({
                     <span className="text-[11px] font-semibold text-muted-foreground">
                       Additional Occupants ({guests.length - 1}):
                     </span>
-                    <div className="space-y-1 bg-card p-2 rounded-lg border border-border/60">
+                    <div className="space-y-1 bg-muted/20 p-2.5 rounded-lg border border-border/60">
                       {guests.slice(1).map((occ, i) => (
                         <div
                           key={occ.id}
@@ -2890,7 +3252,8 @@ export function NewBookingFlow({
                 onClick={() => {
                   setCreatedBooking(null);
                   setCurrentStep(1);
-                  setSelectedRoomId("");
+                  setSelectedRoomIds([]);
+                  setCustomRates({});
                   setGuests([
                     {
                       id: "guest-primary",

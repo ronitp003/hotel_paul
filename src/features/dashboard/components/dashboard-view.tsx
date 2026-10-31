@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { MoneyText } from "@/components/shared/money-text";
-import { ArrivalsDeparturesTables } from "./arrivals-departures-tables";
+import { DepartingTodayCard, ArrivingTodayCard } from "./arrivals-departures-tables";
 import { ForecastChart } from "./forecast-chart";
 import {
   RoomIcon,
@@ -17,64 +15,64 @@ import {
   PaymentIcon,
   InvoiceIcon,
   RupeeIcon,
-  NewBookingIcon,
   InventoryIcon,
 } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 import type { DashboardSummary } from "@/features/dashboard/schemas";
 
 interface DashboardViewProps {
   data: DashboardSummary;
+  userRole?: string;
 }
 
-export function DashboardView({ data }: DashboardViewProps) {
+export function DashboardView({ data, userRole = "OWNER" }: DashboardViewProps) {
+  const isOwner = userRole === "OWNER";
+  const canViewFinancials = isOwner && data.billing !== null;
+
   const occupancyRate =
     data.rooms.total > 0
       ? Math.round((data.rooms.occupied / data.rooms.total) * 100)
       : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
+    <div className="space-y-4 sm:space-y-5">
+      {/* Page Header (New Booking / Check-in button removed per design requirement) */}
       <PageHeader
         title="Dashboard"
         description="Property overview, room occupancy, daily operations, inventory alerts, and revenue summary."
-      >
-        <Link href="/bookings/new">
-          <Button className="gap-2 font-semibold">
-            <NewBookingIcon className="size-4" aria-hidden="true" />
-            <span>New Booking / Check-in</span>
-          </Button>
-        </Link>
-      </PageHeader>
+      />
 
-      {/* KPI Section 1: Room Occupancy Status */}
-      <div className="space-y-3">
+      {/* KPI Section 1: Live Room Occupancy (Noticeably shorter/compact cards) */}
+      <div className="space-y-2">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Live Room Occupancy
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
+            size="compact"
             title="Occupied Rooms"
             value={data.rooms.occupied}
-            icon={<RoomIcon className="size-5 text-status-occupied" aria-hidden="true" />}
+            icon={<RoomIcon className="size-4 sm:size-5 text-status-occupied" aria-hidden="true" />}
             badge={<StatusBadge status="OCCUPIED" label={`${occupancyRate}%`} />}
             hint={`${data.rooms.occupied} of ${data.rooms.total} rooms`}
             href="/rooms?status=OCCUPIED"
           />
 
           <StatCard
+            size="compact"
             title="Available Rooms"
             value={data.rooms.available}
-            icon={<RoomIcon className="size-5 text-status-available" aria-hidden="true" />}
+            icon={<RoomIcon className="size-4 sm:size-5 text-status-available" aria-hidden="true" />}
             badge={<StatusBadge status="AVAILABLE" label={`${data.rooms.available} Ready`} />}
             hint="Ready for check-in"
             href="/rooms?status=AVAILABLE"
           />
 
           <StatCard
+            size="compact"
             title="Under Maintenance"
             value={data.rooms.maintenance}
-            icon={<MaintenanceIcon className="size-5 text-status-maintenance" aria-hidden="true" />}
+            icon={<MaintenanceIcon className="size-4 sm:size-5 text-status-maintenance" aria-hidden="true" />}
             badge={
               data.rooms.maintenance > 0 ? (
                 <StatusBadge status="MAINTENANCE" label={`${data.rooms.maintenance} Blocked`} />
@@ -85,9 +83,10 @@ export function DashboardView({ data }: DashboardViewProps) {
           />
 
           <StatCard
+            size="compact"
             title="Rooms with Problems"
             value={data.rooms.problems}
-            icon={<ProblemIcon className="size-5 text-status-problem" aria-hidden="true" />}
+            icon={<ProblemIcon className="size-4 sm:size-5 text-status-problem" aria-hidden="true" />}
             badge={
               data.rooms.problems > 0 ? (
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-problem/15 text-status-problem">
@@ -102,13 +101,21 @@ export function DashboardView({ data }: DashboardViewProps) {
         </div>
       </div>
 
-      {/* KPI Section 2: Today's Operations, Billing & Inventory */}
-      <div className="space-y-3">
+      {/* KPI Section 2: Operations, Finance & Inventory (Role-based, full height cards) */}
+      <div className="space-y-2">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Operations, Finance & Inventory
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div
+          className={cn(
+            "grid gap-3 sm:gap-4",
+            canViewFinancials
+              ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-6"
+              : "grid-cols-2 sm:grid-cols-2 lg:grid-cols-4"
+          )}
+        >
           <StatCard
+            size="default"
             title="Arrivals Today"
             value={data.movements.arrivals.total}
             icon={<CheckInIcon className="size-5 text-primary" aria-hidden="true" />}
@@ -122,6 +129,7 @@ export function DashboardView({ data }: DashboardViewProps) {
           />
 
           <StatCard
+            size="default"
             title="Departures Today"
             value={data.movements.departures.total}
             icon={<CheckOutIcon className="size-5 text-primary" aria-hidden="true" />}
@@ -135,6 +143,7 @@ export function DashboardView({ data }: DashboardViewProps) {
           />
 
           <StatCard
+            size="default"
             title="Payments Due"
             value={<MoneyText amount={data.paymentsDue.totalAmount} />}
             icon={<PaymentIcon className="size-5 text-destructive" aria-hidden="true" />}
@@ -143,6 +152,7 @@ export function DashboardView({ data }: DashboardViewProps) {
           />
 
           <StatCard
+            size="default"
             title="Low Stock"
             value={data.lowStock.count}
             icon={<InventoryIcon className="size-5 text-amber-500" aria-hidden="true" />}
@@ -166,38 +176,45 @@ export function DashboardView({ data }: DashboardViewProps) {
             href="/inventory"
           />
 
-          <StatCard
-            title="Billed This Month"
-            value={<MoneyText amount={data.billing.totalBilled} />}
-            icon={<InvoiceIcon className="size-5 text-primary" aria-hidden="true" />}
-            hint={`${data.billing.invoicesCount} tax invoice${data.billing.invoicesCount === 1 ? "" : "s"} issued`}
-            href="/payments"
-          />
+          {canViewFinancials && data.billing && (
+            <>
+              <StatCard
+                size="default"
+                title="Billed This Month"
+                value={<MoneyText amount={data.billing.totalBilled} />}
+                icon={<InvoiceIcon className="size-5 text-primary" aria-hidden="true" />}
+                hint={`${data.billing.invoicesCount} tax invoice${data.billing.invoicesCount === 1 ? "" : "s"} issued`}
+                href="/payments"
+              />
 
-          <StatCard
-            title="GST Payable"
-            value={<MoneyText amount={data.billing.totalGst} />}
-            icon={<RupeeIcon className="size-5 text-primary" aria-hidden="true" />}
-            hint={`CGST + SGST (${data.billing.monthName})`}
-            href="/payments"
-          />
+              <StatCard
+                size="default"
+                title="GST Payable"
+                value={<MoneyText amount={data.billing.totalGst} />}
+                icon={<RupeeIcon className="size-5 text-primary" aria-hidden="true" />}
+                hint={`CGST + SGST (${data.billing.monthName})`}
+                href="/payments"
+              />
+            </>
+          )}
         </div>
       </div>
 
-      {/* 7-Day Room Occupancy Forecast Chart (Phase 2.5) */}
-      <div className="space-y-3 pt-2">
-        <ForecastChart data={data.forecast} />
+      {/* Row 1: Two-column layout (7-Day Forecast & Departing Today) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+        <ForecastChart
+          data={data.forecast}
+          className="h-[390px] flex flex-col justify-between"
+        />
+        <DepartingTodayCard
+          departures={data.departingToday}
+          className="h-[390px] flex flex-col"
+        />
       </div>
 
-      {/* Tables: Arriving Today & Departing Today */}
-      <div className="space-y-3 pt-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Today&apos;s Movements
-        </h2>
-        <ArrivalsDeparturesTables
-          arrivingToday={data.arrivingToday}
-          departingToday={data.departingToday}
-        />
+      {/* Row 2: Arriving Today Section (Occupies full available width) */}
+      <div className="w-full">
+        <ArrivingTodayCard arrivals={data.arrivingToday} />
       </div>
     </div>
   );

@@ -17,15 +17,16 @@ import type {
   ForecastDay,
   DashboardLowStockAlert,
 } from "@/features/dashboard/schemas";
-import { BookingStatus, InvoiceStatus } from "@prisma/client";
+import { BookingStatus, InvoiceStatus, Role } from "@prisma/client";
 
 export const dashboardService = {
   /**
    * Computes the operational KPI summary for Dashboard v2.
    * Includes room statuses, today's arrivals & departures in IST, payments due, MTD billing/GST,
    * low-stock alerts, and 7-day booked-room occupancy forecast.
+   * Respects role-based permissions: financial billing info is only fetched for OWNER.
    */
-  async getDashboardSummary(): Promise<DashboardSummary> {
+  async getDashboardSummary(userRole?: Role | string): Promise<DashboardSummary> {
     const now = new Date();
     const startOfDayUTC = startOfISTDay(now);
     const endOfDayUTC = endOfISTDay(now);
@@ -150,28 +151,42 @@ export const dashboardService = {
       }
     }
 
-    // 5. Monthly Billed Revenue and Total GST Payable
-    const monthInvoices = await prisma.invoice.findMany({
-      where: {
-        status: InvoiceStatus.ISSUED,
-        issuedAt: {
-          gte: startOfMonthUTC,
-          lte: endOfMonthUTC,
+    // 5. Monthly Billed Revenue and Total GST Payable (Owner role only)
+    const isOwner = !userRole || userRole === Role.OWNER;
+    let billing: DashboardSummary["billing"] = null;
+
+    if (isOwner) {
+      const monthInvoices = await prisma.invoice.findMany({
+        where: {
+          status: InvoiceStatus.ISSUED,
+          issuedAt: {
+            gte: startOfMonthUTC,
+            lte: endOfMonthUTC,
+          },
         },
-      },
-      select: {
-        billAmount: true,
-        cgst: true,
-        sgst: true,
-      },
-    });
+        select: {
+          billAmount: true,
+          cgst: true,
+          sgst: true,
+        },
+      });
 
-    let monthlyTotalBilled = new Decimal(0);
-    let monthlyTotalGst = new Decimal(0);
+      let monthlyTotalBilled = new Decimal(0);
+      let monthlyTotalGst = new Decimal(0);
 
-    for (const inv of monthInvoices) {
-      monthlyTotalBilled = monthlyTotalBilled.add(new Decimal(inv.billAmount));
-      monthlyTotalGst = monthlyTotalGst.add(new Decimal(inv.cgst)).add(new Decimal(inv.sgst));
+      for (const inv of monthInvoices) {
+        monthlyTotalBilled = monthlyTotalBilled.add(new Decimal(inv.billAmount));
+        monthlyTotalGst = monthlyTotalGst
+          .add(new Decimal(inv.cgst))
+          .add(new Decimal(inv.sgst));
+      }
+
+      billing = {
+        invoicesCount: monthInvoices.length,
+        totalBilled: monthlyTotalBilled.toNumber(),
+        totalGst: monthlyTotalGst.toNumber(),
+        monthName,
+      };
     }
 
     // 6. Low Stock Alerts (Phase 2.4/2.5)
@@ -307,12 +322,7 @@ export const dashboardService = {
         count: dueCount,
         totalAmount: dueTotal.toNumber(),
       },
-      billing: {
-        invoicesCount: monthInvoices.length,
-        totalBilled: monthlyTotalBilled.toNumber(),
-        totalGst: monthlyTotalGst.toNumber(),
-        monthName,
-      },
+      billing,
       lowStock,
       forecast,
       arrivingToday,

@@ -19,7 +19,7 @@ import {
   errorResult,
   successResult,
 } from "@/lib/errors";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 
 export async function createBookingAction(
   input: unknown
@@ -53,7 +53,7 @@ export async function createBookingAction(
 
 export async function checkInReservedBookingAction(
   input: unknown
-): Promise<ActionResult<{ id: string; reference: string; status: string }>> {
+): Promise<ActionResult<{ id: string; reference: string; status: string; groupBookingId?: string | null }>> {
   try {
     const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
     const { bookingId } = checkInBookingSchema.parse(input);
@@ -65,10 +65,23 @@ export async function checkInReservedBookingAction(
     revalidatePath("/dashboard");
     revalidatePath("/calendar");
 
+    // If part of a group booking, revalidate sibling paths as well
+    if (result.groupBookingId) {
+      const { prisma } = await import("@/server/db");
+      const siblings = await prisma.booking.findMany({
+        where: { groupBookingId: result.groupBookingId },
+        select: { id: true },
+      });
+      for (const s of siblings) {
+        revalidatePath(`/bookings/${s.id}`);
+      }
+    }
+
     return successResult({
       id: result.id,
       reference: result.reference,
       status: result.status,
+      groupBookingId: result.groupBookingId,
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -81,6 +94,43 @@ export async function checkInReservedBookingAction(
       );
     }
     console.error("checkInReservedBookingAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}
+
+export async function checkInGroupBookingAction(
+  input: unknown
+): Promise<ActionResult<{ groupBookingId: string; updatedCount: number }>> {
+  try {
+    const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
+    const { groupBookingId } = z
+      .object({ groupBookingId: z.string().min(1, "Group booking ID is required") })
+      .parse(input);
+    const result = await bookingService.checkInGroup(actor, groupBookingId);
+
+    revalidatePath("/bookings");
+    for (const b of result.updatedBookings) {
+      revalidatePath(`/bookings/${b.id}`);
+    }
+    revalidatePath("/rooms");
+    revalidatePath("/dashboard");
+    revalidatePath("/calendar");
+
+    return successResult({
+      groupBookingId: result.groupBookingId,
+      updatedCount: result.count,
+    });
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    if (err instanceof ZodError) {
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
+    }
+    console.error("checkInGroupBookingAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }

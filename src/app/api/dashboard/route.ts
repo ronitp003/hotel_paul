@@ -4,8 +4,8 @@ import { dashboardService } from "@/server/services/dashboard.service";
 
 export async function GET() {
   try {
-    await requireSession();
-    const data = await dashboardService.getDashboardSummary();
+    const { actor } = await requireSession();
+    const data = await dashboardService.getDashboardSummary(actor.role);
     return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/dashboard error:", error);

@@ -80,6 +80,26 @@ export interface BookingBillData {
     netPaid: number;
     balanceDue: number;
   };
+  isGroup?: boolean;
+  groupRooms?: Array<{
+    bookingId: string;
+    reference: string;
+    roomId: string;
+    roomNumber: string;
+    roomTypeName: string;
+    stayDays: number;
+    rateApplied: number;
+    roomCharge: number;
+    status: string;
+    isGroupMaster: boolean;
+    guests: Array<{
+      id: string;
+      name: string;
+      mobile: string | null;
+      isPrimary: boolean;
+      allocatedRoomId?: string | null;
+    }>;
+  }>;
 }
 
 interface CheckoutDialogProps {
@@ -290,7 +310,7 @@ export function CheckoutDialog({
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground font-semibold">
             <CheckOutIcon className="size-5 text-primary shrink-0" />
             <span className="truncate">
-              Check-out & Issue Invoice — Room {roomNumber}
+              Check-out & Issue Invoice — {billData?.isGroup ? `Group of ${billData.groupRooms?.length} Rooms` : `Room ${roomNumber}`}
             </span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground leading-relaxed mt-0.5">
@@ -299,7 +319,7 @@ export function CheckoutDialog({
             <span className="font-mono font-semibold text-foreground">
               {bookingRef}
             </span>
-            .
+            {billData?.isGroup && " (Combined Group Reservation)"}.
           </DialogDescription>
         </DialogHeader>
 
@@ -356,6 +376,51 @@ export function CheckoutDialog({
                 </span>
               </div>
             </div>
+
+            {/* Group Rooms Breakdown (if multi-room booking) */}
+            {billData.isGroup && billData.groupRooms && billData.groupRooms.length > 1 && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-primary">
+                  <span>Group Rooms ({billData.groupRooms.length} Rooms)</span>
+                  <span className="text-[11px] font-normal text-muted-foreground">Combined billing</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {billData.groupRooms.map((gr) => (
+                    <div
+                      key={gr.bookingId}
+                      className="flex items-center justify-between p-2 rounded bg-background/80 border border-border/60"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="font-semibold text-foreground flex items-center gap-1.5">
+                          <span>Room {gr.roomNumber}</span>
+                          {gr.isGroupMaster && (
+                            <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-primary/10 text-primary font-bold">
+                              Master
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-muted-foreground text-[11px] block truncate">
+                          {gr.roomTypeName}
+                        </span>
+                        {gr.guests && gr.guests.length > 0 && (
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {gr.guests.map((g) => g.name).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-mono font-medium text-foreground block">
+                          ₹{formatINRPlain(gr.roomCharge)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground block">
+                          ₹{formatINRPlain(gr.rateApplied)}/d
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Corporate / GSTIN Billing Details */}
             <div className="border border-border/70 rounded-lg p-3 bg-muted/20 space-y-2">
@@ -480,8 +545,11 @@ export function CheckoutDialog({
 
               <div className="flex justify-between items-center py-0.5">
                 <span className="text-muted-foreground">
-                  Room Tariff ({formatINRPlain(billData.bill.rateApplied)} ×{" "}
-                  {billData.stay.days} days)
+                  {billData.isGroup &&
+                  billData.groupRooms &&
+                  billData.groupRooms.length > 1
+                    ? `Combined Accommodation (${billData.groupRooms.length} rooms × ${billData.stay.days} days)`
+                    : `Room Tariff (${formatINRPlain(billData.bill.rateApplied)} × ${billData.stay.days} days)`}
                 </span>
                 <span className="font-mono font-medium">
                   {formatINR(billData.bill.roomCharges)}

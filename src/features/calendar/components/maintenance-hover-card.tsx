@@ -40,12 +40,12 @@ export function MaintenanceHoverCard({
       >
         <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-2">
           <div className="flex items-center gap-1.5 font-bold text-foreground">
-            <MaintenanceIcon className="size-4 text-amber-500" />
+            <MaintenanceIcon className="size-4 text-purple-600 dark:text-purple-400" />
             <span>Room Maintenance</span>
           </div>
           <Badge
             variant="outline"
-            className="text-[10px] font-semibold px-2 py-0.5 bg-slate-700 text-white border-transparent"
+            className="text-[10px] font-semibold px-2 py-0.5 bg-purple-600 text-white border-transparent"
           >
             Scheduled
           </Badge>

@@ -275,7 +275,7 @@ export function CalendarMonthView({
                       )}
                       {d.maintenanceCount > 0 && (
                         <div
-                          className="bg-slate-700 dark:bg-slate-500 h-full"
+                          className="bg-purple-600 dark:bg-purple-500 h-full"
                           style={{
                             width: `${(d.maintenanceCount / rooms.length) * 100}%`,
                           }}
@@ -302,12 +302,17 @@ export function CalendarMonthView({
                               e.stopPropagation();
                               onSelectMaintenance(m, room);
                             }}
-                            className="px-1.5 py-0.5 rounded-md bg-slate-700/90 hover:bg-slate-700 text-white border border-slate-600 text-[10px] font-medium truncate flex items-center gap-1 shadow-xs transition-transform hover:scale-[1.01]"
+                            style={{
+                              backgroundColor: "var(--maintenance-bg, #f3e8ff)",
+                              backgroundImage:
+                                "repeating-linear-gradient(-45deg, var(--maintenance-stripe, rgba(147, 51, 234, 0.22)), var(--maintenance-stripe, rgba(147, 51, 234, 0.22)) 6px, transparent 6px, transparent 12px)",
+                            }}
+                            className="px-1.5 py-0.5 rounded-md bg-maintenance-striped hover:opacity-95 text-purple-950 dark:text-purple-100 border border-purple-400 dark:border-purple-500 text-[10px] font-bold truncate flex items-center gap-1 shadow-xs transition-transform hover:scale-[1.01]"
                           >
-                            <MaintenanceIcon className="size-2.5 shrink-0 text-slate-300" />
-                            <span className="truncate">
-                              {room ? `R${room.number}` : "Maint"}:{" "}
-                              {m.reason || "Maintenance"}
+                            <MaintenanceIcon className="size-2.5 shrink-0 text-purple-800 dark:text-purple-300" />
+                            <span className="truncate text-purple-950 dark:text-purple-100">
+                              {room ? `R${room.number}` : "Room"}:{" "}
+                              {m.reason ? `Maintenance • ${m.reason}` : "Maintenance"}
                             </span>
                           </div>
                         </MaintenanceHoverCard>

@@ -73,7 +73,7 @@ export interface DashboardSummary {
   rooms: DashboardRoomCounts;
   movements: DashboardTodayMovements;
   paymentsDue: DashboardPaymentsDue;
-  billing: DashboardMonthlyBilling;
+  billing: DashboardMonthlyBilling | null;
   lowStock: DashboardLowStockAlert;
   forecast: ForecastDay[];
   arrivingToday: TodayGuestMovement[];
@@ -105,12 +105,14 @@ export const dashboardSummarySchema = z.object({
     count: z.number(),
     totalAmount: z.number(),
   }),
-  billing: z.object({
-    invoicesCount: z.number(),
-    totalBilled: z.number(),
-    totalGst: z.number(),
-    monthName: z.string(),
-  }),
+  billing: z
+    .object({
+      invoicesCount: z.number(),
+      totalBilled: z.number(),
+      totalGst: z.number(),
+      monthName: z.string(),
+    })
+    .nullable(),
   lowStock: z.object({
     count: z.number(),
     items: z.array(

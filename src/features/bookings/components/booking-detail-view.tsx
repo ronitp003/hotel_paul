@@ -31,6 +31,7 @@ import { CancelBookingDialog } from "./cancel-booking-dialog";
 import { EditStayDatesDialog } from "./edit-stay-dates-dialog";
 import { deleteChargeAction } from "@/server/actions/billing.actions";
 import { toast } from "sonner";
+import type { BookingBillSummary } from "@/server/services/booking.service";
 
 export interface BookingDetailData {
   id: string;
@@ -93,6 +94,25 @@ export interface BookingDetailData {
     status: string;
     issuedAt: Date;
   } | null;
+  groupBookingId?: string | null;
+  isGroupMaster?: boolean;
+  groupRooms?: Array<{
+    id: string;
+    reference: string;
+    roomId: string;
+    roomNumber: string;
+    roomTypeName: string;
+    status: string;
+    rateApplied: number;
+    stayDays?: number;
+    roomCharge?: number;
+    isGroupMaster: boolean;
+    guests: Array<{
+      name: string;
+      isPrimary: boolean;
+    }>;
+  }>;
+  groupBill?: BookingBillSummary | null;
 }
 
 interface BookingDetailViewProps {
@@ -115,6 +135,11 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
   const isCheckedIn = booking.status === "CHECKED_IN";
   const isCheckedOut = booking.status === "CHECKED_OUT";
   const isReserved = booking.status === "RESERVED";
+  const isGroup = Boolean(
+    booking.groupBookingId &&
+      booking.groupRooms &&
+      booking.groupRooms.length > 1
+  );
   const primaryGuestName =
     booking.guests.find((g) => g.isPrimary)?.name ||
     booking.guests[0]?.name ||
@@ -288,6 +313,140 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
         </div>
       </div>
 
+      {/* Consolidated Group Rooms & Pricing (when group booking) */}
+      {isGroup && booking.groupRooms && (
+        <Card className="p-5 border-primary/30 bg-primary/5 space-y-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-primary text-primary-foreground">
+                Group Booking ({booking.groupRooms.length} Rooms)
+              </span>
+              <span className="font-mono text-xs font-semibold text-foreground">
+                {booking.groupBookingId}
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground font-medium">
+              Consolidated view of all rooms & individual prices • Unified checkout available
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-border text-muted-foreground uppercase text-[10px] font-semibold tracking-wider">
+                <tr>
+                  <th className="py-2.5 px-3">Room</th>
+                  <th className="py-2.5 px-3">Reference</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Tariff / Night</th>
+                  <th className="py-2.5 px-3 text-center">Nights</th>
+                  <th className="py-2.5 px-3 text-right">Room Charge</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {booking.groupRooms.map((gr) => {
+                  const isViewing = gr.id === booking.id;
+                  const nights = gr.stayDays ?? booking.stayDays;
+                  const charge = gr.roomCharge ?? gr.rateApplied * nights;
+                  return (
+                    <tr
+                      key={gr.id}
+                      className={cn(
+                        "transition-colors",
+                        isViewing
+                          ? "bg-primary/10 font-medium"
+                          : "hover:bg-muted/30"
+                      )}
+                    >
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-foreground text-sm">
+                            Room {gr.roomNumber}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            ({gr.roomTypeName})
+                          </span>
+                          {gr.isGroupMaster && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] uppercase px-1.5 py-0.2 bg-primary/15 text-primary border-primary/30 font-bold"
+                            >
+                              Master
+                            </Badge>
+                          )}
+                          {isViewing && (
+                            <span className="text-[10px] text-primary font-bold">
+                              (Current)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                        {gr.reference}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {getStatusBadge(gr.status)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-semibold text-foreground">
+                        {formatINR(gr.rateApplied)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono">
+                        {nights}d
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-foreground">
+                        {formatINR(charge)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        {!isViewing ? (
+                          <Link
+                            href={`/bookings/${gr.id}`}
+                            className="text-xs text-primary hover:underline font-semibold"
+                          >
+                            Switch Room
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-muted-foreground font-medium">
+                            Active
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t-2 border-border/80 font-bold text-xs bg-muted/30">
+                <tr>
+                  <td colSpan={3} className="py-2.5 px-3">
+                    Total ({booking.groupRooms.length} Rooms Combined)
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-primary">
+                    {formatINR(
+                      booking.groupRooms.reduce((sum, r) => sum + r.rateApplied, 0)
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3 text-center text-muted-foreground font-normal">
+                    —
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-primary font-bold">
+                    {formatINR(
+                      booking.groupBill?.roomCharges ??
+                        booking.groupRooms.reduce(
+                          (sum, r) =>
+                            sum +
+                            (r.roomCharge ??
+                              r.rateApplied * (r.stayDays ?? booking.stayDays)),
+                          0
+                        )
+                    )}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
+
       {/* Main Grid: Details on Left (2/3), Bill Summary on Right (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}
@@ -305,7 +464,7 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                   className="py-2.5 flex items-center justify-between text-xs"
                 >
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-foreground text-sm">
                         {guest.name}
                       </span>
@@ -612,37 +771,62 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
         {/* Right Column: Sticky Bill Summary & Invoice Card */}
         <div className="space-y-6">
           <Card className="p-5 space-y-3.5 sticky top-6">
-            <h3 className="text-sm font-semibold text-foreground border-b border-border/80 pb-2">
-              Stay Bill Summary
-            </h3>
+            <div className="flex items-center justify-between border-b border-border/80 pb-2">
+              <h3 className="text-sm font-semibold text-foreground">
+                {isGroup ? "Group Stay Bill Summary" : "Stay Bill Summary"}
+              </h3>
+              {isGroup && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-bold bg-primary/10 text-primary border-primary/20"
+                >
+                  {booking.groupRooms?.length} Rooms
+                </Badge>
+              )}
+            </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>
-                  Room Charges ({booking.stayDays}d ×{" "}
-                  {formatINRPlain(booking.rateApplied)})
+                  {isGroup
+                    ? `Total Room Charges (${booking.groupRooms?.length} rooms)`
+                    : `Room Charges (${booking.stayDays}d × ${formatINRPlain(booking.rateApplied)})`}
                 </span>
                 <span className="font-mono font-medium text-foreground">
-                  {formatINR(booking.roomCharges)}
+                  {formatINR(
+                    isGroup
+                      ? (booking.groupBill?.roomCharges ?? booking.roomCharges)
+                      : booking.roomCharges
+                  )}
                 </span>
               </div>
 
-              {booking.charges.length > 0 && (
+              {(isGroup
+                ? (booking.groupBill?.totalCharges ?? 0) > 0
+                : booking.charges.length > 0) && (
                 <div className="flex justify-between items-center text-muted-foreground">
-                  <span>Additional Services ({booking.charges.length})</span>
+                  <span>Additional Services</span>
                   <span className="font-mono font-medium text-foreground">
                     {formatINR(
-                      booking.charges.reduce((acc, c) => acc + c.amount, 0)
+                      isGroup
+                        ? (booking.groupBill?.totalCharges ?? 0)
+                        : booking.charges.reduce((acc, c) => acc + c.amount, 0)
                     )}
                   </span>
                 </div>
               )}
 
-              {booking.discount > 0 && (
+              {(isGroup
+                ? (booking.groupBill?.discount ?? 0) > 0
+                : booking.discount > 0) && (
                 <div className="flex justify-between items-center text-red-600 dark:text-red-400 font-medium">
                   <span>Discount</span>
                   <span className="font-mono">
-                    -{formatINR(booking.discount)}
+                    -{formatINR(
+                      isGroup
+                        ? (booking.groupBill?.discount ?? 0)
+                        : booking.discount
+                    )}
                   </span>
                 </div>
               )}
@@ -650,23 +834,35 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
               <div className="flex justify-between items-center pt-2 border-t border-border/60 text-muted-foreground">
                 <span>Taxable Amount</span>
                 <span className="font-mono font-medium text-foreground">
-                  {formatINR(booking.taxableAmount)}
+                  {formatINR(
+                    isGroup
+                      ? (booking.groupBill?.taxableAmount ?? booking.taxableAmount)
+                      : booking.taxableAmount
+                  )}
                 </span>
               </div>
 
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>
-                  GST ({booking.effectiveGstPercent}% — CGST/SGST split)
+                  GST ({isGroup ? (booking.groupBill?.gstPercent ?? booking.effectiveGstPercent) : booking.effectiveGstPercent}% — CGST/SGST split)
                 </span>
                 <span className="font-mono font-medium text-foreground">
-                  {formatINR(booking.taxAmount)}
+                  {formatINR(
+                    isGroup
+                      ? (booking.groupBill?.totalGst ?? booking.taxAmount)
+                      : booking.taxAmount
+                  )}
                 </span>
               </div>
 
               <div className="flex justify-between items-center pt-2.5 border-t-2 border-border text-base font-bold text-foreground">
                 <span>Total Bill</span>
                 <span className="font-mono text-primary text-lg">
-                  {formatINR(booking.totalAmount)}
+                  {formatINR(
+                    isGroup
+                      ? (booking.groupBill?.billAmount ?? booking.totalAmount)
+                      : booking.totalAmount
+                  )}
                 </span>
               </div>
 
@@ -674,7 +870,11 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                 <div className="flex justify-between items-center text-muted-foreground">
                   <span>Net Payments Received</span>
                   <span className="font-mono text-emerald-600 font-semibold">
-                    {formatINR(booking.totalPaid)}
+                    {formatINR(
+                      isGroup
+                        ? (booking.groupBill?.netPaid ?? booking.totalPaid)
+                        : booking.totalPaid
+                    )}
                   </span>
                 </div>
 
@@ -682,35 +882,41 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                   <span>Balance Due</span>
                   <span
                     className={`font-mono ${
-                      booking.balanceDue > 0
+                      (isGroup
+                        ? (booking.groupBill?.balanceDue ?? booking.balanceDue)
+                        : booking.balanceDue) > 0
                         ? "text-red-600 dark:text-red-400 text-base"
                         : "text-emerald-600 dark:text-emerald-400"
                     }`}
                   >
-                    {formatINR(booking.balanceDue)}
+                    {formatINR(
+                      isGroup
+                        ? (booking.groupBill?.balanceDue ?? booking.balanceDue)
+                        : booking.balanceDue
+                    )}
                   </span>
                 </div>
               </div>
             </div>
 
-            {isCheckedIn && (
+            {(isCheckedIn || (isGroup && booking.groupRooms?.some((r) => r.status === "CHECKED_IN"))) && (
               <Button
                 variant="default"
                 size="sm"
                 onClick={() => setCheckoutOpen(true)}
-                className="w-full mt-2 font-semibold"
+                className="w-full mt-2 font-semibold shadow-xs"
               >
                 <CheckOutIcon className="size-4 mr-2" />
-                Check Out & Generate Invoice
+                {isGroup ? "Check Out Entire Group & Issue Invoice" : "Check Out & Generate Invoice"}
               </Button>
             )}
 
-            {isCheckedOut && booking.invoice && (
+            {(isCheckedOut || (isGroup && booking.invoice)) && booking.invoice && (
               <div className="pt-3 border-t border-border/80 space-y-2">
                 <div className="bg-muted/40 p-3 rounded-lg border border-border/60 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-[11px]">
-                      Invoice Number
+                      Tax Invoice
                     </span>
                     <Badge
                       variant="outline"
@@ -749,9 +955,21 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
 
       {/* Modals */}
       <CheckoutDialog
-        bookingId={booking.id}
-        bookingRef={booking.reference}
-        roomNumber={booking.roomNumber}
+        bookingId={
+          isGroup
+            ? (booking.groupRooms?.find((r) => r.isGroupMaster)?.id || booking.id)
+            : booking.id
+        }
+        bookingRef={
+          isGroup
+            ? (booking.groupRooms?.find((r) => r.isGroupMaster)?.reference || booking.reference)
+            : booking.reference
+        }
+        roomNumber={
+          isGroup
+            ? (booking.groupRooms?.map((r) => r.roomNumber).join(", ") || booking.roomNumber)
+            : booking.roomNumber
+        }
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
         onSuccess={() => router.refresh()}
@@ -784,6 +1002,13 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
           roomNumber: booking.roomNumber,
           roomTypeName: booking.roomTypeName,
           guestName: primaryGuestName,
+          groupBookingId: booking.groupBookingId,
+          groupRooms: booking.groupRooms?.map((gr) => ({
+            id: gr.id,
+            roomNumber: gr.roomNumber,
+            roomTypeName: gr.roomTypeName,
+            status: gr.status,
+          })),
         }}
         onSuccess={() => router.refresh()}
       />

@@ -57,9 +57,16 @@ export function BookingHoverCard({
       >
         {/* Header: Reference + Status */}
         <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-2">
-          <span className="font-mono text-[11px] font-semibold text-muted-foreground tracking-wide">
-            {booking.reference}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-mono text-[11px] font-semibold text-muted-foreground tracking-wide">
+              {booking.reference}
+            </span>
+            {booking.groupBookingId && (
+              <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.2 rounded bg-primary/15 text-primary">
+                Group
+              </span>
+            )}
+          </div>
           <Badge
             variant="outline"
             className={`text-[10px] font-semibold px-2 py-0.5 border-transparent ${statusBadgeClass}`}
@@ -110,6 +117,43 @@ export function BookingHoverCard({
             </span>
           )}
         </div>
+
+        {/* Group Rooms Badges (if group booking with multiple rooms) */}
+        {booking.groupBookingId &&
+          booking.groupRoomNumbers &&
+          booking.groupRoomNumbers.length > 1 && (
+            <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/25 space-y-1.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-primary flex items-center gap-1.5">
+                  <GuestIcon className="size-3.5 text-primary shrink-0" />
+                  Group Rooms ({booking.groupRoomNumbers.length})
+                </span>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  {booking.groupBookingId}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1 items-center pt-0.5">
+                {booking.groupRoomNumbers.map((rNum) => {
+                  const isCurrent =
+                    rNum === (room?.number || booking.roomId);
+                  return (
+                    <Badge
+                      key={rNum}
+                      variant="outline"
+                      className={`text-[10px] font-mono px-1.5 py-0.5 transition-colors ${
+                        isCurrent
+                          ? "bg-primary text-primary-foreground font-bold border-primary shadow-xs"
+                          : "bg-background text-foreground border-border/80"
+                      }`}
+                    >
+                      Room {rNum}
+                      {isCurrent ? " (this)" : ""}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
         {/* Open Problem Alert on Room */}
         {room?.hasOpenProblem && (

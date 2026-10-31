@@ -30,11 +30,20 @@ export const guestSchema = z.object({
     .optional()
     .or(z.literal("")),
   isPrimary: z.boolean().default(false),
+  allocatedRoomId: z.string().optional().nullable(),
 });
+
+export const roomSelectionItemSchema = z.object({
+  roomId: z.string().min(1, "Room is required"),
+  rateApplied: z.number().min(0, "Room rate cannot be negative"),
+});
+
+export type RoomSelectionItem = z.infer<typeof roomSelectionItemSchema>;
 
 export const newBookingSchema = z
   .object({
-    roomId: z.string().min(1, "Please select a room"),
+    roomId: z.string().optional(),
+    rooms: z.array(roomSelectionItemSchema).optional(),
     checkInAt: z.coerce.date(),
     checkOutAt: z.coerce.date(),
     action: z.enum(["RESERVE", "CHECK_IN"]).default("RESERVE").optional(),
@@ -58,7 +67,7 @@ export const newBookingSchema = z
     companyAddress: z.string().trim().optional().or(z.literal("")),
 
     // Financials
-    rateApplied: z.number().min(0, "Room rate cannot be negative"),
+    rateApplied: z.number().min(0, "Room rate cannot be negative").optional(),
     discount: z
       .number()
       .min(0, "Discount cannot be negative")
@@ -86,6 +95,16 @@ export const newBookingSchema = z
     message: "Check-out time must be strictly after check-in time",
     path: ["checkOutAt"],
   })
+  .refine(
+    (data) => {
+      if (data.rooms && data.rooms.length > 0) return true;
+      return !!data.roomId && data.rateApplied !== undefined;
+    },
+    {
+      message: "Please select at least one room",
+      path: ["roomId"],
+    }
+  )
   .refine(
     (data) => {
       if (data.advanceAmount && data.advanceAmount > 0) {

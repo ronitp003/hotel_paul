@@ -36,6 +36,8 @@ export interface InvoiceSnapshot {
   booking: {
     id: string;
     reference: string;
+    groupBookingId?: string | null;
+    isGroupMaster?: boolean;
     source: string;
     roomNumber: string;
     roomTypeName: string;
@@ -51,6 +53,16 @@ export interface InvoiceSnapshot {
     companyGstin: string | null;
     companyAddress: string | null;
   };
+  rooms?: Array<{
+    bookingId: string;
+    reference: string;
+    roomNumber: string;
+    roomTypeName: string;
+    stayDays: number;
+    rateApplied: number;
+    roomCharges: number;
+    occupants: string[];
+  }>;
   guests: Array<{
     name: string;
     fatherName: string | null;
@@ -58,6 +70,7 @@ export interface InvoiceSnapshot {
     sex: string | null;
     mobile: string | null;
     isPrimary: boolean;
+    allocatedRoomId?: string | null;
   }>;
   charges: Array<{
     description: string;
@@ -137,6 +150,35 @@ export const invoiceService = {
       );
     }
 
+    // 1. Check for group booking siblings
+    let groupBookings = [bookingPre];
+    if (bookingPre.groupBookingId) {
+      groupBookings = await prisma.booking.findMany({
+        where: { groupBookingId: bookingPre.groupBookingId },
+        include: {
+          room: { include: { type: true } },
+          guests: true,
+          charges: true,
+          payments: true,
+          invoice: true,
+        },
+        orderBy: { reference: "asc" },
+      });
+    }
+
+    const isGroup = groupBookings.length > 1;
+
+    // Check if any booking in group is already checked out with invoice
+    const alreadyIssued = groupBookings.find(
+      (b) => b.status === BookingStatus.CHECKED_OUT && b.invoice
+    );
+    if (alreadyIssued) {
+      throw new AppError(
+        "INVOICE_ALREADY_ISSUED",
+        `Booking ${alreadyIssued.reference} in this group is already checked out (Invoice ${alreadyIssued.invoice?.displayNo}).`
+      );
+    }
+
     const settings = await settingsService.getSettings();
     const gstSlabs = settings.gstSlabs;
 
@@ -157,8 +199,68 @@ export const invoiceService = {
       settings.hotel.graceMinutes
     );
 
+    const groupRooms = groupBookings.map((gb) => {
+      const gbActualCheckIn = gb.actualCheckInAt || gb.checkInAt;
+      const gbEffectiveCheckIn =
+        isOverstay || isEarly ? gbActualCheckIn : gb.checkInAt;
+      const gbEffectiveCheckOut =
+        isOverstay || isEarly ? actualCheckOut : gb.checkOutAt;
+
+      const gbStay = calculateStay(
+        gbEffectiveCheckIn,
+        gbEffectiveCheckOut,
+        settings.hotel.graceMinutes
+      );
+      const roomCharges = new Decimal(gb.rateApplied).mul(gbStay.days);
+
+      return {
+        bookingId: gb.id,
+        reference: gb.reference,
+        roomId: gb.roomId,
+        roomNumber: gb.room.number,
+        roomTypeName: gb.room.type.name,
+        stayDays: gbStay.days,
+        rateApplied: Number(gb.rateApplied),
+        roomCharges: roomCharges.toNumber(),
+        occupants: gb.guests.map((g) => g.name),
+      };
+    });
+
+    const totalRoomChargesOverride = isGroup
+      ? groupRooms.reduce(
+          (acc, r) => acc.add(new Decimal(r.roomCharges)),
+          new Decimal(0)
+        )
+      : undefined;
+
+    const allCharges = isGroup
+      ? groupBookings.flatMap((gb) => gb.charges)
+      : bookingPre.charges;
+
+    const allExistingPayments = isGroup
+      ? groupBookings.flatMap((gb) => gb.payments)
+      : bookingPre.payments;
+
+    const totalDiscount = isGroup
+      ? groupBookings.reduce(
+          (acc, gb) => acc.add(new Decimal(gb.discount)),
+          new Decimal(0)
+        )
+      : bookingPre.discount;
+
+    const masterBooking = isGroup
+      ? groupBookings.find((gb) => gb.isGroupMaster) || groupBookings[0]
+      : bookingPre;
+
+    const effectiveRateForSlab = isGroup
+      ? groupBookings.reduce(
+          (max, gb) => Decimal.max(max, new Decimal(gb.rateApplied)),
+          new Decimal(0)
+        )
+      : bookingPre.rateApplied;
+
     // Prepare payments list including optional final settlement payment or refund
-    const paymentItems = bookingPre.payments.map((p) => ({
+    const paymentItems = allExistingPayments.map((p) => ({
       amount: p.amount,
       kind: p.kind as "ADVANCE" | "PAYMENT" | "REFUND",
     }));
@@ -190,11 +292,13 @@ export const invoiceService = {
     }
 
     const calculation = calculateBill({
-      rateApplied: bookingPre.rateApplied,
+      rateApplied: effectiveRateForSlab,
+      totalRoomChargesOverride,
       days: stay.days,
-      discount: bookingPre.discount,
-      gstPercentOverride: bookingPre.gstPercentOverride,
-      charges: bookingPre.charges.map((c) => ({
+      discount: totalDiscount,
+      gstPercentOverride:
+        bookingPre.gstPercentOverride ?? masterBooking.gstPercentOverride,
+      charges: allCharges.map((c) => ({
         amount: c.amount,
         isTaxable: c.isTaxable,
         description: c.description,
@@ -249,11 +353,13 @@ export const invoiceService = {
       if (data.paymentAmount && data.paymentAmount > 0 && data.paymentMode) {
         const finalPmt = await tx.payment.create({
           data: {
-            bookingId: bookingPre.id,
+            bookingId: masterBooking.id,
             kind: PaymentKind.PAYMENT,
             mode: data.paymentMode as PaymentMode,
             amount: new Decimal(data.paymentAmount),
-            note: data.paymentNote?.trim() || "Settlement on check-out",
+            note: isGroup
+              ? `Settlement on group check-out (${groupRooms.map((r) => r.roomNumber).join(", ")})`
+              : data.paymentNote?.trim() || "Settlement on check-out",
             createdById: actor.id,
           },
         });
@@ -263,7 +369,7 @@ export const invoiceService = {
       if (data.refundAmount && data.refundAmount > 0 && data.refundMode) {
         await tx.payment.create({
           data: {
-            bookingId: bookingPre.id,
+            bookingId: masterBooking.id,
             kind: PaymentKind.REFUND,
             mode: data.refundMode as PaymentMode,
             amount: new Decimal(data.refundAmount),
@@ -286,9 +392,11 @@ export const invoiceService = {
       const prefix = settings.hotel.invoicePrefix?.trim() || "INV-";
       const displayNo = `${prefix}${String(nextNo).padStart(4, "0")}`;
 
-      // Refetch all payments including the newly added one
-      const allPayments = await tx.payment.findMany({
-        where: { bookingId: bookingPre.id },
+      // Refetch all payments across group rooms including the newly added one
+      const allPaymentsInDb = await tx.payment.findMany({
+        where: isGroup
+          ? { bookingId: { in: groupBookings.map((b) => b.id) } }
+          : { bookingId: bookingPre.id },
         orderBy: { receivedAt: "asc" },
       });
 
@@ -311,37 +419,50 @@ export const invoiceService = {
           issuedByName: actor.name,
         },
         booking: {
-          id: bookingPre.id,
-          reference: bookingPre.reference,
-          source: bookingPre.source,
-          roomNumber: bookingPre.room.number,
-          roomTypeName: bookingPre.room.type.name,
-          checkInAt: bookingPre.checkInAt.toISOString(),
-          checkOutAt: bookingPre.checkOutAt.toISOString(),
+          id: masterBooking.id,
+          reference: isGroup
+            ? `${masterBooking.reference} (Group)`
+            : masterBooking.reference,
+          groupBookingId: masterBooking.groupBookingId,
+          isGroupMaster: isGroup,
+          source: masterBooking.source,
+          roomNumber: isGroup
+            ? groupRooms.map((r) => r.roomNumber).join(", ")
+            : masterBooking.room.number,
+          roomTypeName: isGroup
+            ? "Multiple Categories"
+            : masterBooking.room.type.name,
+          checkInAt: masterBooking.checkInAt.toISOString(),
+          checkOutAt: masterBooking.checkOutAt.toISOString(),
           actualCheckInAt: actualCheckIn.toISOString(),
           actualCheckOutAt: actualCheckOut.toISOString(),
           stayDays: stay.days,
-          rateApplied: Number(bookingPre.rateApplied),
-          discount: Number(bookingPre.discount),
+          rateApplied: Number(masterBooking.rateApplied),
+          discount: calculation.discount.toNumber(),
           gstPercent: calculation.gstPercent.toNumber(),
           companyName: finalCompanyName,
           companyGstin: finalCompanyGstin,
           companyAddress: finalCompanyAddress,
         },
-        guests: bookingPre.guests.map((g) => ({
+        rooms: isGroup ? groupRooms : undefined,
+        guests: (isGroup
+          ? groupBookings.flatMap((b) => b.guests)
+          : bookingPre.guests
+        ).map((g) => ({
           name: g.name,
           fatherName: g.fatherName,
           age: g.age,
           sex: g.sex,
           mobile: g.mobile,
           isPrimary: g.isPrimary,
+          allocatedRoomId: g.allocatedRoomId,
         })),
-        charges: bookingPre.charges.map((c) => ({
+        charges: allCharges.map((c) => ({
           description: c.description,
           amount: Number(c.amount),
           isTaxable: c.isTaxable,
         })),
-        payments: allPayments.map((p) => ({
+        payments: allPaymentsInDb.map((p) => ({
           kind: p.kind,
           mode: p.mode,
           amount: Number(p.amount),
@@ -371,12 +492,12 @@ export const invoiceService = {
         },
       };
 
-      // 4. Create immutable Invoice record
+      // 4. Create immutable Invoice record attached to master booking
       const invoice = await tx.invoice.create({
         data: {
           number: nextNo,
           displayNo,
-          bookingId: bookingPre.id,
+          bookingId: masterBooking.id,
           status: InvoiceStatus.ISSUED,
           issuedAt: actualCheckOut,
           issuedById: actor.id,
@@ -390,19 +511,38 @@ export const invoiceService = {
         },
       });
 
-      // 5. Update Booking status to CHECKED_OUT
-      await tx.booking.update({
-        where: { id: bookingPre.id },
-        data: {
-          status: BookingStatus.CHECKED_OUT,
-          checkOutAt: data.isEarlyCheckout ? actualCheckOut : bookingPre.checkOutAt,
-          actualCheckInAt: actualCheckIn,
-          actualCheckOutAt: actualCheckOut,
-          companyName: finalCompanyName,
-          companyGstin: finalCompanyGstin,
-          companyAddress: finalCompanyAddress,
-        },
-      });
+      // 5. Update Booking status to CHECKED_OUT for all rooms in the group
+      if (isGroup) {
+        await tx.booking.updateMany({
+          where: {
+            groupBookingId: bookingPre.groupBookingId,
+            status: { not: BookingStatus.CHECKED_OUT },
+          },
+          data: {
+            status: BookingStatus.CHECKED_OUT,
+            actualCheckInAt: actualCheckIn,
+            actualCheckOutAt: actualCheckOut,
+            companyName: finalCompanyName,
+            companyGstin: finalCompanyGstin,
+            companyAddress: finalCompanyAddress,
+          },
+        });
+      } else {
+        await tx.booking.update({
+          where: { id: bookingPre.id },
+          data: {
+            status: BookingStatus.CHECKED_OUT,
+            checkOutAt: data.isEarlyCheckout
+              ? actualCheckOut
+              : bookingPre.checkOutAt,
+            actualCheckInAt: actualCheckIn,
+            actualCheckOutAt: actualCheckOut,
+            companyName: finalCompanyName,
+            companyGstin: finalCompanyGstin,
+            companyAddress: finalCompanyAddress,
+          },
+        });
+      }
 
       // 6. Record Audit Logs
       await tx.auditLog.create({
@@ -413,8 +553,13 @@ export const invoiceService = {
           entityId: invoice.id,
           metadata: {
             displayNo,
-            bookingRef: bookingPre.reference,
-            roomNumber: bookingPre.room.number,
+            bookingRef: masterBooking.reference,
+            roomNumber: isGroup
+              ? groupRooms.map((r) => r.roomNumber).join(", ")
+              : masterBooking.room.number,
+            isGroup,
+            groupBookingId: masterBooking.groupBookingId,
+            roomsCount: groupRooms.length,
             billAmount: Number(invoice.billAmount),
             balance: Number(invoice.balance),
             finalPaymentId,
@@ -427,12 +572,14 @@ export const invoiceService = {
           actorId: actor.id,
           action: "booking.checkOut",
           entity: "Booking",
-          entityId: bookingPre.id,
+          entityId: masterBooking.id,
           metadata: {
-            reference: bookingPre.reference,
-            roomNumber: bookingPre.room.number,
-            invoiceDisplayNo: displayNo,
+            reference: masterBooking.reference,
+            isGroup,
+            groupBookingId: masterBooking.groupBookingId,
+            roomNumbers: groupRooms.map((r) => r.roomNumber),
             actualCheckOutAt: actualCheckOut.toISOString(),
+            invoiceNo: displayNo,
           },
         },
       });

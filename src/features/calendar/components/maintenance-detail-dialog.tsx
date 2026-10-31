@@ -39,13 +39,13 @@ export function MaintenanceDetailDialog({
             </span>
             <Badge
               variant="secondary"
-              className="text-[11px] font-semibold px-2 py-0.5 bg-slate-500 text-white"
+              className="text-[11px] font-semibold px-2 py-0.5 bg-purple-600 dark:bg-purple-700 text-white"
             >
               MAINTENANCE
             </Badge>
           </div>
           <DialogTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
-            <MaintenanceIcon className="size-5 text-slate-600 dark:text-slate-400 shrink-0" />
+            <MaintenanceIcon className="size-5 text-purple-600 dark:text-purple-400 shrink-0" />
             <span>Room {roomNumber || "—"}</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
