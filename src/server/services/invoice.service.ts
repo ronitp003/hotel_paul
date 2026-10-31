@@ -561,7 +561,7 @@ export const invoiceService = {
     search?: string;
     status?: InvoiceStatus;
   }) {
-    const limit = options?.limit ?? 100;
+    const limit = options?.limit ?? 500;
     const where: Record<string, unknown> = {};
 
     if (options?.status) {
@@ -627,7 +627,7 @@ export const invoiceService = {
     kind?: PaymentKind;
     mode?: PaymentMode;
   }) {
-    const limit = options?.limit ?? 100;
+    const limit = options?.limit ?? 500;
     const where: Record<string, unknown> = {};
 
     if (options?.kind) where.kind = options.kind;

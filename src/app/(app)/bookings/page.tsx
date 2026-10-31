@@ -16,7 +16,7 @@ export const metadata = {
 export default async function BookingsPage() {
   await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
 
-  const { bookings, total } = await bookingService.listBookings({ limit: 100 });
+  const { bookings, total } = await bookingService.listBookings({ limit: 500 });
 
   return (
     <div className="space-y-6">

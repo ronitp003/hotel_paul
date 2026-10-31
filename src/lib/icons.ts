@@ -42,4 +42,7 @@ export {
   LuHistory as HistoryIcon,
   LuArrowDownToLine as RestockIcon,
   LuArrowRight as ArrowRightIcon,
+  LuArrowUpDown as ArrowUpDownIcon,
+  LuArrowUp as ArrowUpIcon,
+  LuArrowDown as ArrowDownIcon,
 } from "react-icons/lu";

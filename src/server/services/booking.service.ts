@@ -500,7 +500,7 @@ export const bookingService = {
     limit?: number;
     offset?: number;
   }) {
-    const limit = Math.min(100, Math.max(1, options?.limit ?? 50));
+    const limit = Math.min(1000, Math.max(1, options?.limit ?? 500));
     const offset = Math.max(0, options?.offset ?? 0);
 
     const where = {
@@ -546,7 +546,7 @@ export const bookingService = {
           guests: { where: { isPrimary: true } },
           payments: true,
         },
-        orderBy: { checkInAt: "desc" },
+        orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       }),
@@ -578,6 +578,7 @@ export const bookingService = {
           guestMobile: primaryGuest?.mobile || null,
           rateApplied: Number(b.rateApplied),
           advancePaid: advance,
+          createdAt: b.createdAt,
         };
       }),
     };

@@ -14,8 +14,8 @@ export default async function PaymentsPage() {
   const actor = await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
 
   const [invoicesResult, paymentsResult] = await Promise.all([
-    invoiceService.listInvoices({ limit: 100 }),
-    invoiceService.listPayments({ limit: 100 }),
+    invoiceService.listInvoices({ limit: 500 }),
+    invoiceService.listPayments({ limit: 500 }),
   ]);
 
   return (

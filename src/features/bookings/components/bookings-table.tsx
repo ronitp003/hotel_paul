@@ -11,10 +11,15 @@ import {
   SearchIcon,
   NewBookingIcon,
   CheckOutIcon,
+  ArrowUpDownIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
 } from "@/lib/icons";
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { BookingStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { CheckoutDialog } from "./checkout-dialog";
@@ -35,6 +40,7 @@ export interface BookingRow {
   guestMobile: string | null;
   rateApplied: number;
   advancePaid: number;
+  createdAt?: Date;
 }
 
 interface BookingsTableProps {
@@ -42,16 +48,21 @@ interface BookingsTableProps {
   total: number;
 }
 
+const PAGE_SIZE = 10;
+
 export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [sortBy, setSortBy] = useState<string>("created-desc");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [checkoutTarget, setCheckoutTarget] = useState<{
     id: string;
     reference: string;
     roomNumber: string;
   } | null>(null);
 
+  // Filter bookings
   const filtered = initialBookings.filter((b) => {
     if (statusFilter !== "ALL" && b.status !== statusFilter) return false;
     if (search.trim()) {
@@ -63,6 +74,122 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
     }
     return true;
   });
+
+  // Sort bookings (Default: latest bookings first based on booking creation date/time)
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "created-desc") {
+      const aTime = a.createdAt
+        ? new Date(a.createdAt).getTime()
+        : new Date(a.checkInAt).getTime();
+      const bTime = b.createdAt
+        ? new Date(b.createdAt).getTime()
+        : new Date(b.checkInAt).getTime();
+      return bTime - aTime;
+    }
+    if (sortBy === "created-asc") {
+      const aTime = a.createdAt
+        ? new Date(a.createdAt).getTime()
+        : new Date(a.checkInAt).getTime();
+      const bTime = b.createdAt
+        ? new Date(b.createdAt).getTime()
+        : new Date(b.checkInAt).getTime();
+      return aTime - bTime;
+    }
+    if (sortBy === "checkin-desc") {
+      return new Date(b.checkInAt).getTime() - new Date(a.checkInAt).getTime();
+    }
+    if (sortBy === "checkin-asc") {
+      return new Date(a.checkInAt).getTime() - new Date(b.checkInAt).getTime();
+    }
+    if (sortBy === "guest-asc") {
+      return a.guestName.localeCompare(b.guestName);
+    }
+    if (sortBy === "guest-desc") {
+      return b.guestName.localeCompare(a.guestName);
+    }
+    if (sortBy === "tariff-desc") {
+      return b.rateApplied - a.rateApplied;
+    }
+    if (sortBy === "tariff-asc") {
+      return a.rateApplied - b.rateApplied;
+    }
+    if (sortBy === "advance-desc") {
+      return b.advancePaid - a.advancePaid;
+    }
+    if (sortBy === "advance-asc") {
+      return a.advancePaid - b.advancePaid;
+    }
+    // Default fallback: latest bookings first based on booking creation date/time
+    const aTime = a.createdAt
+      ? new Date(a.createdAt).getTime()
+      : new Date(a.checkInAt).getTime();
+    const bTime = b.createdAt
+      ? new Date(b.createdAt).getTime()
+      : new Date(b.checkInAt).getTime();
+    return bTime - aTime;
+  });
+
+  // Pagination calculation
+  const totalRecords = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedBookings = sorted.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    setCurrentPage(1);
+  };
+
+  const toggleSort = (field: "checkin" | "guest" | "tariff" | "advance" | "created") => {
+    let nextSort = "";
+    if (field === "created") {
+      nextSort = sortBy === "created-desc" ? "created-asc" : "created-desc";
+    } else if (field === "checkin") {
+      nextSort = sortBy === "checkin-desc" ? "checkin-asc" : "checkin-desc";
+    } else if (field === "guest") {
+      nextSort = sortBy === "guest-asc" ? "guest-desc" : "guest-asc";
+    } else if (field === "tariff") {
+      nextSort = sortBy === "tariff-desc" ? "tariff-asc" : "tariff-desc";
+    } else if (field === "advance") {
+      nextSort = sortBy === "advance-desc" ? "advance-asc" : "advance-desc";
+    }
+    if (nextSort) {
+      handleSortChange(nextSort);
+    }
+  };
+
+  const renderSortIndicator = (field: "checkin" | "guest" | "tariff" | "advance" | "created") => {
+    if (field === "created") {
+      if (sortBy === "created-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (sortBy === "created-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "checkin") {
+      if (sortBy === "checkin-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (sortBy === "checkin-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "guest") {
+      if (sortBy === "guest-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+      if (sortBy === "guest-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+    } else if (field === "tariff") {
+      if (sortBy === "tariff-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (sortBy === "tariff-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "advance") {
+      if (sortBy === "advance-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (sortBy === "advance-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    }
+    return <ArrowUpDownIcon className="size-3 opacity-30 group-hover/col:opacity-70 transition-opacity" />;
+  };
 
   const getStatusBadge = (status: BookingStatus) => {
     switch (status) {
@@ -100,20 +227,43 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
 
   return (
     <div className="space-y-4">
-      {/* Top Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border shadow-xs">
-        <div className="relative flex-1 max-w-sm">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by reference, room, or guest..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
+      {/* Top Filter & Sort Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border shadow-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+          <div className="relative flex-1 max-w-sm">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by reference, room, or guest..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9 h-9 text-sm"
+            />
+          </div>
+
+          <div className="w-full sm:w-52">
+            <SelectDropdown
+              value={sortBy}
+              onChange={handleSortChange}
+              options={[
+                { value: "created-desc", label: "Latest Bookings First" },
+                { value: "created-asc", label: "Oldest Bookings First" },
+                { value: "checkin-desc", label: "Check-in (Latest First)" },
+                { value: "checkin-asc", label: "Check-in (Earliest First)" },
+                { value: "guest-asc", label: "Guest Name (A–Z)" },
+                { value: "guest-desc", label: "Guest Name (Z–A)" },
+                { value: "tariff-desc", label: "Tariff (High to Low)" },
+                { value: "tariff-asc", label: "Tariff (Low to High)" },
+                { value: "advance-desc", label: "Advance (High to Low)" },
+                { value: "advance-asc", label: "Advance (Low to High)" },
+              ]}
+              size="sm"
+              groupLabel="Sort Bookings"
+            />
+          </div>
         </div>
 
         {/* Status Filter Buttons */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
           {[
             { id: "ALL", label: "All Stays" },
             { id: "CHECKED_IN", label: "Checked In" },
@@ -124,7 +274,7 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
             <button
               key={item.id}
               type="button"
-              onClick={() => setStatusFilter(item.id)}
+              onClick={() => handleStatusFilterChange(item.id)}
               className={cn(
                 "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors whitespace-nowrap",
                 statusFilter === item.id
@@ -141,13 +291,14 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
       {/* Count Indicator */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
         <span>
-          Showing {filtered.length} of {total} record(s)
+          Showing {totalRecords} matching stay{totalRecords === 1 ? "" : "s"} of {total} total record(s)
+          {totalPages > 1 && ` • Page ${safePage} of ${totalPages}`}
         </span>
       </div>
 
       {/* Bookings List / Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden shadow-xs">
-        {filtered.length === 0 ? (
+        {totalRecords === 0 ? (
           <div className="p-12 text-center space-y-3">
             <div className="size-12 rounded-full bg-muted/60 text-muted-foreground flex items-center justify-center mx-auto">
               <CalendarIcon className="size-6" />
@@ -171,106 +322,153 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
-                <tr>
-                  <th className="px-4 py-3">Reference</th>
-                  <th className="px-4 py-3">Room</th>
-                  <th className="px-4 py-3">Primary Guest</th>
-                  <th className="px-4 py-3">Check-in / Check-out</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Tariff</th>
-                  <th className="px-4 py-3 text-right">Advance Paid</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((b) => (
-                  <tr
-                    key={b.id}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3 font-mono font-bold">
-                      <Link
-                        href={`/bookings/${b.id}`}
-                        className="text-primary hover:underline"
+          <div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th className="px-4 py-3">Reference</th>
+                    <th className="px-4 py-3">Room</th>
+                    <th className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("guest")}
+                        className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {b.reference}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <RoomIcon className="size-3.5 text-muted-foreground" />
-                        <span className="font-bold text-foreground font-mono">
-                          {b.roomNumber}
-                        </span>
-                        <span className="text-muted-foreground">
-                          ({b.roomTypeName})
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {b.guestName}
-                        </span>
-                        {b.guestMobile && (
-                          <span className="text-[11px] text-muted-foreground font-mono">
-                            {b.guestMobile}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col font-mono text-[11px]">
-                        <span>In: {formatISTDateTime(b.checkInAt)}</span>
-                        <span className="text-muted-foreground">
-                          Out: {formatISTDateTime(b.checkOutAt)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">{getStatusBadge(b.status)}</td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold">
-                      {formatINR(b.rateApplied)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                      {b.advancePaid > 0 ? formatINR(b.advancePaid) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                        <span>Primary Guest</span>
+                        {renderSortIndicator("guest")}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("checkin")}
+                        className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <span>Check-in / Check-out</span>
+                        {renderSortIndicator("checkin")}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("tariff")}
+                        className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                      >
+                        <span>Tariff</span>
+                        {renderSortIndicator("tariff")}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("advance")}
+                        className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                      >
+                        <span>Advance Paid</span>
+                        {renderSortIndicator("advance")}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {paginatedBookings.map((b) => (
+                    <tr
+                      key={b.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono font-bold">
                         <Link
                           href={`/bookings/${b.id}`}
-                          className={cn(
-                            buttonVariants({ variant: "ghost", size: "sm" }),
-                            "h-7 px-2 text-xs"
-                          )}
+                          className="text-primary hover:underline"
                         >
-                          Details
+                          {b.reference}
                         </Link>
-                        {b.status === "CHECKED_IN" && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() =>
-                              setCheckoutTarget({
-                                id: b.id,
-                                reference: b.reference,
-                                roomNumber: b.roomNumber,
-                              })
-                            }
-                            className="h-7 px-2.5 text-xs font-semibold"
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <RoomIcon className="size-3.5 text-muted-foreground" />
+                          <span className="font-bold text-foreground font-mono">
+                            {b.roomNumber}
+                          </span>
+                          <span className="text-muted-foreground">
+                            ({b.roomTypeName})
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">
+                            {b.guestName}
+                          </span>
+                          {b.guestMobile && (
+                            <span className="text-[11px] text-muted-foreground font-mono">
+                              {b.guestMobile}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col font-mono text-[11px]">
+                          <span>In: {formatISTDateTime(b.checkInAt)}</span>
+                          <span className="text-muted-foreground">
+                            Out: {formatISTDateTime(b.checkOutAt)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{getStatusBadge(b.status)}</td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold">
+                        {formatINR(b.rateApplied)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {b.advancePaid > 0 ? formatINR(b.advancePaid) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/bookings/${b.id}`}
+                            className={cn(
+                              buttonVariants({ variant: "ghost", size: "sm" }),
+                              "h-7 px-2 text-xs"
+                            )}
                           >
-                            <CheckOutIcon className="size-3 mr-1" />
-                            Check Out
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                            Details
+                          </Link>
+                          {b.status === "CHECKED_IN" && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() =>
+                                setCheckoutTarget({
+                                  id: b.id,
+                                  reference: b.reference,
+                                  roomNumber: b.roomNumber,
+                                })
+                              }
+                              className="h-7 px-2.5 text-xs font-semibold"
+                            >
+                              <CheckOutIcon className="size-3 mr-1" />
+                              Check Out
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <TablePagination
+              currentPage={safePage}
+              totalRecords={totalRecords}
+              pageSize={PAGE_SIZE}
+              onPageChange={(page) => setCurrentPage(page)}
+              recordLabel="bookings"
+            />
           </div>
         )}
       </div>

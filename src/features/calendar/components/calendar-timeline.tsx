@@ -296,10 +296,6 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
     }
   };
 
-  const handleToday = () => {
-    setSelectedDate(startOfISTDay(new Date()));
-  };
-
   // Header column generation for Day and Week views
   const headerColumns = useMemo(() => {
     if (viewMode === "day") {
@@ -389,7 +385,7 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
       <div className="flex flex-col lg:flex-row gap-3.5 items-stretch lg:items-center justify-between p-3.5 rounded-xl border border-border bg-card shadow-xs">
         {/* Left: Nav Buttons & Date Title */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1 border border-border rounded-lg p-0.5 bg-muted/40">
+          <div className="flex items-center gap-0.5 border border-border rounded-lg p-0.5 bg-muted/40">
             <Button
               type="button"
               variant="ghost"
@@ -399,15 +395,6 @@ export function CalendarTimeline({ roomTypes = [] }: CalendarTimelineProps) {
               title="Previous"
             >
               <ChevronLeftIcon className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2.5 text-xs font-semibold"
-              onClick={handleToday}
-            >
-              Today
             </Button>
             <Button
               type="button"

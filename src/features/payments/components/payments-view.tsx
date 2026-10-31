@@ -13,6 +13,9 @@ import {
   DownloadIcon,
   RupeeIcon,
   ProblemIcon,
+  ArrowUpDownIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
 } from "@/lib/icons";
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -20,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CancelInvoiceDialog } from "./cancel-invoice-dialog";
 import { SelectDropdown } from "@/components/ui/select-dropdown";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface InvoiceItem {
   id: string;
@@ -57,6 +61,8 @@ interface PaymentsViewProps {
   isOwner: boolean;
 }
 
+const PAGE_SIZE = 10;
+
 export function PaymentsView({
   invoices,
   payments,
@@ -67,18 +73,22 @@ export function PaymentsView({
     "invoices"
   );
 
-  // Invoices filter state
+  // Invoices filter and pagination state
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("ALL");
+  const [invoiceSortBy, setInvoiceSortBy] = useState<string>("issued-desc");
+  const [invoicePage, setInvoicePage] = useState<number>(1);
   const [cancellingInvoice, setCancellingInvoice] = useState<{
     id: string;
     displayNo: string;
   } | null>(null);
 
-  // Payments filter state
+  // Payments filter and pagination state
   const [paymentSearch, setPaymentSearch] = useState("");
   const [paymentKindFilter, setPaymentKindFilter] = useState<string>("ALL");
   const [paymentModeFilter, setPaymentModeFilter] = useState<string>("ALL");
+  const [paymentSortBy, setPaymentSortBy] = useState<string>("received-desc");
+  const [paymentPage, setPaymentPage] = useState<number>(1);
 
   // Filter Invoices
   const filteredInvoices = invoices.filter((inv) => {
@@ -95,6 +105,109 @@ export function PaymentsView({
     return true;
   });
 
+  // Sort Invoices (Default: Latest invoices first based on invoice issue date/time)
+  const sortedInvoices = [...filteredInvoices].sort((a, b) => {
+    if (invoiceSortBy === "issued-desc") {
+      return new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
+    }
+    if (invoiceSortBy === "issued-asc") {
+      return new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime();
+    }
+    if (invoiceSortBy === "amount-desc") {
+      return b.billAmount - a.billAmount;
+    }
+    if (invoiceSortBy === "amount-asc") {
+      return a.billAmount - b.billAmount;
+    }
+    if (invoiceSortBy === "balance-desc") {
+      return b.balance - a.balance;
+    }
+    if (invoiceSortBy === "balance-asc") {
+      return a.balance - b.balance;
+    }
+    if (invoiceSortBy === "guest-asc") {
+      return a.guestName.localeCompare(b.guestName);
+    }
+    if (invoiceSortBy === "guest-desc") {
+      return b.guestName.localeCompare(a.guestName);
+    }
+    if (invoiceSortBy === "number-desc") {
+      return b.number - a.number;
+    }
+    if (invoiceSortBy === "number-asc") {
+      return a.number - b.number;
+    }
+    // Default fallback: latest invoices first
+    return new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
+  });
+
+  // Invoices pagination calculation
+  const totalInvoiceRecords = sortedInvoices.length;
+  const totalInvoicePages = Math.max(1, Math.ceil(totalInvoiceRecords / PAGE_SIZE));
+  const safeInvoicePage = Math.min(Math.max(1, invoicePage), totalInvoicePages);
+  const paginatedInvoices = sortedInvoices.slice(
+    (safeInvoicePage - 1) * PAGE_SIZE,
+    safeInvoicePage * PAGE_SIZE
+  );
+
+  // Invoices handlers (resets page to 1)
+  const handleInvoiceSearchChange = (value: string) => {
+    setInvoiceSearch(value);
+    setInvoicePage(1);
+  };
+
+  const handleInvoiceStatusFilterChange = (value: string) => {
+    setInvoiceStatusFilter(value);
+    setInvoicePage(1);
+  };
+
+  const handleInvoiceSortChange = (value: string) => {
+    setInvoiceSortBy(value);
+    setInvoicePage(1);
+  };
+
+  const toggleInvoiceSort = (
+    field: "issued" | "amount" | "balance" | "guest" | "number"
+  ) => {
+    let nextSort = "";
+    if (field === "issued") {
+      nextSort = invoiceSortBy === "issued-desc" ? "issued-asc" : "issued-desc";
+    } else if (field === "amount") {
+      nextSort = invoiceSortBy === "amount-desc" ? "amount-asc" : "amount-desc";
+    } else if (field === "balance") {
+      nextSort = invoiceSortBy === "balance-desc" ? "balance-asc" : "balance-desc";
+    } else if (field === "guest") {
+      nextSort = invoiceSortBy === "guest-asc" ? "guest-desc" : "guest-asc";
+    } else if (field === "number") {
+      nextSort = invoiceSortBy === "number-desc" ? "number-asc" : "number-desc";
+    }
+    if (nextSort) {
+      handleInvoiceSortChange(nextSort);
+    }
+  };
+
+  const renderInvoiceSortIndicator = (
+    field: "issued" | "amount" | "balance" | "guest" | "number"
+  ) => {
+    if (field === "issued") {
+      if (invoiceSortBy === "issued-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (invoiceSortBy === "issued-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "amount") {
+      if (invoiceSortBy === "amount-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (invoiceSortBy === "amount-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "balance") {
+      if (invoiceSortBy === "balance-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (invoiceSortBy === "balance-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "guest") {
+      if (invoiceSortBy === "guest-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+      if (invoiceSortBy === "guest-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+    } else if (field === "number") {
+      if (invoiceSortBy === "number-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (invoiceSortBy === "number-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    }
+    return <ArrowUpDownIcon className="size-3 opacity-30 group-hover/col:opacity-70 transition-opacity" />;
+  };
+
   // Filter Payments
   const filteredPayments = payments.filter((pmt) => {
     if (paymentKindFilter !== "ALL" && pmt.kind !== paymentKindFilter)
@@ -110,6 +223,88 @@ export function PaymentsView({
     }
     return true;
   });
+
+  // Sort Payments (Default: Latest transactions first based on payment received date/time)
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    if (paymentSortBy === "received-desc") {
+      return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
+    }
+    if (paymentSortBy === "received-asc") {
+      return new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime();
+    }
+    if (paymentSortBy === "amount-desc") {
+      return b.amount - a.amount;
+    }
+    if (paymentSortBy === "amount-asc") {
+      return a.amount - b.amount;
+    }
+    if (paymentSortBy === "guest-asc") {
+      return a.guestName.localeCompare(b.guestName);
+    }
+    if (paymentSortBy === "guest-desc") {
+      return b.guestName.localeCompare(a.guestName);
+    }
+    // Default fallback: latest transactions first
+    return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
+  });
+
+  // Payments pagination calculation
+  const totalPaymentRecords = sortedPayments.length;
+  const totalPaymentPages = Math.max(1, Math.ceil(totalPaymentRecords / PAGE_SIZE));
+  const safePaymentPage = Math.min(Math.max(1, paymentPage), totalPaymentPages);
+  const paginatedPayments = sortedPayments.slice(
+    (safePaymentPage - 1) * PAGE_SIZE,
+    safePaymentPage * PAGE_SIZE
+  );
+
+  // Payments handlers (resets page to 1)
+  const handlePaymentSearchChange = (value: string) => {
+    setPaymentSearch(value);
+    setPaymentPage(1);
+  };
+
+  const handlePaymentKindFilterChange = (value: string) => {
+    setPaymentKindFilter(value);
+    setPaymentPage(1);
+  };
+
+  const handlePaymentModeFilterChange = (value: string) => {
+    setPaymentModeFilter(value);
+    setPaymentPage(1);
+  };
+
+  const handlePaymentSortChange = (value: string) => {
+    setPaymentSortBy(value);
+    setPaymentPage(1);
+  };
+
+  const togglePaymentSort = (field: "received" | "amount" | "guest") => {
+    let nextSort = "";
+    if (field === "received") {
+      nextSort = paymentSortBy === "received-desc" ? "received-asc" : "received-desc";
+    } else if (field === "amount") {
+      nextSort = paymentSortBy === "amount-desc" ? "amount-asc" : "amount-desc";
+    } else if (field === "guest") {
+      nextSort = paymentSortBy === "guest-asc" ? "guest-desc" : "guest-asc";
+    }
+    if (nextSort) {
+      handlePaymentSortChange(nextSort);
+    }
+  };
+
+  const renderPaymentSortIndicator = (field: "received" | "amount" | "guest") => {
+    if (field === "received") {
+      if (paymentSortBy === "received-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (paymentSortBy === "received-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "amount") {
+      if (paymentSortBy === "amount-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+      if (paymentSortBy === "amount-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+    } else if (field === "guest") {
+      if (paymentSortBy === "guest-asc") return <ArrowUpIcon className="size-3 text-primary" />;
+      if (paymentSortBy === "guest-desc") return <ArrowDownIcon className="size-3 text-primary" />;
+    }
+    return <ArrowUpDownIcon className="size-3 opacity-30 group-hover/col:opacity-70 transition-opacity" />;
+  };
 
   // Metric Totals
   const totalBilled = invoices
@@ -224,19 +419,42 @@ export function PaymentsView({
         {/* Tab 1: Invoices */}
         {activeTab === "invoices" && (
           <div className="space-y-4">
-            {/* Filter Row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-sm">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search invoice #, booking, room, or guest..."
-                  value={invoiceSearch}
-                  onChange={(e) => setInvoiceSearch(e.target.value)}
-                  className="pl-9 h-9 text-xs"
-                />
+            {/* Filter & Sort Row */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                <div className="relative flex-1 max-w-sm">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search invoice #, booking, room, or guest..."
+                    value={invoiceSearch}
+                    onChange={(e) => handleInvoiceSearchChange(e.target.value)}
+                    className="pl-9 h-9 text-xs"
+                  />
+                </div>
+
+                <div className="w-full sm:w-52">
+                  <SelectDropdown
+                    value={invoiceSortBy}
+                    onChange={handleInvoiceSortChange}
+                    options={[
+                      { value: "issued-desc", label: "Latest Invoices First" },
+                      { value: "issued-asc", label: "Oldest Invoices First" },
+                      { value: "amount-desc", label: "Total Bill (High to Low)" },
+                      { value: "amount-asc", label: "Total Bill (Low to High)" },
+                      { value: "balance-desc", label: "Balance Due (High to Low)" },
+                      { value: "balance-asc", label: "Balance Due (Low to High)" },
+                      { value: "guest-asc", label: "Guest Name (A–Z)" },
+                      { value: "guest-desc", label: "Guest Name (Z–A)" },
+                      { value: "number-desc", label: "Invoice No (High to Low)" },
+                      { value: "number-asc", label: "Invoice No (Low to High)" },
+                    ]}
+                    size="sm"
+                    groupLabel="Sort Invoices"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
                 {[
                   { id: "ALL", label: "All Invoices" },
                   { id: "ISSUED", label: "Issued" },
@@ -245,9 +463,9 @@ export function PaymentsView({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setInvoiceStatusFilter(item.id)}
+                    onClick={() => handleInvoiceStatusFilterChange(item.id)}
                     className={cn(
-                      "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                      "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors whitespace-nowrap",
                       invoiceStatusFilter === item.id
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card text-muted-foreground border-border hover:bg-muted"
@@ -261,113 +479,169 @@ export function PaymentsView({
 
             {/* Invoices Table */}
             <div className="rounded-lg border border-border overflow-hidden">
-              {filteredInvoices.length === 0 ? (
+              {totalInvoiceRecords === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground">
                   No invoices match your search filters.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
-                      <tr>
-                        <th className="px-4 py-3">Invoice No</th>
-                        <th className="px-4 py-3">Booking Ref</th>
-                        <th className="px-4 py-3">Room</th>
-                        <th className="px-4 py-3">Guest Name</th>
-                        <th className="px-4 py-3">Issued Date</th>
-                        <th className="px-4 py-3 text-right">Total Bill</th>
-                        <th className="px-4 py-3 text-right">Balance Due</th>
-                        <th className="px-4 py-3 text-center">Status</th>
-                        <th className="px-4 py-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filteredInvoices.map((inv) => (
-                        <tr key={inv.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-3 font-mono font-bold text-primary">
-                            {inv.displayNo}
-                          </td>
-                          <td className="px-4 py-3 font-mono font-semibold">
-                            <Link
-                              href={`/bookings/${inv.bookingId}`}
-                              className="hover:underline"
+                <div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
+                        <tr>
+                          <th className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleInvoiceSort("number")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              {inv.bookingRef}
-                            </Link>
-                          </td>
-                          <td className="px-4 py-3 font-mono">
-                            {inv.roomNumber} ({inv.roomTypeName})
-                          </td>
-                          <td className="px-4 py-3 font-medium text-foreground">
-                            {inv.guestName}
-                          </td>
-                          <td className="px-4 py-3 font-mono text-muted-foreground">
-                            {formatISTDateTime(inv.issuedAt)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono font-semibold">
-                            {formatINR(inv.billAmount)}
-                          </td>
-                          <td
-                            className={`px-4 py-3 text-right font-mono font-semibold ${
-                              inv.balance > 0
-                                ? "text-red-600"
-                                : "text-emerald-600"
-                            }`}
-                          >
-                            {formatINR(inv.balance)}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {inv.status === "ISSUED" ? (
-                              <Badge className="bg-emerald-600 text-white text-[10px]">
-                                ISSUED
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="destructive"
-                                className="text-[10px]"
-                              >
-                                CANCELLED
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <a
-                                href={`/api/invoices/${inv.id}/pdf`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className={cn(
-                                  buttonVariants({
-                                    variant: "outline",
-                                    size: "sm",
-                                  }),
-                                  "h-7 px-2 text-xs"
-                                )}
-                              >
-                                <DownloadIcon className="size-3 mr-1" />
-                                PDF
-                              </a>
-                              {isOwner && inv.status === "ISSUED" && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    setCancellingInvoice({
-                                      id: inv.id,
-                                      displayNo: inv.displayNo,
-                                    })
-                                  }
-                                  className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  Cancel
-                                </Button>
-                              )}
-                            </div>
-                          </td>
+                              <span>Invoice No</span>
+                              {renderInvoiceSortIndicator("number")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3">Booking Ref</th>
+                          <th className="px-4 py-3">Room</th>
+                          <th className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleInvoiceSort("guest")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <span>Guest Name</span>
+                              {renderInvoiceSortIndicator("guest")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleInvoiceSort("issued")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <span>Issued Date</span>
+                              {renderInvoiceSortIndicator("issued")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => toggleInvoiceSort("amount")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                            >
+                              <span>Total Bill</span>
+                              {renderInvoiceSortIndicator("amount")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => toggleInvoiceSort("balance")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                            >
+                              <span>Balance Due</span>
+                              {renderInvoiceSortIndicator("balance")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3 text-center">Status</th>
+                          <th className="px-4 py-3 text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {paginatedInvoices.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-muted/30">
+                            <td className="px-4 py-3 font-mono font-bold text-primary">
+                              {inv.displayNo}
+                            </td>
+                            <td className="px-4 py-3 font-mono font-semibold">
+                              <Link
+                                href={`/bookings/${inv.bookingId}`}
+                                className="hover:underline"
+                              >
+                                {inv.bookingRef}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 font-mono">
+                              {inv.roomNumber} ({inv.roomTypeName})
+                            </td>
+                            <td className="px-4 py-3 font-medium text-foreground">
+                              {inv.guestName}
+                            </td>
+                            <td className="px-4 py-3 font-mono text-muted-foreground">
+                              {formatISTDateTime(inv.issuedAt)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono font-semibold">
+                              {formatINR(inv.billAmount)}
+                            </td>
+                            <td
+                              className={`px-4 py-3 text-right font-mono font-semibold ${
+                                inv.balance > 0
+                                  ? "text-red-600"
+                                  : "text-emerald-600"
+                              }`}
+                            >
+                              {formatINR(inv.balance)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {inv.status === "ISSUED" ? (
+                                <Badge className="bg-emerald-600 text-white text-[10px]">
+                                  ISSUED
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-[10px]"
+                                >
+                                  CANCELLED
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <a
+                                  href={`/api/invoices/${inv.id}/pdf`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={cn(
+                                    buttonVariants({
+                                      variant: "outline",
+                                      size: "sm",
+                                    }),
+                                    "h-7 px-2 text-xs"
+                                  )}
+                                >
+                                  <DownloadIcon className="size-3 mr-1" />
+                                  PDF
+                                </a>
+                                {isOwner && inv.status === "ISSUED" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      setCancellingInvoice({
+                                        id: inv.id,
+                                        displayNo: inv.displayNo,
+                                      })
+                                    }
+                                    className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    Cancel
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Invoices Pagination */}
+                  <TablePagination
+                    currentPage={safeInvoicePage}
+                    totalRecords={totalInvoiceRecords}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={(page) => setInvoicePage(page)}
+                    recordLabel="invoices"
+                  />
                 </div>
               )}
             </div>
@@ -377,23 +651,42 @@ export function PaymentsView({
         {/* Tab 2: Payments */}
         {activeTab === "payments" && (
           <div className="space-y-4">
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-sm">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search booking ref, room, or guest..."
-                  value={paymentSearch}
-                  onChange={(e) => setPaymentSearch(e.target.value)}
-                  className="pl-9 h-9 text-xs"
-                />
+            {/* Filters & Sort Row */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                <div className="relative flex-1 max-w-sm">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search booking ref, room, or guest..."
+                    value={paymentSearch}
+                    onChange={(e) => handlePaymentSearchChange(e.target.value)}
+                    className="pl-9 h-9 text-xs"
+                  />
+                </div>
+
+                <div className="w-full sm:w-52">
+                  <SelectDropdown
+                    value={paymentSortBy}
+                    onChange={handlePaymentSortChange}
+                    options={[
+                      { value: "received-desc", label: "Latest Payments First" },
+                      { value: "received-asc", label: "Oldest Payments First" },
+                      { value: "amount-desc", label: "Amount (High to Low)" },
+                      { value: "amount-asc", label: "Amount (Low to High)" },
+                      { value: "guest-asc", label: "Guest Name (A–Z)" },
+                      { value: "guest-desc", label: "Guest Name (Z–A)" },
+                    ]}
+                    size="sm"
+                    groupLabel="Sort Payments"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="w-full sm:w-36">
                   <SelectDropdown
                     value={paymentKindFilter}
-                    onChange={setPaymentKindFilter}
+                    onChange={handlePaymentKindFilterChange}
                     options={[
                       { value: "ALL", label: "All Types" },
                       { value: "ADVANCE", label: "Advance" },
@@ -408,7 +701,7 @@ export function PaymentsView({
                 <div className="w-full sm:w-36">
                   <SelectDropdown
                     value={paymentModeFilter}
-                    onChange={setPaymentModeFilter}
+                    onChange={handlePaymentModeFilterChange}
                     options={[
                       { value: "ALL", label: "All Modes" },
                       { value: "UPI", label: "UPI" },
@@ -425,93 +718,131 @@ export function PaymentsView({
 
             {/* Payments Table */}
             <div className="rounded-lg border border-border overflow-hidden">
-              {filteredPayments.length === 0 ? (
+              {totalPaymentRecords === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground">
                   No payment records match your filters.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
-                      <tr>
-                        <th className="px-4 py-3">Received At</th>
-                        <th className="px-4 py-3">Booking Ref</th>
-                        <th className="px-4 py-3">Room</th>
-                        <th className="px-4 py-3">Guest Name</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Mode</th>
-                        <th className="px-4 py-3">Note / Details</th>
-                        <th className="px-4 py-3 text-right">Amount</th>
-                        <th className="px-4 py-3 text-right">Invoice</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filteredPayments.map((pmt) => (
-                        <tr key={pmt.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-3 font-mono text-muted-foreground">
-                            {formatISTDateTime(pmt.receivedAt)}
-                          </td>
-                          <td className="px-4 py-3 font-mono font-semibold">
-                            <Link
-                              href={`/bookings/${pmt.bookingId}`}
-                              className="hover:underline text-primary"
+                <div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
+                        <tr>
+                          <th className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => togglePaymentSort("received")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              {pmt.bookingRef}
-                            </Link>
-                          </td>
-                          <td className="px-4 py-3 font-mono font-bold">
-                            {pmt.roomNumber}
-                          </td>
-                          <td className="px-4 py-3 font-medium text-foreground">
-                            {pmt.guestName}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge
-                              variant={
-                                pmt.kind === "REFUND"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                              className="text-[10px]"
+                              <span>Received At</span>
+                              {renderPaymentSortIndicator("received")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3">Booking Ref</th>
+                          <th className="px-4 py-3">Room</th>
+                          <th className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => togglePaymentSort("guest")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              {pmt.kind}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 font-mono font-medium">
-                            {pmt.mode}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground text-[11px]">
-                            {pmt.note || "—"}
-                          </td>
-                          <td
-                            className={`px-4 py-3 text-right font-mono font-bold ${
-                              pmt.kind === "REFUND"
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-emerald-600 dark:text-emerald-400"
-                            }`}
-                          >
-                            {pmt.kind === "REFUND"
-                              ? `-${formatINR(pmt.amount)}`
-                              : formatINR(pmt.amount)}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {pmt.invoiceId ? (
-                              <a
-                                href={`/api/invoices/${pmt.invoiceId}/pdf`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="font-mono text-primary hover:underline font-semibold"
-                              >
-                                {pmt.invoiceDisplayNo}
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </td>
+                              <span>Guest Name</span>
+                              {renderPaymentSortIndicator("guest")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3">Type</th>
+                          <th className="px-4 py-3">Mode</th>
+                          <th className="px-4 py-3">Note / Details</th>
+                          <th className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => togglePaymentSort("amount")}
+                              className="group/col inline-flex items-center gap-1 uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                            >
+                              <span>Amount</span>
+                              {renderPaymentSortIndicator("amount")}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3 text-right">Invoice</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {paginatedPayments.map((pmt) => (
+                          <tr key={pmt.id} className="hover:bg-muted/30">
+                            <td className="px-4 py-3 font-mono text-muted-foreground">
+                              {formatISTDateTime(pmt.receivedAt)}
+                            </td>
+                            <td className="px-4 py-3 font-mono font-semibold">
+                              <Link
+                                href={`/bookings/${pmt.bookingId}`}
+                                className="hover:underline text-primary"
+                              >
+                                {pmt.bookingRef}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 font-mono font-bold">
+                              {pmt.roomNumber}
+                            </td>
+                            <td className="px-4 py-3 font-medium text-foreground">
+                              {pmt.guestName}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant={
+                                  pmt.kind === "REFUND"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                                className="text-[10px]"
+                              >
+                                {pmt.kind}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 font-mono font-medium">
+                              {pmt.mode}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground text-[11px]">
+                              {pmt.note || "—"}
+                            </td>
+                            <td
+                              className={`px-4 py-3 text-right font-mono font-bold ${
+                                pmt.kind === "REFUND"
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-emerald-600 dark:text-emerald-400"
+                              }`}
+                            >
+                              {pmt.kind === "REFUND"
+                                ? `-${formatINR(pmt.amount)}`
+                                : formatINR(pmt.amount)}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {pmt.invoiceId ? (
+                                <a
+                                  href={`/api/invoices/${pmt.invoiceId}/pdf`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="font-mono text-primary hover:underline font-semibold"
+                                >
+                                  {pmt.invoiceDisplayNo}
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Payments Pagination */}
+                  <TablePagination
+                    currentPage={safePaymentPage}
+                    totalRecords={totalPaymentRecords}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={(page) => setPaymentPage(page)}
+                    recordLabel="payments"
+                  />
                 </div>
               )}
             </div>
