@@ -59,7 +59,7 @@ type ActiveMaintenanceItem = RoomDetailsData["activeMaintenance"][number];
 
 export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"problems" | "maintenance" | "stays">("problems");
+  const [activeTab, setActiveTab] = useState<"stays" | "problems" | "maintenance">("stays");
   const [isProblemDialogOpen, setIsProblemDialogOpen] = useState(false);
   const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
   const [fixingProblemId, setFixingProblemId] = useState<string | null>(null);
@@ -75,6 +75,17 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
 
   const { room, derivedStatus, currentBooking, openProblems, resolvedProblems, activeMaintenance, pastMaintenance, recentBookings } =
     initialData;
+
+  const isOccupiedOrReserved =
+    derivedStatus.status === "OCCUPIED" || derivedStatus.status === "RESERVED";
+  const isAlreadyUnderMaintenance = derivedStatus.status === "MAINTENANCE";
+  const isMaintenanceDisabled = isOccupiedOrReserved || isAlreadyUnderMaintenance;
+
+  const maintenanceDisabledTooltip = isAlreadyUnderMaintenance
+    ? `Room ${room.number} is already under maintenance.`
+    : isOccupiedOrReserved
+    ? `Room ${room.number} is ${derivedStatus.status === "OCCUPIED" ? "currently occupied" : "reserved"}. Maintenance cannot be scheduled until room is free.`
+    : "Schedule room maintenance";
 
   const handleMarkFixed = (problemId: string) => {
     setFixingProblemId(problemId);
@@ -163,8 +174,18 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsMaintenanceDialogOpen(true)}
-            className="gap-1.5 border-status-maintenance/30 text-status-maintenance hover:bg-status-maintenance/10"
+            disabled={isMaintenanceDisabled}
+            onClick={() => {
+              if (isMaintenanceDisabled) return;
+              setIsMaintenanceDialogOpen(true);
+            }}
+            title={maintenanceDisabledTooltip}
+            className={cn(
+              "gap-1.5 border-status-maintenance/30",
+              isMaintenanceDisabled
+                ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground border-border hover:bg-muted"
+                : "text-status-maintenance hover:bg-status-maintenance/10"
+            )}
           >
             <MaintenanceIcon className="size-3.5" />
             <span>Schedule Maintenance</span>
@@ -220,6 +241,15 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
         <div className="grid grid-cols-3 gap-3 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 shrink-0">
           <div className="space-y-0.5">
             <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">
+              Total Stays
+            </span>
+            <span className="text-xl font-bold font-mono text-foreground">
+              {recentBookings.length}
+            </span>
+          </div>
+
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">
               Open Defects
             </span>
             <span className="text-xl font-bold font-mono text-destructive">
@@ -235,20 +265,24 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
               {activeMaintenance.length}
             </span>
           </div>
-
-          <div className="space-y-0.5">
-            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">
-              Total Stays
-            </span>
-            <span className="text-xl font-bold font-mono text-foreground">
-              {recentBookings.length}
-            </span>
-          </div>
         </div>
       </div>
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-border gap-2">
+        <button
+          onClick={() => setActiveTab("stays")}
+          className={cn(
+            "pb-3 px-3 text-sm font-semibold transition-all relative flex items-center gap-2 cursor-pointer",
+            activeTab === "stays"
+              ? "text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <GuestIcon className="size-4" />
+          <span>Stay & Booking</span>
+        </button>
+
         <button
           onClick={() => setActiveTab("problems")}
           className={cn(
@@ -283,19 +317,6 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
               {activeMaintenance.length}
             </span>
           )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab("stays")}
-          className={cn(
-            "pb-3 px-3 text-sm font-semibold transition-all relative flex items-center gap-2 cursor-pointer",
-            activeTab === "stays"
-              ? "text-primary border-b-2 border-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <GuestIcon className="size-4" />
-          <span>Stays & Bookings</span>
         </button>
       </div>
 
@@ -452,13 +473,32 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
 
               <Button
                 size="sm"
-                onClick={() => setIsMaintenanceDialogOpen(true)}
-                className="gap-1.5 text-xs bg-status-maintenance hover:bg-status-maintenance/90 text-white"
+                disabled={isMaintenanceDisabled}
+                onClick={() => {
+                  if (isMaintenanceDisabled) return;
+                  setIsMaintenanceDialogOpen(true);
+                }}
+                title={maintenanceDisabledTooltip}
+                className={cn(
+                  "gap-1.5 text-xs text-white",
+                  isMaintenanceDisabled
+                    ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground hover:bg-muted"
+                    : "bg-status-maintenance hover:bg-status-maintenance/90"
+                )}
               >
                 <MaintenanceIcon className="size-3.5" />
                 <span>Schedule Maintenance</span>
               </Button>
             </div>
+
+            {isOccupiedOrReserved && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
+                <ProblemIcon className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>
+                  Room {room.number} is {derivedStatus.status === "OCCUPIED" ? "currently occupied by a guest" : "reserved"}. Maintenance cannot be scheduled until the room is free after check-out.
+                </span>
+              </div>
+            )}
 
             {activeMaintenance.length === 0 ? (
               <div className="p-8 rounded-xl border border-dashed border-border bg-card text-center space-y-2">

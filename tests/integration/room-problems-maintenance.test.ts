@@ -191,21 +191,7 @@ describe("Phase 2.2: Room Problems & Maintenance (Integration)", () => {
     });
     expect(booking.id).toBeDefined();
 
-    // 2. Attempt to schedule maintenance overlapping with the booking without confirmation
-    const conflictRes = await checkMaintenanceConflictsAction({
-      roomId: testRoomId,
-      startsAt: tomorrow.toISOString(),
-      endsAt: dayAfter.toISOString(),
-    });
-    expect(conflictRes.ok).toBe(true);
-    const conflictData = conflictRes.data as {
-      bookings: Array<unknown>;
-      maintenance: Array<{ id: string; reason: string }>;
-      roomUpcomingMaintenance: Array<{ id: string; reason: string }>;
-    };
-    expect(conflictData.bookings.length).toBeGreaterThanOrEqual(1);
-
-    // Try creating maintenance with confirmOverlap = false -> should fail with MAINTENANCE_OVERLAP
+    // 2. Attempt to schedule maintenance overlapping with the booking -> must strictly fail
     const failRes = await createMaintenanceAction({
       roomId: testRoomId,
       startsAt: tomorrow.toISOString(),
@@ -216,13 +202,26 @@ describe("Phase 2.2: Room Problems & Maintenance (Integration)", () => {
     expect(failRes.ok).toBe(false);
     expect(failRes.code).toBe("MAINTENANCE_OVERLAP");
 
-    // 3. Confirm overlap -> should successfully schedule
-    const successRes = await createMaintenanceAction({
+    // Even if confirmOverlap = true is sent, system MUST NOT permit maintenance on occupied/reserved room
+    const failResWithConfirm = await createMaintenanceAction({
       roomId: testRoomId,
       startsAt: tomorrow.toISOString(),
       endsAt: dayAfter.toISOString(),
       reason: "Complete bathroom pipe renovation",
       confirmOverlap: true,
+    });
+    expect(failResWithConfirm.ok).toBe(false);
+    expect(failResWithConfirm.code).toBe("MAINTENANCE_OVERLAP");
+
+    // 3. Room becomes free (e.g. booking is removed/checked-out)
+    await prisma.booking.delete({ where: { id: booking.id } });
+
+    // Now scheduling maintenance on the free room succeeds
+    const successRes = await createMaintenanceAction({
+      roomId: testRoomId,
+      startsAt: tomorrow.toISOString(),
+      endsAt: dayAfter.toISOString(),
+      reason: "Complete bathroom pipe renovation",
     });
     expect(successRes.ok).toBe(true);
     const maintenance = successRes.data as { id: string };
@@ -350,6 +349,10 @@ describe("Phase 2.2: Room Problems & Maintenance (Integration)", () => {
     }
 
     expect(() => assertNoDecimal(details)).not.toThrow();
+
+    // Clean up test booking so testRoomId remains free
+    await prisma.payment.deleteMany({ where: { bookingId: booking.id } });
+    await prisma.booking.delete({ where: { id: booking.id } });
   });
 
   it("includes open problem descriptions in listRoomsWithStatus for staff inspection", async () => {
@@ -386,7 +389,6 @@ describe("Phase 2.2: Room Problems & Maintenance (Integration)", () => {
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
       reason: "AC duct deep cleaning",
-      confirmOverlap: true,
     });
     expect(createRes.ok).toBe(true);
     const maintId = (createRes.data as { id: string }).id;
@@ -418,7 +420,6 @@ describe("Phase 2.2: Room Problems & Maintenance (Integration)", () => {
       startsAt: accidentalStart.toISOString(),
       endsAt: accidentalEnd.toISOString(),
       reason: "Accidental test maintenance entry",
-      confirmOverlap: true,
     });
     expect(accidentalRes.ok).toBe(true);
     const accidentalId = (accidentalRes.data as { id: string }).id;
@@ -458,7 +459,6 @@ describe("Phase 2.2: Room Problems & Maintenance (Integration)", () => {
         startsAt: futureStart.toISOString(),
         endsAt: futureEnd.toISOString(),
         reason: "Initial 3-day maintenance block",
-        confirmOverlap: true,
       });
       expect(initialRes.ok).toBe(true);
       const maintId = (initialRes.data as { id: string }).id;

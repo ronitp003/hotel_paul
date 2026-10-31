@@ -36,6 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateInput } from "@/components/ui/date-input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -896,13 +897,12 @@ export function NewBookingFlow({
                     htmlFor="checkin-date"
                     className="text-xs font-medium text-muted-foreground"
                   >
-                    Check-in Date
+                    Check-in Date (DD/MM/YYYY)
                   </Label>
-                  <Input
+                  <DateInput
                     id="checkin-date"
-                    type="date"
                     value={checkInDate}
-                    onChange={(e) => handleCheckInDateChange(e.target.value)}
+                    onChange={handleCheckInDateChange}
                     className="font-mono text-sm h-10 bg-background"
                   />
                 </div>
@@ -943,13 +943,12 @@ export function NewBookingFlow({
                     htmlFor="checkout-date"
                     className="text-xs font-medium text-muted-foreground"
                   >
-                    Check-out Date
+                    Check-out Date (DD/MM/YYYY)
                   </Label>
-                  <Input
+                  <DateInput
                     id="checkout-date"
-                    type="date"
                     value={checkOutDate}
-                    onChange={(e) => handleCheckOutDateChange(e.target.value)}
+                    onChange={handleCheckOutDateChange}
                     className="font-mono text-sm h-10 bg-background"
                   />
                 </div>

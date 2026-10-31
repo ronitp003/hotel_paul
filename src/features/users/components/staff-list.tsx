@@ -16,7 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AddIcon, SpinnerIcon } from "@/lib/icons";
+import { AddIcon, SpinnerIcon, SearchIcon, GuestIcon } from "@/lib/icons";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
 import {
   createStaffAction,
   resetPasswordAction,
@@ -40,6 +41,41 @@ interface StaffListProps {
 
 export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
   const [isPending, startTransition] = useTransition();
+
+  // Filters State (Active status is default)
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"ALL" | Role>("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ACTIVE");
+
+  const isFiltered = roleFilter !== "ALL" || statusFilter !== "ACTIVE" || search.trim() !== "";
+
+  const handleResetFilters = () => {
+    setRoleFilter("ALL");
+    setStatusFilter("ACTIVE");
+    setSearch("");
+  };
+
+  // Filtered Users
+  const filteredStaff = initialStaff.filter((user) => {
+    if (roleFilter !== "ALL" && user.role !== roleFilter) {
+      return false;
+    }
+    if (statusFilter === "ACTIVE" && !user.isActive) {
+      return false;
+    }
+    if (statusFilter === "INACTIVE" && user.isActive) {
+      return false;
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const matchName = user.name.toLowerCase().includes(q);
+      const matchEmail = user.email.toLowerCase().includes(q);
+      if (!matchName && !matchEmail) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   // Create Staff Modal State
   const [createOpen, setCreateOpen] = useState(false);
@@ -65,14 +101,14 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
       });
 
       if (res.ok) {
-        toast.success(`Staff account for ${name} created successfully`);
+        toast.success(`User account for ${name} created successfully`);
         setCreateOpen(false);
         setName("");
         setEmail("");
         setPassword("");
         setRole(ROLES.RECEPTIONIST);
       } else {
-        toast.error(res.message || "Failed to create staff account");
+        toast.error(res.message || "Failed to create user account");
       }
     });
   };
@@ -117,18 +153,77 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Staff Accounts</h2>
+          <h2 className="text-lg font-semibold text-foreground">Users</h2>
           <p className="text-sm text-muted-foreground">
-            Manage front desk access and employee roles. Public registration is
+            Manage front desk access, employee roles, and account statuses. Public registration is
             disabled.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+        <Button onClick={() => setCreateOpen(true)} className="gap-2 shrink-0">
           <AddIcon className="size-4" aria-hidden="true" />
-          <span>Add Staff Member</span>
+          <span>Add User</span>
         </Button>
+      </div>
+
+      {/* Search and Filters Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Search users by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 text-xs bg-background"
+          />
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Role Filter Dropdown */}
+          <div className="w-full sm:w-40">
+            <SelectDropdown
+              value={roleFilter}
+              onChange={(val) => setRoleFilter(val as "ALL" | Role)}
+              options={[
+                { value: "ALL", label: "All Roles" },
+                { value: ROLES.OWNER, label: "Owner" },
+                { value: ROLES.RECEPTIONIST, label: "Receptionist" },
+              ]}
+              size="sm"
+              groupLabel="Filter by Role"
+            />
+          </div>
+
+          {/* Status Filter Dropdown */}
+          <div className="w-full sm:w-40">
+            <SelectDropdown
+              value={statusFilter}
+              onChange={(val) =>
+                setStatusFilter(val as "ALL" | "ACTIVE" | "INACTIVE")
+              }
+              options={[
+                { value: "ACTIVE", label: "Active" },
+                { value: "ALL", label: "All Status" },
+                { value: "INACTIVE", label: "Deactivated" },
+              ]}
+              size="sm"
+              groupLabel="Filter by Status"
+            />
+          </div>
+
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className="text-xs h-9 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              Reset
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -137,7 +232,7 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 border-b border-border text-muted-foreground font-medium">
                 <tr>
-                  <th className="px-4 py-3">Staff Member</th>
+                  <th className="px-4 py-3">User</th>
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Created</th>
@@ -145,7 +240,41 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {initialStaff.map((user) => {
+                {filteredStaff.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-sm text-muted-foreground">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <GuestIcon className="size-8 text-muted-foreground/50" />
+                        <p className="font-medium text-foreground">No users found</p>
+                        <p className="text-xs text-muted-foreground max-w-sm">
+                          {statusFilter === "ACTIVE" && roleFilter === "ALL" && !search.trim()
+                            ? "No active users found. Switch status filter to All Status or Deactivated."
+                            : "No user accounts match the selected role or status filters."}
+                        </p>
+                        {isFiltered ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleResetFilters}
+                            className="text-xs mt-2"
+                          >
+                            Reset Filters
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setStatusFilter("ALL")}
+                            className="text-xs mt-2"
+                          >
+                            Show All Users
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStaff.map((user) => {
                   const isSelf = user.id === currentUserId;
 
                   return (
@@ -213,20 +342,20 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Add Staff Dialog */}
+      {/* Add User Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Staff Member</DialogTitle>
+            <DialogTitle>Add New User</DialogTitle>
             <DialogDescription>
-              Create credentials for an employee to access Hotel Desk.
+              Create credentials for a user to access Hotel Desk.
             </DialogDescription>
           </DialogHeader>
 
@@ -274,20 +403,21 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="staff-role">Role</Label>
-              <select
-                id="staff-role"
-                disabled={isPending}
+              <SelectDropdown
                 value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value={ROLES.RECEPTIONIST}>
-                  RECEPTIONIST (Front desk, rooms, payments)
-                </option>
-                <option value={ROLES.OWNER}>
-                  OWNER (Full system access, settings, user management)
-                </option>
-              </select>
+                onChange={(val) => setRole(val as Role)}
+                options={[
+                  {
+                    value: ROLES.RECEPTIONIST,
+                    label: "RECEPTIONIST (Front desk, rooms, payments)",
+                  },
+                  {
+                    value: ROLES.OWNER,
+                    label: "OWNER (Full system access, settings, user management)",
+                  },
+                ]}
+                disabled={isPending}
+              />
             </div>
 
             <DialogFooter className="pt-2">
@@ -306,7 +436,7 @@ export function StaffList({ initialStaff, currentUserId }: StaffListProps) {
                     aria-hidden="true"
                   />
                 )}
-                <span>Create Staff Account</span>
+                <span>Create User Account</span>
               </Button>
             </DialogFooter>
           </form>

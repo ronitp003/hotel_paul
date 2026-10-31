@@ -23,7 +23,7 @@ const SETTINGS_TABS: NavTab[] = [
     icon: RoomIcon,
   },
   {
-    label: "Staff & Users",
+    label: "Users",
     href: "/settings/users",
     icon: GuestIcon,
   },

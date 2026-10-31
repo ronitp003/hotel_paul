@@ -419,7 +419,11 @@ export function RoomsManager({
       <CreateMaintenanceDialog
         open={isMaintenanceOpen}
         onOpenChange={setIsMaintenanceOpen}
-        rooms={initialRooms.map((r) => ({ id: r.id, number: r.number }))}
+        rooms={initialRooms.map((r) => ({
+          id: r.id,
+          number: r.number,
+          status: r.status,
+        }))}
         onSuccess={handleRefresh}
       />
     </div>

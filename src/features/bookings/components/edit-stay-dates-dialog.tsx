@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateInput } from "@/components/ui/date-input";
 import { CalendarIcon, SpinnerIcon, ProblemIcon } from "@/lib/icons";
 import { toISTInputString, fromISTInput } from "@/lib/datetime";
 import { calculateStay } from "@/lib/stay";
@@ -148,13 +149,12 @@ function EditStayDatesForm({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label htmlFor="edit-checkin-date" className="text-[11px] text-muted-foreground">
-                Date
+                Date (DD/MM/YYYY)
               </Label>
-              <Input
+              <DateInput
                 id="edit-checkin-date"
-                type="date"
                 value={checkInDate}
-                onChange={(e) => setCheckInDate(e.target.value)}
+                onChange={setCheckInDate}
                 className="h-8 text-xs mt-1"
                 required
               />
@@ -183,13 +183,12 @@ function EditStayDatesForm({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label htmlFor="edit-checkout-date" className="text-[11px] text-muted-foreground">
-                Date
+                Date (DD/MM/YYYY)
               </Label>
-              <Input
+              <DateInput
                 id="edit-checkout-date"
-                type="date"
                 value={checkOutDate}
-                onChange={(e) => setCheckOutDate(e.target.value)}
+                onChange={setCheckOutDate}
                 className="h-8 text-xs mt-1"
                 required
               />

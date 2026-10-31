@@ -23,7 +23,7 @@ export default async function SettingsLayout({
     <div className="space-y-6">
       <PageHeader
         title="Settings & Administration"
-        description="Owner controls: Property details, GST rate tiers, invoicing rules, room types, and staff."
+        description="Owner controls: Property details, GST rate tiers, invoicing rules, room types, and users."
       />
       <SettingsNav />
       {children}

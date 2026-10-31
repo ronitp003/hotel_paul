@@ -518,34 +518,63 @@ export function RoomCard({
               </div>
             )}
             {/* Quick Action Buttons for Problem & Maintenance */}
-            <div className="flex items-center gap-2 pt-2 border-t border-border/60">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsDetailsOpen(false);
-                  setIsProblemOpen(true);
-                }}
-                className="flex-1 gap-1.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-              >
-                <ProblemIcon className="size-3.5" />
-                <span>Report Problem</span>
-              </Button>
+            <div className="space-y-1.5 pt-2 border-t border-border/60">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsDetailsOpen(false);
+                    setIsProblemOpen(true);
+                  }}
+                  className="flex-1 gap-1.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                >
+                  <ProblemIcon className="size-3.5" />
+                  <span>Report Problem</span>
+                </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsDetailsOpen(false);
-                  setIsMaintenanceOpen(true);
-                }}
-                className="flex-1 gap-1.5 text-xs text-status-maintenance border-status-maintenance/30 hover:bg-status-maintenance/10"
-              >
-                <MaintenanceIcon className="size-3.5" />
-                <span>Maintenance</span>
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    room.status === "OCCUPIED" ||
+                    room.status === "RESERVED" ||
+                    room.status === "MAINTENANCE"
+                  }
+                  onClick={() => {
+                    if (
+                      room.status === "OCCUPIED" ||
+                      room.status === "RESERVED" ||
+                      room.status === "MAINTENANCE"
+                    )
+                      return;
+                    setIsDetailsOpen(false);
+                    setIsMaintenanceOpen(true);
+                  }}
+                  title={
+                    room.status === "MAINTENANCE"
+                      ? "Room is already under maintenance."
+                      : room.status === "OCCUPIED"
+                      ? "Room is currently occupied. Maintenance cannot be scheduled until check-out."
+                      : room.status === "RESERVED"
+                      ? "Room has an active reservation. Maintenance cannot be scheduled."
+                      : "Schedule room maintenance"
+                  }
+                  className={cn(
+                    "flex-1 gap-1.5 text-xs border-status-maintenance/30",
+                    room.status === "OCCUPIED" ||
+                      room.status === "RESERVED" ||
+                      room.status === "MAINTENANCE"
+                      ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground border-border hover:bg-muted"
+                      : "text-status-maintenance hover:bg-status-maintenance/10"
+                  )}
+                >
+                  <MaintenanceIcon className="size-3.5" />
+                  <span>Maintenance</span>
+                </Button>
+              </div>
             </div>
           </div>
 

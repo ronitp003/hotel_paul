@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
 import { roomSchema } from "../schemas";
 import {
   updateRoomAction,
@@ -170,19 +171,17 @@ export function EditRoomDialog({
                   >
                     Room Type *
                   </Label>
-                  <select
+                  <SelectDropdown
                     id="edit-room-type"
-                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
                     value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  >
-                    {roomTypes.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => field.handleChange(val)}
+                    options={roomTypes.map((t) => ({
+                      value: t.id,
+                      label: t.name,
+                    }))}
+                    placeholder="Select room type..."
+                    className="h-10 w-full"
+                  />
                 </div>
               )}
             </editForm.Field>

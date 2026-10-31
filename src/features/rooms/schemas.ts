@@ -73,7 +73,7 @@ export const createMaintenanceSchema = z
       .trim()
       .min(3, "Reason must be at least 3 characters")
       .max(500, "Reason cannot exceed 500 characters"),
-    confirmOverlap: z.boolean().default(false),
+    confirmOverlap: z.boolean().optional().default(false),
   })
   .refine(
     (data) => {

@@ -222,7 +222,7 @@ export class RoomMaintenanceService {
 
   /**
    * Creates a maintenance period for a room.
-   * Warns or blocks if overlapping bookings exist, unless confirmed.
+   * Strictly blocks creation if overlapping bookings exist (room must be free).
    */
   async createMaintenance(input: CreateMaintenanceInput, actor: Actor) {
     let startsAt = new Date(input.startsAt);
@@ -296,7 +296,7 @@ export class RoomMaintenanceService {
         },
       });
 
-      if (conflicts.length > 0 && !input.confirmOverlap) {
+      if (conflicts.length > 0) {
         const conflictDetails = conflicts.map((c) => ({
           reference: c.reference,
           status: c.status,
@@ -305,7 +305,7 @@ export class RoomMaintenanceService {
 
         throw new AppError(
           "MAINTENANCE_OVERLAP",
-          `Room ${room.number} has ${conflicts.length} overlapping booking(s) during this period. Please confirm to proceed.`,
+          `Cannot schedule maintenance: Room ${room.number} is occupied or reserved during this period (${conflicts.length} booking(s)). The room must be free before maintenance can be scheduled.`,
           { conflicts: conflictDetails }
         );
       }
