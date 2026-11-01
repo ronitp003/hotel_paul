@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 import type { Role } from "@/lib/constants";
@@ -22,18 +23,80 @@ interface MobileNavProps {
   userRole?: Role;
 }
 
-export function MobileNav({
-  open,
-  onOpenChange,
-  userRole = "OWNER",
-}: MobileNavProps) {
+function MobileNavList({
+  userRole,
+  onClose,
+}: {
+  userRole: Role;
+  onClose: () => void;
+}) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isNavigating, targetPath } = useNavigationState();
 
   const filteredItems = NAV_ITEMS.filter((item) =>
     item.roles.includes(userRole)
   );
 
+  return (
+    <nav
+      className="flex-1 overflow-y-auto p-3 space-y-1"
+      aria-label="Mobile Navigation"
+    >
+      {filteredItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = isNavItemActive(pathname, item.href, searchParams);
+        const isPending =
+          isNavigating &&
+          targetPath !== null &&
+          isNavItemActive(targetPath, item.href) &&
+          !isActive;
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              isActive
+                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                : isPending
+                ? "bg-primary/15 text-primary font-semibold border border-primary/30"
+                : item.highlight
+                ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+            )}
+          >
+            <Icon
+              className={cn(
+                "size-5 shrink-0 transition-colors",
+                isActive
+                  ? "text-primary-foreground"
+                  : isPending
+                  ? "text-primary animate-pulse"
+                  : item.highlight
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              )}
+              aria-hidden="true"
+            />
+            <span className="flex-1 truncate">{item.title}</span>
+            {isPending && (
+              <SpinnerIcon className="size-3.5 text-primary animate-spin shrink-0 ml-auto" />
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function MobileNav({
+  open,
+  onOpenChange,
+  userRole = "OWNER",
+}: MobileNavProps) {
   return (
     <>
       {/* Mobile Drawer (Sheet) */}
@@ -48,56 +111,12 @@ export function MobileNav({
             </SheetTitle>
           </SheetHeader>
 
-          <nav
-            className="flex-1 overflow-y-auto p-3 space-y-1"
-            aria-label="Mobile Navigation"
-          >
-            {filteredItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = isNavItemActive(pathname, item.href);
-              const isPending =
-                isNavigating &&
-                targetPath !== null &&
-                isNavItemActive(targetPath, item.href) &&
-                !isActive;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => onOpenChange(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                      : isPending
-                      ? "bg-primary/15 text-primary font-semibold border border-primary/30"
-                      : item.highlight
-                      ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "size-5 shrink-0 transition-colors",
-                      isActive
-                        ? "text-primary-foreground"
-                        : isPending
-                        ? "text-primary animate-pulse"
-                        : item.highlight
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span className="flex-1 truncate">{item.title}</span>
-                  {isPending && (
-                    <SpinnerIcon className="size-3.5 text-primary animate-spin shrink-0 ml-auto" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+          <Suspense fallback={<div className="flex-1 p-3" />}>
+            <MobileNavList
+              userRole={userRole}
+              onClose={() => onOpenChange(false)}
+            />
+          </Suspense>
         </SheetContent>
       </Sheet>
 

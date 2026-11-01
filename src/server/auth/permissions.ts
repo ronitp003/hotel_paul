@@ -30,6 +30,7 @@ export type PermissionAction =
   | "users.create"
   | "users.deactivate"
   | "users.resetPassword"
+  | "register.view"
   | "analytics.view"
   | "data.export"
   | "data.import"
@@ -75,7 +76,8 @@ const PERMISSION_MATRIX: Record<PermissionAction, Role[]> = {
   "users.deactivate": [ROLES.OWNER],
   "users.resetPassword": [ROLES.OWNER],
 
-  // Analytics & Data (OWNER only)
+  // Register, Analytics & Data (OWNER only)
+  "register.view": [ROLES.OWNER],
   "analytics.view": [ROLES.OWNER],
   "data.export": [ROLES.OWNER],
   "data.import": [ROLES.OWNER],

@@ -63,7 +63,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: "Check-in Register",
     href: "/register",
     icon: InvoiceIcon,
-    roles: [ROLES.OWNER, ROLES.RECEPTIONIST],
+    roles: [ROLES.OWNER],
   },
   {
     title: "Analytics",
