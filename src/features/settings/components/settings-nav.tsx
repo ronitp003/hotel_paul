@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { SettingsIcon, RoomIcon, GuestIcon } from "@/lib/icons";
+import { SettingsIcon, RoomIcon, GuestIcon, DatabaseIcon } from "@/lib/icons";
 
 interface NavTab {
   label: string;
@@ -26,6 +26,11 @@ const SETTINGS_TABS: NavTab[] = [
     label: "Users",
     href: "/settings/users",
     icon: GuestIcon,
+  },
+  {
+    label: "Data & Backup",
+    href: "/settings/data",
+    icon: DatabaseIcon,
   },
 ];
 
