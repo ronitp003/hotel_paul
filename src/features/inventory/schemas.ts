@@ -1,7 +1,22 @@
 import { z } from "zod";
-import { StockLocation } from "@prisma/client";
 
-export { StockLocation };
+export const StockLocation = {
+  STORE: "STORE",
+  ROOMS: "ROOMS",
+  LAUNDRY: "LAUNDRY",
+  DAMAGED: "DAMAGED",
+  DISCONTINUED: "DISCONTINUED",
+} as const;
+
+export type StockLocation = (typeof StockLocation)[keyof typeof StockLocation];
+
+export const stockLocationEnum = z.enum([
+  "STORE",
+  "ROOMS",
+  "LAUNDRY",
+  "DAMAGED",
+  "DISCONTINUED",
+]);
 
 export const StockActionType = {
   ADD_STOCK: "ADD_STOCK",
@@ -93,8 +108,8 @@ export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemSchema>
 export const moveStockSchema = z
   .object({
     itemId: z.string().min(1, "Item is required"),
-    from: z.nativeEnum(StockLocation).nullable().optional(),
-    to: z.nativeEnum(StockLocation).nullable().optional(),
+    from: stockLocationEnum.nullable().optional(),
+    to: stockLocationEnum.nullable().optional(),
     quantity: z.coerce
       .number()
       .int("Quantity must be an integer")

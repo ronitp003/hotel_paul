@@ -21,7 +21,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDropdown } from "@/components/ui/select-dropdown";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { BookingStatus } from "@prisma/client";
+import type { BookingStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { CheckoutDialog } from "./checkout-dialog";
 
