@@ -41,10 +41,15 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setErrorMessage("");
 
-    if (!email || !password) {
-      setErrorMessage("Please enter both email and password.");
+    if (!email.trim() || !password) {
+      const msg = "Please enter both email and password.";
+      setErrorMessage(msg);
+      toast.error("Missing credentials", {
+        description: msg,
+      });
       return;
     }
 
@@ -52,25 +57,33 @@ function LoginForm() {
 
     try {
       const result = await authClient.signIn.email({
-        email,
+        email: email.trim(),
         password,
       });
 
       if (result.error) {
-        setErrorMessage(
-          result.error.message || "Invalid email or password. Please try again."
-        );
-        toast.error("Sign in failed");
+        const errorMsg =
+          result.error.message || "Invalid email or password. Please try again.";
+        setErrorMessage(errorMsg);
+        toast.error("Sign in failed", {
+          description: errorMsg,
+        });
+        setLoading(false);
       } else {
-        toast.success("Welcome back to Hotel Desk");
+        toast.success("Welcome back to Hotel Desk", {
+          description: "Signed in successfully. Redirecting to dashboard...",
+        });
+        // Keep loading true while redirecting to the destination dashboard
         router.push(redirectTo);
         router.refresh();
       }
     } catch {
-      setErrorMessage(
-        "Unable to connect to authentication service. Please check your connection."
-      );
-    } finally {
+      const errorMsg =
+        "Unable to connect to authentication service. Please check your connection.";
+      setErrorMessage(errorMsg);
+      toast.error("Sign in failed", {
+        description: errorMsg,
+      });
       setLoading(false);
     }
   };
@@ -136,7 +149,8 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground focus:outline-hidden"
+                disabled={loading}
+                className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground focus:outline-hidden disabled:opacity-50 disabled:pointer-events-none"
                 tabIndex={-1}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -154,12 +168,12 @@ function LoginForm() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-10 gap-2 font-semibold"
+            className="w-full h-10 min-h-[40px] gap-2 font-semibold transition-all duration-150"
           >
             {loading && (
-              <SpinnerIcon className="size-4 animate-spin" aria-hidden="true" />
+              <SpinnerIcon className="size-4 animate-spin shrink-0" aria-hidden="true" />
             )}
-            <span>{loading ? "Signing in..." : "Sign In to Hotel Desk"}</span>
+            <span>{loading ? "Signing In..." : "Sign In to Hotel Desk"}</span>
           </Button>
         </CardFooter>
       </form>

@@ -1429,7 +1429,7 @@ export function NewBookingFlow({
                           ? "cursor-pointer hover:border-primary/50 hover:shadow-xs bg-card"
                           : "opacity-60 bg-muted/40 cursor-not-allowed border-border/80",
                         isSelected && isAvail
-                          ? "border-primary ring-2 ring-primary/25 bg-teal-50/70 dark:bg-teal-950/30 shadow-sm"
+                          ? "border-primary ring-2 ring-primary/25 bg-primary-light/70 dark:bg-primary-subtle shadow-sm"
                           : ""
                       )}
                     >

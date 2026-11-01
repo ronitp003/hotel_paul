@@ -26,7 +26,7 @@ export default function RootLayout({
         <QueryProvider>
           <NavigationProvider>
             {children}
-            <Toaster position="top-right" richColors />
+            <Toaster />
           </NavigationProvider>
         </QueryProvider>
       </body>

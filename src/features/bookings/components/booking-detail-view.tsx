@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatISTDateTime } from "@/lib/datetime";
@@ -12,6 +12,7 @@ import {
   RupeeIcon,
   CheckInIcon,
   CheckOutIcon,
+  SpinnerIcon,
   CloseIcon,
   AddIcon,
   DeleteIcon,
@@ -122,6 +123,10 @@ interface BookingDetailViewProps {
 export function BookingDetailView({ booking }: BookingDetailViewProps) {
   const router = useRouter();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isPendingRefresh, startRefreshTransition] = useTransition();
+  const isCheckoutBusy = isCheckingOut || isPendingRefresh;
+
   const [chargeOpen, setChargeOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentKind, setPaymentKind] = useState<"PAYMENT" | "ADVANCE">(
@@ -253,10 +258,20 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                 variant="default"
                 size="sm"
                 onClick={() => setCheckoutOpen(true)}
-                className="text-xs font-semibold"
+                disabled={isCheckoutBusy}
+                className="text-xs font-semibold min-w-[180px] h-8 inline-flex items-center justify-center gap-1.5"
               >
-                <CheckOutIcon className="size-3.5 mr-1.5" />
-                Check Out & Issue Invoice
+                {isCheckoutBusy ? (
+                  <>
+                    <SpinnerIcon className="size-3.5 animate-spin shrink-0" />
+                    <span>Processing Checkout...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckOutIcon className="size-3.5 shrink-0" />
+                    <span>Check Out & Issue Invoice</span>
+                  </>
+                )}
               </Button>
             </>
           )}
@@ -904,10 +919,22 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
                 variant="default"
                 size="sm"
                 onClick={() => setCheckoutOpen(true)}
-                className="w-full mt-2 font-semibold shadow-xs"
+                disabled={isCheckoutBusy}
+                className="w-full mt-2 font-semibold shadow-xs min-h-[36px] inline-flex items-center justify-center gap-2"
               >
-                <CheckOutIcon className="size-4 mr-2" />
-                {isGroup ? "Check Out Entire Group & Issue Invoice" : "Check Out & Generate Invoice"}
+                {isCheckoutBusy ? (
+                  <>
+                    <SpinnerIcon className="size-4 animate-spin shrink-0" />
+                    <span>Processing Checkout...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckOutIcon className="size-4 shrink-0" />
+                    <span>
+                      {isGroup ? "Check Out Entire Group & Issue Invoice" : "Check Out & Generate Invoice"}
+                    </span>
+                  </>
+                )}
               </Button>
             )}
 
@@ -972,7 +999,13 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
         }
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
-        onSuccess={() => router.refresh()}
+        onProcessingChange={(busy) => setIsCheckingOut(busy)}
+        onSuccess={() => {
+          setIsCheckingOut(true);
+          startRefreshTransition(() => {
+            router.refresh();
+          });
+        }}
       />
 
       <AddChargeDialog

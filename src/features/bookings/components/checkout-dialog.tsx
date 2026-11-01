@@ -109,6 +109,7 @@ interface CheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: (result: { invoiceId: string; displayNo: string }) => void;
+  onProcessingChange?: (isProcessing: boolean) => void;
 }
 
 export function CheckoutDialog({
@@ -118,8 +119,11 @@ export function CheckoutDialog({
   open,
   onOpenChange,
   onSuccess,
+  onProcessingChange,
 }: CheckoutDialogProps) {
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isCheckoutBusy = isPending || isSubmitting;
   const [billData, setBillData] = useState<BookingBillData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -216,6 +220,8 @@ export function CheckoutDialog({
   const netRemainingAfterPayment = Math.max(0, currentBalance - payAmt);
 
   const handleCheckout = () => {
+    if (isCheckoutBusy) return;
+
     const amtNum = parseFloat(paymentAmount) || 0;
     const excessRefund = currentBalance < 0 ? Math.abs(currentBalance) : 0;
 
@@ -238,53 +244,69 @@ export function CheckoutDialog({
       }
     }
 
+    setIsSubmitting(true);
+    onProcessingChange?.(true);
+
     startTransition(async () => {
-      const res = await checkoutAction({
-        bookingId,
-        paymentAmount: amtNum > 0 ? amtNum : undefined,
-        paymentMode: amtNum > 0 ? paymentMode : undefined,
-        paymentNote: amtNum > 0 ? paymentNote : undefined,
-        allowZeroPaymentWithBalance,
-        isEarlyCheckout,
-        refundAmount: excessRefund > 0 ? excessRefund : undefined,
-        refundMode: excessRefund > 0 ? refundMode : undefined,
-        refundNote: excessRefund > 0 ? refundNote : undefined,
-        companyName:
-          showCorporate && companyName.trim() ? companyName.trim() : undefined,
-        companyGstin:
-          showCorporate && companyGstin.trim()
-            ? companyGstin.trim().toUpperCase()
-            : undefined,
-        companyAddress:
-          showCorporate && companyAddress.trim()
-            ? companyAddress.trim()
-            : undefined,
-      });
+      try {
+        const res = await checkoutAction({
+          bookingId,
+          paymentAmount: amtNum > 0 ? amtNum : undefined,
+          paymentMode: amtNum > 0 ? paymentMode : undefined,
+          paymentNote: amtNum > 0 ? paymentNote : undefined,
+          allowZeroPaymentWithBalance,
+          isEarlyCheckout,
+          refundAmount: excessRefund > 0 ? excessRefund : undefined,
+          refundMode: excessRefund > 0 ? refundMode : undefined,
+          refundNote: excessRefund > 0 ? refundNote : undefined,
+          companyName:
+            showCorporate && companyName.trim() ? companyName.trim() : undefined,
+          companyGstin:
+            showCorporate && companyGstin.trim()
+              ? companyGstin.trim().toUpperCase()
+              : undefined,
+          companyAddress:
+            showCorporate && companyAddress.trim()
+              ? companyAddress.trim()
+              : undefined,
+        });
 
-      if (!res.ok) {
-        toast.error(res.message || "Checkout failed.");
-        return;
-      }
-
-      const result = res.data as { invoiceId: string; displayNo: string };
-      toast.success(
-        `Stay checked out! Tax Invoice ${result.displayNo} generated.`,
-        {
-          action: {
-            label: "View PDF",
-            onClick: () =>
-              window.open(`/api/invoices/${result.invoiceId}/pdf`, "_blank"),
-          },
-          duration: 8000,
+        if (!res.ok) {
+          setIsSubmitting(false);
+          onProcessingChange?.(false);
+          toast.error(res.message || "Checkout failed. Please try again.");
+          return;
         }
-      );
 
-      onOpenChange(false);
-      onSuccess?.(result);
+        const result = res.data as { invoiceId: string; displayNo: string };
+        toast.success(
+          `Stay checked out! Tax Invoice ${result.displayNo} generated.`,
+          {
+            action: {
+              label: "View PDF",
+              onClick: () =>
+                window.open(`/api/invoices/${result.invoiceId}/pdf`, "_blank"),
+            },
+            duration: 8000,
+          }
+        );
+
+        setIsSubmitting(false);
+        onOpenChange(false);
+        onSuccess?.(result);
+      } catch (err) {
+        console.error("Checkout execution error:", err);
+        setIsSubmitting(false);
+        onProcessingChange?.(false);
+        toast.error("Checkout failed unexpectedly. Please retry.");
+      }
     });
   };
 
   const handleDialogChange = (isOpen: boolean) => {
+    // Prevent dismissing dialog while checkout mutation is processing
+    if (isCheckoutBusy) return;
+
     if (!isOpen) {
       setBillData(null);
       setLoadError(null);
@@ -299,6 +321,7 @@ export function CheckoutDialog({
       setCompanyGstin("");
       setCompanyAddress("");
       setGstinError(null);
+      onProcessingChange?.(false);
     }
     onOpenChange(isOpen);
   };
@@ -841,7 +864,7 @@ export function CheckoutDialog({
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isPending}
+            disabled={isCheckoutBusy}
             className="h-9 px-4 text-xs sm:text-sm font-medium w-full sm:w-auto cursor-pointer"
           >
             Cancel
@@ -851,7 +874,7 @@ export function CheckoutDialog({
             variant="default"
             onClick={handleCheckout}
             disabled={
-              isPending ||
+              isCheckoutBusy ||
               isLoadingBill ||
               !billData ||
               (currentBalance > 0 && payAmt > currentBalance) ||
@@ -859,12 +882,12 @@ export function CheckoutDialog({
                 payAmt < currentBalance &&
                 !allowZeroPaymentWithBalance)
             }
-            className="h-9 px-4 sm:px-5 text-xs sm:text-sm font-semibold w-full sm:w-auto shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5"
+            className="h-9 px-4 sm:px-5 text-xs sm:text-sm font-semibold w-full sm:w-auto shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5 min-w-[210px]"
           >
-            {isPending ? (
+            {isCheckoutBusy ? (
               <>
                 <SpinnerIcon className="size-4 animate-spin shrink-0" />
-                <span>Processing Check-out...</span>
+                <span>Processing Checkout...</span>
               </>
             ) : currentBalance < 0 ? (
               <>

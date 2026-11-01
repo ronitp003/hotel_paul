@@ -131,7 +131,7 @@ export function ItemHistorySheet({
       return (
         <Badge
           variant="outline"
-          className="bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30 gap-1 font-semibold"
+          className="bg-primary-light text-primary dark:bg-primary-subtle dark:text-primary border-primary-border gap-1 font-semibold"
         >
           <CheckIcon className="size-3" />
           Returned to Available (+{m.quantity} {item.unit})

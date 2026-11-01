@@ -286,7 +286,7 @@ export function CheckInRegisterTab({
       </div>
 
       {/* ── Day Summary Card ── */}
-      <div className="rounded-xl border bg-gradient-to-r from-teal-500/10 via-emerald-500/5 to-transparent p-4 sm:p-5">
+      <div className="rounded-xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -294,7 +294,7 @@ export function CheckInRegisterTab({
                 {data.formattedDate}
               </h2>
               {selectedDate === todayStr && (
-                <Badge variant="outline" className="border-teal-500/40 bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+                <Badge variant="outline" className="border-primary-border bg-primary-light text-primary dark:bg-primary-subtle dark:text-primary dark:border-primary-border">
                   Today
                 </Badge>
               )}
@@ -407,8 +407,8 @@ export function CheckInRegisterTab({
                     >
                       {/* Stay Timeline: Check-in Time ONLY (No Checkout) */}
                       <td className="px-4 py-3.5 align-top whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 px-2 py-1 font-semibold text-teal-800 dark:bg-teal-950 dark:text-teal-300">
-                          <ClockIcon className="size-3.5 text-teal-600 dark:text-teal-400" />
+                        <div className="inline-flex items-center gap-1.5 rounded-md bg-primary-light px-2 py-1 font-semibold text-primary dark:bg-primary-subtle dark:text-primary">
+                          <ClockIcon className="size-3.5 text-primary" />
                           <span>{checkInFormatted}</span>
                         </div>
                         <div className="mt-1 text-[11px] text-muted-foreground">

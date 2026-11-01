@@ -204,7 +204,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         <RouteWatcher onComplete={finishNavigation} />
       </Suspense>
 
-      {/* Top Global Progress Bar (Teal Theme) */}
+      {/* Top Global Progress Bar (Blue Theme) */}
       <div
         aria-hidden="true"
         className={cn(

@@ -102,14 +102,14 @@ function SidebarNavList({ userRole }: { userRole: Role }) {
             href={item.href}
             title={item.title}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors justify-center lg:justify-start relative",
+              "group/nav flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors justify-center lg:justify-start relative",
               isActive
                 ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                 : isPending
-                ? "bg-primary/15 text-primary font-semibold border border-primary/30"
+                ? "bg-primary-light text-primary font-semibold border border-primary-border"
                 : item.highlight
-                ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                ? "bg-primary-light text-primary hover:bg-primary-light/80 border border-primary-border"
+                : "text-muted-foreground hover:bg-primary-subtle hover:text-primary"
             )}
           >
             <Icon
@@ -121,7 +121,7 @@ function SidebarNavList({ userRole }: { userRole: Role }) {
                   ? "text-primary animate-pulse"
                   : item.highlight
                   ? "text-primary"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground group-hover/nav:text-primary"
               )}
               aria-hidden="true"
             />

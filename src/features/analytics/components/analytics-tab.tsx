@@ -70,7 +70,7 @@ function getBarConfig(itemCount: number) {
 const checkInChartConfig = {
   checkIns: {
     label: "Check-ins",
-    color: "#0d9488", // teal-600
+    color: "#0078D4", // Primary Blue
   },
 } satisfies ChartConfig;
 
@@ -84,21 +84,21 @@ const occupancyChartConfig = {
 const paymentChartConfig = {
   netCollections: {
     label: "Net Collections",
-    color: "#0d9488", // teal-600
+    color: "#0078D4", // Primary Blue
   },
 } satisfies ChartConfig;
 
 const timeDistributionChartConfig = {
   count: {
     label: "Check-ins",
-    color: "#0d9488",
+    color: "#0078D4", // Primary Blue
   },
 } satisfies ChartConfig;
 
 const TIME_SLOT_COLORS: Record<string, string> = {
   MORNING: "#f59e0b", // Amber
-  AFTERNOON: "#0d9488", // Teal
-  EVENING: "#3b82f6", // Blue
+  AFTERNOON: "#0078D4", // Primary Blue
+  EVENING: "#005FA8", // Deep Blue
   NIGHT: "#6366f1", // Indigo
 };
 
@@ -197,7 +197,7 @@ export function AnalyticsTab({ initialData }: AnalyticsTabProps) {
               Total check-in bookings in period
             </div>
           </div>
-          <div className="rounded-lg bg-teal-500/10 p-2 text-teal-600 shrink-0">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
             <ClockIcon className="size-4" />
           </div>
         </div>
@@ -397,7 +397,7 @@ export function AnalyticsTab({ initialData }: AnalyticsTabProps) {
                 <div key={slot.slot} className="flex items-center gap-1">
                   <span
                     className="size-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: TIME_SLOT_COLORS[slot.slot] || "#0d9488" }}
+                    style={{ backgroundColor: TIME_SLOT_COLORS[slot.slot] || "#0078D4" }}
                   />
                   <span>{slot.label}</span>
                 </div>
@@ -462,7 +462,7 @@ export function AnalyticsTab({ initialData }: AnalyticsTabProps) {
                     {checkInTimeDistribution.map((entry) => (
                       <Cell
                         key={entry.slot}
-                        fill={TIME_SLOT_COLORS[entry.slot] || "#0d9488"}
+                        fill={TIME_SLOT_COLORS[entry.slot] || "#0078D4"}
                       />
                     ))}
                   </Bar>
@@ -486,7 +486,7 @@ export function AnalyticsTab({ initialData }: AnalyticsTabProps) {
 
             <div className="flex items-center gap-1.5 text-xs">
               <span className="text-muted-foreground hidden sm:inline">Total:</span>
-              <span className="font-semibold text-teal-700 dark:text-teal-300">
+              <span className="font-semibold text-primary">
                 {formatRupee(paymentCollections.totalNetCollections)}
               </span>
             </div>
@@ -537,7 +537,7 @@ export function AnalyticsTab({ initialData }: AnalyticsTabProps) {
                             </span>
                           </div>
                         )}
-                        <div className="flex items-center justify-between font-bold text-teal-700 dark:text-teal-300 pt-0.5 border-t border-border text-[11px]">
+                        <div className="flex items-center justify-between font-bold text-primary pt-0.5 border-t border-border text-[11px]">
                           <span>Net Collections:</span>
                           <span>{formatRupee(item.netCollections)}</span>
                         </div>

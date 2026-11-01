@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     borderBottomWidth: 1.5,
-    borderBottomColor: "#0F766E",
+    borderBottomColor: "#0078D4",
     paddingBottom: 14,
     marginBottom: 14,
   },
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   hotelTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#0F766E",
+    color: "#0078D4",
     marginBottom: 4,
   },
   hotelSubtitle: {
@@ -86,9 +86,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   invoiceBadge: {
-    backgroundColor: "#F0FDFA",
+    backgroundColor: "#EAF4FC",
     borderWidth: 1,
-    borderColor: "#0F766E",
+    borderColor: "#0078D4",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 3,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   invoiceBadgeText: {
     fontSize: 9,
     fontWeight: "bold",
-    color: "#0F766E",
+    color: "#0078D4",
   },
   metaText: {
     fontSize: 8,
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   boxHeader: {
     fontSize: 9,
     fontWeight: "bold",
-    color: "#0F766E",
+    color: "#0078D4",
     borderBottomWidth: 0.5,
     borderBottomColor: "#E5E7EB",
     paddingBottom: 4,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#0F766E",
+    backgroundColor: "#0078D4",
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1.5,
-    borderTopColor: "#0F766E",
+    borderTopColor: "#0078D4",
     paddingTop: 6,
     marginTop: 6,
     marginBottom: 2,
@@ -225,20 +225,20 @@ const styles = StyleSheet.create({
   grandLabel: {
     fontSize: 10,
     fontWeight: "bold",
-    color: "#0F766E",
+    color: "#0078D4",
     flex: 1,
   },
   grandValue: {
     fontSize: 10,
     fontWeight: "bold",
-    color: "#0F766E",
+    color: "#0078D4",
     textAlign: "right",
     width: 90,
   },
   wordsBox: {
-    backgroundColor: "#F0FDFA",
+    backgroundColor: "#EAF4FC",
     borderWidth: 0.5,
-    borderColor: "#0F766E",
+    borderColor: "#0078D4",
     borderRadius: 4,
     padding: 6,
     marginBottom: 10,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   wordsLabel: {
     fontSize: 7,
     fontWeight: "bold",
-    color: "#0F766E",
+    color: "#0078D4",
     textTransform: "uppercase",
     marginBottom: 2,
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { formatISTDateTime } from "@/lib/datetime";
 import { formatINR } from "@/lib/money";
@@ -11,6 +11,7 @@ import {
   SearchIcon,
   NewBookingIcon,
   CheckOutIcon,
+  SpinnerIcon,
   ArrowUpDownIcon,
   ArrowUpIcon,
   ArrowDownIcon,
@@ -65,6 +66,8 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
     reference: string;
     roomNumber: string;
   } | null>(null);
+  const [isProcessingCheckoutId, setIsProcessingCheckoutId] = useState<string | null>(null);
+  const [isPendingRefresh, startRefreshTransition] = useTransition();
 
   // Filter bookings
   const filtered = initialBookings.filter((b) => {
@@ -490,6 +493,7 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                             <Button
                               variant="default"
                               size="sm"
+                              disabled={isProcessingCheckoutId === b.id || isPendingRefresh}
                               onClick={() =>
                                 setCheckoutTarget({
                                   id: b.id,
@@ -498,10 +502,19 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                                     b.groupRoomNumbers?.join(", ") || b.roomNumber,
                                 })
                               }
-                              className="h-7 px-2.5 text-xs font-semibold"
+                              className="h-7 px-2.5 text-xs font-semibold min-w-[85px] inline-flex items-center justify-center gap-1"
                             >
-                              <CheckOutIcon className="size-3 mr-1" />
-                              Check Out
+                              {isProcessingCheckoutId === b.id || (isPendingRefresh && checkoutTarget?.id === b.id) ? (
+                                <>
+                                  <SpinnerIcon className="size-3 animate-spin shrink-0" />
+                                  <span>Processing Checkout...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckOutIcon className="size-3 shrink-0" />
+                                  <span>Check Out</span>
+                                </>
+                              )}
                             </Button>
                           )}
                         </div>
@@ -530,12 +543,22 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
           bookingRef={checkoutTarget.reference}
           roomNumber={checkoutTarget.roomNumber}
           open={!!checkoutTarget}
+          onProcessingChange={(busy) => {
+            setIsProcessingCheckoutId(busy ? checkoutTarget.id : null);
+          }}
           onOpenChange={(isOpen) => {
-            if (!isOpen) setCheckoutTarget(null);
+            if (!isOpen) {
+              setCheckoutTarget(null);
+              setIsProcessingCheckoutId(null);
+            }
           }}
           onSuccess={() => {
+            const targetId = checkoutTarget.id;
+            setIsProcessingCheckoutId(targetId);
             setCheckoutTarget(null);
-            router.refresh();
+            startRefreshTransition(() => {
+              router.refresh();
+            });
           }}
         />
       )}
