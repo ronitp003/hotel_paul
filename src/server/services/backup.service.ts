@@ -21,9 +21,19 @@ import {
 } from "@/features/settings/data-schemas";
 import { BookingStatus, PaymentKind } from "@prisma/client";
 
-function escapeCsv(value: string | number | null | undefined): string {
+export function escapeCsv(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
-  const str = String(value);
+  if (typeof value === "number") return String(value);
+
+  let str = String(value);
+
+  // OWASP CSV Injection mitigation (CWE-1236):
+  // If the cell starts with a formula trigger character (=, +, -, @, \t, \r),
+  // prefix it with a single quote (') so spreadsheet applications treat it as text.
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+
   if (/[",\n\r]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }

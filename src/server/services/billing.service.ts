@@ -161,6 +161,11 @@ export const billingService = {
    */
   async addPayment(actor: Actor, data: AddPaymentInput) {
     return await prisma.$transaction(async (tx) => {
+      // Acquire exclusive row-level lock on the booking to serialize concurrent financial mutations
+      await tx.$executeRaw`
+        SELECT id FROM "Booking" WHERE id = ${data.bookingId} FOR UPDATE
+      `;
+
       const booking = await tx.booking.findUnique({
         where: { id: data.bookingId },
         include: { room: true },
@@ -226,6 +231,11 @@ export const billingService = {
    */
   async refundPayment(actor: Actor, data: RefundPaymentInput) {
     return await prisma.$transaction(async (tx) => {
+      // 1. Acquire exclusive row-level lock on the booking to serialize concurrent financial mutations (SEC-01)
+      await tx.$executeRaw`
+        SELECT id FROM "Booking" WHERE id = ${data.bookingId} FOR UPDATE
+      `;
+
       const booking = await tx.booking.findUnique({
         where: { id: data.bookingId },
         include: { room: true, payments: true },

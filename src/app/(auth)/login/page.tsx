@@ -22,11 +22,12 @@ import {
   ProblemIcon,
 } from "@/lib/icons";
 import { toast } from "sonner";
+import { getSafeRedirectUrl } from "@/lib/utils";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = getSafeRedirectUrl(searchParams.get("redirect"));
   const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");

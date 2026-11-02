@@ -235,6 +235,32 @@ describe("Phase 1.6: Check-out, Payments & GST Billing (Integration)", () => {
         amount: 2000, // exceeds 1200
       })
     ).rejects.toThrowError(/cannot exceed total net payments/);
+
+    // 4. SEC-01: Concurrent refund requests test
+    // Net refundable remaining is 1200. Send two concurrent refund requests for 800 each (sum 1600 > 1200).
+    // Row-level locking ensures transactions serialize: exactly one succeeds and one fails.
+    const concurrentResults = await Promise.allSettled([
+      billingService.refundPayment(receptionistActor, {
+        bookingId: booking.id,
+        mode: "CASH",
+        amount: 800,
+        note: "Concurrent refund A",
+      }),
+      billingService.refundPayment(receptionistActor, {
+        bookingId: booking.id,
+        mode: "CASH",
+        amount: 800,
+        note: "Concurrent refund B",
+      }),
+    ]);
+
+    const fulfilled = concurrentResults.filter((r) => r.status === "fulfilled");
+    const rejected = concurrentResults.filter((r) => r.status === "rejected");
+    expect(fulfilled.length).toBe(1);
+    expect(rejected.length).toBe(1);
+    if (rejected[0].status === "rejected") {
+      expect(rejected[0].reason.message).toMatch(/cannot exceed total net payments/);
+    }
   });
 
   it("computes accurate bill with stay days, taxes, discount, and balance due", async () => {

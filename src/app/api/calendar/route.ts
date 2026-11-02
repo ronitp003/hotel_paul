@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/server/auth/permissions";
 import { ROLES } from "@/lib/constants";
 import { calendarService } from "@/server/services/calendar.service";
+import { AppError } from "@/lib/errors";
 import { z } from "zod";
 
 const calendarQuerySchema = z.object({
@@ -40,8 +41,24 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ ok: true, data });
   } catch (err: unknown) {
+    if (err instanceof AppError) {
+      const status =
+        err.code === "UNAUTHORIZED"
+          ? 401
+          : err.code === "FORBIDDEN"
+          ? 403
+          : 400;
+      return NextResponse.json(
+        { ok: false, error: err.message, code: err.code },
+        { status }
+      );
+    }
+
     console.error("Calendar GET error:", err);
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
+

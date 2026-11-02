@@ -67,11 +67,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const errorMessage =
-      error instanceof Error ? error.message : "Internal server error during backup restore";
     console.error("Backup restore failed:", error);
     return NextResponse.json(
-      { ok: false, error: errorMessage },
+      { ok: false, error: "Internal server error during backup restore" },
       { status: 500 }
     );
   }
