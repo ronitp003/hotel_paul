@@ -1,12 +1,14 @@
 import "server-only";
 import { prisma } from "@/server/db";
-import { hashPassword } from "better-auth/crypto";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { AppError } from "@/lib/errors";
 import type { Actor } from "@/server/auth/session";
 import type {
   CreateStaffInput,
   ResetPasswordInput,
   ToggleActiveInput,
+  UpdateProfileInput,
+  ChangePasswordInput,
 } from "@/features/users/schemas";
 
 export const userService = {
@@ -178,6 +180,100 @@ export const userService = {
         entityId: user.id,
         metadata: {
           targetEmail: user.email,
+        },
+      },
+    });
+
+    return { success: true };
+  },
+
+  /**
+   * Updates the authenticated user's own profile (display name).
+   */
+  async updateProfile(actor: Actor, data: UpdateProfileInput) {
+    const trimmedName = data.name.trim();
+
+    const updated = await prisma.user.update({
+      where: { id: actor.id },
+      data: { name: trimmedName },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    // Write audit log
+    await prisma.auditLog.create({
+      data: {
+        actorId: actor.id,
+        action: "users.updateProfile",
+        entity: "User",
+        entityId: updated.id,
+        metadata: {
+          previousName: actor.name,
+          newName: updated.name,
+        },
+      },
+    });
+
+    return updated;
+  },
+
+  /**
+   * Changes the authenticated user's own password after verifying their current password.
+   */
+  async changePassword(actor: Actor, data: ChangePasswordInput) {
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: actor.id,
+        providerId: "credential",
+      },
+    });
+
+    if (!account || !account.password) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Password authentication is not configured for this account."
+      );
+    }
+
+    const isMatch = await verifyPassword({
+      password: data.currentPassword,
+      hash: account.password,
+    });
+
+    if (!isMatch) {
+      throw new AppError("VALIDATION_ERROR", "Current password is incorrect.");
+    }
+
+    if (data.currentPassword === data.newPassword) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "New password cannot be the same as your current password."
+      );
+    }
+
+    const hashedPassword = await hashPassword(data.newPassword);
+
+    await prisma.account.update({
+      where: { id: account.id },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    // Write audit log
+    await prisma.auditLog.create({
+      data: {
+        actorId: actor.id,
+        action: "users.changePassword",
+        entity: "User",
+        entityId: actor.id,
+        metadata: {
+          email: actor.email,
         },
       },
     });

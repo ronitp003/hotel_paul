@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/server/auth/permissions";
+import { requireSession } from "@/server/auth/session";
 import { ROLES } from "@/lib/constants";
 import { userService } from "@/server/services/user.service";
 import {
   createStaffSchema,
   resetPasswordSchema,
   toggleActiveSchema,
+  updateProfileSchema,
+  changePasswordSchema,
 } from "@/features/users/schemas";
 import {
   AppError,
@@ -83,6 +86,54 @@ export async function resetPasswordAction(
       );
     }
     console.error("resetPasswordAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}
+
+export async function updateProfileAction(
+  input: unknown
+): Promise<ActionResult> {
+  try {
+    const { actor } = await requireSession();
+    const data = updateProfileSchema.parse(input);
+    const updated = await userService.updateProfile(actor, data);
+    revalidatePath("/profile");
+    revalidatePath("/", "layout");
+    return successResult(updated);
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    if (err instanceof ZodError) {
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
+    }
+    console.error("updateProfileAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}
+
+export async function changePasswordAction(
+  input: unknown
+): Promise<ActionResult> {
+  try {
+    const { actor } = await requireSession();
+    const data = changePasswordSchema.parse(input);
+    const result = await userService.changePassword(actor, data);
+    return successResult(result);
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    if (err instanceof ZodError) {
+      return errorResult(
+        "VALIDATION_ERROR",
+        err.issues[0]?.message || "Validation failed"
+      );
+    }
+    console.error("changePasswordAction error:", err);
     return errorResult("INTERNAL_ERROR");
   }
 }

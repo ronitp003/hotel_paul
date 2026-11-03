@@ -50,4 +50,6 @@ export {
   LuFileJson as FileJsonIcon,
   LuShieldAlert as ShieldAlertIcon,
   LuRefreshCw as RefreshIcon,
+  LuUser as UserIcon,
+  LuKeyRound as KeyIcon,
 } from "react-icons/lu";

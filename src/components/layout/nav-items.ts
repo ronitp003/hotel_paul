@@ -10,6 +10,7 @@ import {
   AnalyticsIcon,
   InventoryIcon,
   SettingsIcon,
+  UserIcon,
 } from "@/lib/icons";
 import { ROLES, type Role } from "@/lib/constants";
 
@@ -82,5 +83,11 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/settings",
     icon: SettingsIcon,
     roles: [ROLES.OWNER],
+  },
+  {
+    title: "Profile",
+    href: "/profile",
+    icon: UserIcon,
+    roles: [ROLES.OWNER, ROLES.RECEPTIONIST],
   },
 ];

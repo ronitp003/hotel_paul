@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { LiveClock } from "./live-clock";
-import { MenuIcon, LogoutIcon, RoomIcon } from "@/lib/icons";
+import { MenuIcon, LogoutIcon, RoomIcon, UserIcon } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,6 +112,16 @@ export function Topbar({
                   </Badge>
                 </div>
               </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                onClick={() => router.push("/profile")}
+                className="cursor-pointer"
+              >
+                <UserIcon className="size-4 mr-2" aria-hidden="true" />
+                <span>My Profile</span>
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
