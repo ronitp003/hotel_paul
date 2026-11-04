@@ -319,7 +319,9 @@ export function CalendarMonthView({
                           onSelectDate(d.date);
                         }
                       }}
-                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground shadow-2xs transition-all"
+
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground shadow-2xs transition-all opacity-0 pointer-events-none group-hover/cell:opacity-100 group-hover/cell:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
+
                       title={`Open ${formatIST(d.date, "dd MMM")} Day Timeline`}
                     >
                       <span>View Day</span>

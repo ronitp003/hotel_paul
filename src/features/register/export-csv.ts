@@ -26,7 +26,6 @@ export function generateRegisterCsv(entries: RegisterEntry[]): string {
     "Check-in Date & Time",
     "Room Number",
     "Room Type",
-    "Booking Reference",
     "Booking Source",
     "Primary Guest Name",
     "Father's Name",
@@ -35,25 +34,25 @@ export function generateRegisterCsv(entries: RegisterEntry[]): string {
     "Sex",
     "Accompanying Occupants Count",
     "Accompanying Names",
-    "Arriving From",
-    "Purpose of Visit",
   ];
 
   for (let i = 1; i <= maxAccompanying; i++) {
     headers.push(
       `Accompanying Guest ${i} – Name`,
+      `Accompanying Guest ${i} – Phone Number`,
       `Accompanying Guest ${i} – Sex`,
       `Accompanying Guest ${i} – Age`,
       `Accompanying Guest ${i} – Father's Name`
     );
   }
 
+  headers.push("Arriving From", "Purpose of Visit");
+
   const rows = entries.map((e) => {
     const row = [
       formatCsvCell(formatISTTime(e.checkInTime)),
       formatCsvCell(e.roomNumber),
       formatCsvCell(e.roomTypeName),
-      formatCsvCell(e.reference),
       formatCsvCell(e.source),
       formatCsvCell(e.primaryGuest?.name ?? ""),
       formatCsvCell(e.primaryGuest?.fatherName || ""),
@@ -68,8 +67,6 @@ export function generateRegisterCsv(entries: RegisterEntry[]): string {
       formatCsvCell(
         (e.accompanyingGuests || []).map((g) => g.name).join("; ")
       ),
-      formatCsvCell(e.arrivingFrom || ""),
-      formatCsvCell(e.purposeOfVisit || ""),
     ];
 
     for (let i = 0; i < maxAccompanying; i++) {
@@ -77,6 +74,7 @@ export function generateRegisterCsv(entries: RegisterEntry[]): string {
       if (guest) {
         row.push(
           formatCsvCell(guest.name || ""),
+          formatCsvCell(guest.mobile || ""),
           formatCsvCell(guest.sex || ""),
           formatCsvCell(
             guest.age !== null && guest.age !== undefined ? guest.age : ""
@@ -88,10 +86,16 @@ export function generateRegisterCsv(entries: RegisterEntry[]): string {
           formatCsvCell(""),
           formatCsvCell(""),
           formatCsvCell(""),
+          formatCsvCell(""),
           formatCsvCell("")
         );
       }
     }
+
+    row.push(
+      formatCsvCell(e.arrivingFrom || ""),
+      formatCsvCell(e.purposeOfVisit || "")
+    );
 
     return row.join(",");
   });

@@ -29,7 +29,6 @@ describe("Check-in Register CSV Export", () => {
       "Check-in Date & Time",
       "Room Number",
       "Room Type",
-      "Booking Reference",
       "Booking Source",
       "Primary Guest Name",
       "Father's Name",
@@ -42,7 +41,7 @@ describe("Check-in Register CSV Export", () => {
       "Purpose of Visit",
     ];
 
-    it("exports standard 14 columns when no bookings have accompanying guests", () => {
+    it("exports standard 13 columns without Booking Reference when no bookings have accompanying guests", () => {
       const entries: RegisterEntry[] = [
         {
           id: "bk-1",
@@ -72,7 +71,7 @@ describe("Check-in Register CSV Export", () => {
 
       const dataRow = lines[1];
       expect(dataRow).toContain('"101"');
-      expect(dataRow).toContain('"BK-20261103-001"');
+      expect(dataRow).not.toContain('"BK-20261103-001"'); // Booking Reference removed
       expect(dataRow).toContain('"WALK_IN"');
       expect(dataRow).toContain('"Jayanta"');
       expect(dataRow).toContain('"bbbusa"');
@@ -83,12 +82,15 @@ describe("Check-in Register CSV Export", () => {
       expect(dataRow).toContain('"Mumbai"');
       expect(dataRow).toContain('"Tour"');
 
-      // 14 columns total
+      // 13 columns total (Booking reference removed)
       const columns = dataRow.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-      expect(columns.length).toBe(14);
+      expect(columns.length).toBe(13);
+      // Arriving From and Purpose of Visit are the last columns
+      expect(columns[columns.length - 2]).toBe('"Mumbai"');
+      expect(columns[columns.length - 1]).toBe('"Tour"');
     });
 
-    it("dynamically appends accompanying guest columns up to max accompanying guests", () => {
+    it("dynamically appends accompanying guest columns including phone number, with arriving from & purpose at last column", () => {
       const entries: RegisterEntry[] = [
         // Entry 1: 1 accompanying guest
         {
@@ -111,7 +113,7 @@ describe("Check-in Register CSV Export", () => {
               fatherName: "Senior Person",
               age: 28,
               sex: Sex.FEMALE,
-              mobile: null,
+              mobile: "9988776655",
             },
           ],
           arrivingFrom: "Kolkata",
@@ -138,7 +140,7 @@ describe("Check-in Register CSV Export", () => {
               fatherName: "Bob Smith",
               age: 15,
               sex: Sex.MALE,
-              mobile: null,
+              mobile: "9811122233",
             },
             {
               name: "Daisy Smith",
@@ -175,36 +177,51 @@ describe("Check-in Register CSV Export", () => {
       const csv = generateRegisterCsv(entries);
       const lines = csv.split("\n");
 
-      // Verify header contains dynamic columns for Guest 1 and Guest 2
+      // Verify header contains dynamic columns for Guest 1 and Guest 2, with Arriving From & Purpose of Visit at the end
       const expectedHeader = [
-        ...baseHeaders,
+        "Check-in Date & Time",
+        "Room Number",
+        "Room Type",
+        "Booking Source",
+        "Primary Guest Name",
+        "Father's Name",
+        "Mobile Contact",
+        "Age",
+        "Sex",
+        "Accompanying Occupants Count",
+        "Accompanying Names",
         "Accompanying Guest 1 – Name",
+        "Accompanying Guest 1 – Phone Number",
         "Accompanying Guest 1 – Sex",
         "Accompanying Guest 1 – Age",
         "Accompanying Guest 1 – Father's Name",
         "Accompanying Guest 2 – Name",
+        "Accompanying Guest 2 – Phone Number",
         "Accompanying Guest 2 – Sex",
         "Accompanying Guest 2 – Age",
         "Accompanying Guest 2 – Father's Name",
+        "Arriving From",
+        "Purpose of Visit",
       ].join(",");
 
       expect(lines[0]).toBe(expectedHeader);
 
-      // Total columns: 14 + (2 * 4) = 22
-      // Entry 1 row: Has Guest 1 filled, Guest 2 empty
+      // Total columns: 11 base + (2 * 5) + 2 travel = 23
+      // Entry 1 row: Has Guest 1 filled with phone number, Guest 2 empty, travel at the end
       const row1 = lines[1];
-      expect(row1).toContain('"RANDOM PERSON 2","FEMALE","28","Senior Person"');
-      expect(row1).toMatch(/,"","","",""$/); // Guest 2 is empty
+      expect(row1).toContain('"RANDOM PERSON 2","9988776655","FEMALE","28","Senior Person"');
+      expect(row1).toMatch(/,"","","","","","Kolkata","BUSINESS"$/); // Guest 2 is empty, ends with travel info
 
-      // Entry 2 row: Has Guest 1 and Guest 2 filled
+      // Entry 2 row: Has Guest 1 and Guest 2 filled (Guest 2 mobile is null -> "")
       const row2 = lines[2];
-      expect(row2).toContain('"Charlie Smith","MALE","15","Bob Smith"');
-      expect(row2).toContain('"Daisy Smith","FEMALE","12","Bob Smith"');
+      expect(row2).toContain('"Charlie Smith","9811122233","MALE","15","Bob Smith"');
+      expect(row2).toContain('"Daisy Smith","","FEMALE","12","Bob Smith"');
+      expect(row2).toMatch(/,"Delhi","VACATION"$/);
 
-      // Entry 3 row: Has 0 guests, so Guest 1 and Guest 2 are both empty
+      // Entry 3 row: Has 0 guests, so Guest 1 and Guest 2 are both empty (10 empty fields)
       const row3 = lines[3];
       expect(row3).toContain('"HGFDX"');
-      expect(row3).toMatch(/,"","","","","","",""$/); // 8 empty slots for 2 missing guests
+      expect(row3).toMatch(/,"","","","","","","","","","","RDVF","FXAB FDF"$/); // 10 empty slots for 2 missing guests, ends with travel info
     });
 
     it("leaves optional fields empty when information is unavailable", () => {
@@ -241,8 +258,9 @@ describe("Check-in Register CSV Export", () => {
       const lines = csv.split("\n");
       const row = lines[1];
 
-      // Accompanying guest columns should be: "Accompanying Person","","",""
-      expect(row).toContain('"Accompanying Person","","",""');
+      // Accompanying guest columns should be: "Accompanying Person","","","",""
+      expect(row).toContain('"Accompanying Person","","","",""');
+      expect(row).toMatch(/,"",""$/); // Arriving from and purpose null -> "",""
     });
 
     it("returns base headers only when entries is empty", () => {

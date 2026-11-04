@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -162,7 +163,7 @@ export function RoomCard({
                 {room.hasProblem && (
                   <span
                     title={`${room.openProblemsCount} unresolved problem(s)`}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white shadow-2xs shrink-0"
+                    className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white shadow-2xs shrink-0"
                   >
                     <ProblemIcon
                       className="size-2.5 shrink-0"
@@ -175,6 +176,8 @@ export function RoomCard({
                     </span>
                   </span>
                 )}
+
+                {/* Status badge remains visible on every screen size */}
                 <span
                   className={cn(
                     "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border leading-tight shrink-0 shadow-2xs",
