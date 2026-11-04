@@ -16,6 +16,7 @@ import {
 
 import { isNavItemActive } from "./sidebar";
 import { useNavigationState } from "@/providers/navigation-provider";
+import { useBookingModal } from "@/features/bookings/context/booking-modal-context";
 
 interface MobileNavProps {
   open: boolean;
@@ -97,6 +98,8 @@ export function MobileNav({
   onOpenChange,
   userRole = "OWNER",
 }: MobileNavProps) {
+  const { openBookingModal } = useBookingModal();
+
   return (
     <>
       {/* Mobile Drawer (Sheet) */}
@@ -122,13 +125,14 @@ export function MobileNav({
 
       {/* Floating Action Button (FAB) on phone (<768px) */}
       <div className="md:hidden fixed bottom-5 right-5 z-40">
-        <Link
-          href="/bookings/new"
-          className="size-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform"
+        <button
+          type="button"
+          onClick={() => openBookingModal()}
+          className="size-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform cursor-pointer"
           aria-label="New Booking"
         >
           <NewBookingIcon className="size-6" aria-hidden="true" />
-        </Link>
+        </button>
       </div>
     </>
   );

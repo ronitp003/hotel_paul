@@ -3,6 +3,7 @@ import { roomService } from "@/server/services/room.service";
 import { roomTypeService } from "@/server/services/room-type.service";
 import { PageHeader } from "@/components/layout/page-header";
 import { RoomsManager } from "@/features/rooms/components/rooms-manager";
+import { NewBookingButton } from "@/features/bookings/components/new-booking-button";
 
 export default async function RoomsPage() {
   const { actor } = await requireSession();
@@ -17,7 +18,9 @@ export default async function RoomsPage() {
       <PageHeader
         title="Rooms Inventory"
         description="Glanceable front-desk view: Live occupancy status, nightly room pricing, and maintenance alerts."
-      />
+      >
+        <NewBookingButton size="sm">New Booking / Check-in</NewBookingButton>
+      </PageHeader>
 
       <RoomsManager
         initialRooms={rooms}

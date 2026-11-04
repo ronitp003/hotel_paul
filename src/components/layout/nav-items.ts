@@ -3,7 +3,6 @@ import {
   DashboardIcon,
   RoomIcon,
   CalendarIcon,
-  NewBookingIcon,
   GuestIcon,
   PaymentIcon,
   InvoiceIcon,
@@ -40,13 +39,6 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/calendar",
     icon: CalendarIcon,
     roles: [ROLES.OWNER, ROLES.RECEPTIONIST],
-  },
-  {
-    title: "New Booking",
-    href: "/bookings/new",
-    icon: NewBookingIcon,
-    roles: [ROLES.OWNER, ROLES.RECEPTIONIST],
-    highlight: true,
   },
   {
     title: "Bookings",

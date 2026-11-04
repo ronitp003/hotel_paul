@@ -76,3 +76,19 @@ export async function deleteRoomTypeAction(id: string): Promise<ActionResult> {
     return errorResult("INTERNAL_ERROR");
   }
 }
+
+export async function listRoomTypesAction(): Promise<
+  ActionResult<Array<{ id: string; name: string }>>
+> {
+  try {
+    await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
+    const types = await roomTypeService.listRoomTypes();
+    return successResult(types.map((t) => ({ id: t.id, name: t.name })));
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    console.error("listRoomTypesAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}

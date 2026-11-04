@@ -7,6 +7,7 @@ import { StatusBadge, type StatusType } from "@/components/shared/status-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { LogProblemDialog } from "./log-problem-dialog";
 import { CreateMaintenanceDialog } from "./create-maintenance-dialog";
 import {
@@ -75,6 +76,24 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
 
   const { room, derivedStatus, currentBooking, openProblems, resolvedProblems, activeMaintenance, pastMaintenance, recentBookings } =
     initialData;
+
+  // Pagination for Recent Room History (5 records per page)
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [prevRoomId, setPrevRoomId] = useState(room.id);
+
+  if (room.id !== prevRoomId) {
+    setPrevRoomId(room.id);
+    setCurrentPage(1);
+  }
+
+  const totalRecords = recentBookings.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedBookings = recentBookings.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
 
   const isOccupiedOrReserved =
     derivedStatus.status === "OCCUPIED" || derivedStatus.status === "RESERVED";
@@ -690,62 +709,73 @@ export function RoomDetailsView({ initialData }: RoomDetailsViewProps) {
                 No past stays recorded for Room {room.number}.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-border bg-card">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold">
-                    <tr>
-                      <th className="py-2.5 px-3">Reference</th>
-                      <th className="py-2.5 px-3">Primary Guest</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3">Check-In</th>
-                      <th className="py-2.5 px-3">Check-Out</th>
-                      <th className="py-2.5 px-3">Rate</th>
-                      <th className="py-2.5 px-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {recentBookings.map((b) => (
-                      <tr key={b.id} className="hover:bg-muted/20">
-                        <td className="py-2.5 px-3 font-mono font-semibold text-foreground">
-                          {b.reference}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span className="font-medium text-foreground block">
-                            {b.primaryGuestName}
-                          </span>
-                          {b.primaryGuestMobile && (
-                            <span className="text-[11px] text-muted-foreground font-mono">
-                              {b.primaryGuestMobile}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <StatusBadge status={b.status as StatusType} />
-                        </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
-                          {formatISTDate(b.checkInAt)}
-                        </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
-                          {formatISTDate(b.checkOutAt)}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono font-semibold">
-                          {formatINR(b.rateApplied)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <Link
-                            href={`/bookings/${b.id}`}
-                            className={cn(
-                              buttonVariants({ variant: "ghost", size: "xs" }),
-                              "h-7 px-2 text-xs"
-                            )}
-                          >
-                            View
-                          </Link>
-                        </td>
+              <div className="rounded-xl border border-border bg-card overflow-hidden shadow-2xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold">
+                      <tr>
+                        <th className="py-2.5 px-3">Reference</th>
+                        <th className="py-2.5 px-3">Primary Guest</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">Check-In</th>
+                        <th className="py-2.5 px-3">Check-Out</th>
+                        <th className="py-2.5 px-3">Rate</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {paginatedBookings.map((b) => (
+                        <tr key={b.id} className="hover:bg-muted/20">
+                          <td className="py-2.5 px-3 font-mono font-semibold text-foreground">
+                            {b.reference}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="font-medium text-foreground block">
+                              {b.primaryGuestName}
+                            </span>
+                            {b.primaryGuestMobile && (
+                              <span className="text-[11px] text-muted-foreground font-mono">
+                                {b.primaryGuestMobile}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <StatusBadge status={b.status as StatusType} />
+                          </td>
+                          <td className="py-2.5 px-3 text-muted-foreground">
+                            {formatISTDate(b.checkInAt)}
+                          </td>
+                          <td className="py-2.5 px-3 text-muted-foreground">
+                            {formatISTDate(b.checkOutAt)}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-semibold">
+                            {formatINR(b.rateApplied)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Link
+                              href={`/bookings/${b.id}`}
+                              className={cn(
+                                buttonVariants({ variant: "ghost", size: "xs" }),
+                                "h-7 px-2 text-xs"
+                              )}
+                            >
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls */}
+                <TablePagination
+                  currentPage={safePage}
+                  totalRecords={totalRecords}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={(page) => setCurrentPage(page)}
+                  recordLabel="records"
+                />
               </div>
             )}
           </div>

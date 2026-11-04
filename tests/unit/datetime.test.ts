@@ -3,6 +3,7 @@ import {
   formatIST,
   formatISTDate,
   formatISTTime,
+  formatISTTimeWithSeconds,
   startOfISTDay,
   endOfISTDay,
   startOfISTMonth,
@@ -27,6 +28,16 @@ describe("lib/datetime (IST Timezone Handling)", () => {
     // 2026-10-29T06:30:00Z is 2026-10-29 12:00:00 PM IST
     const midday = new Date("2026-10-29T06:30:00.000Z");
     expect(formatISTTime(midday)).toBe("12:00 PM");
+  });
+
+  it("formats IST time with seconds in 12-hour format with AM/PM (e.g. 14:35:09 -> 02:35:09 PM)", () => {
+    // 2026-11-04T09:05:09Z is 14:35:09 IST -> 02:35:09 PM
+    const afternoon = new Date("2026-11-04T09:05:09.000Z");
+    expect(formatISTTimeWithSeconds(afternoon)).toBe("02:35:09 PM");
+
+    // 2026-11-04T04:00:05Z is 09:30:05 IST -> 09:30:05 AM
+    const morning = new Date("2026-11-04T04:00:05.000Z");
+    expect(formatISTTimeWithSeconds(morning)).toBe("09:30:05 AM");
   });
 
   it("parses IST input string to correct UTC timestamp", () => {

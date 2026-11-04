@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { requireRole } from "@/server/auth/permissions";
 import { ROLES } from "@/lib/constants";
 import { bookingService } from "@/server/services/booking.service";
 import { BookingsTable } from "@/features/bookings/components/bookings-table";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { NewBookingIcon, GuestIcon } from "@/lib/icons";
+import { GuestIcon } from "@/lib/icons";
+import { NewBookingButton } from "@/features/bookings/components/new-booking-button";
 
 export const metadata = {
   title: "Bookings | Hotel Paul",
@@ -33,16 +31,9 @@ export default async function BookingsPage() {
           </p>
         </div>
 
-        <Link
-          href="/bookings/new"
-          className={cn(
-            buttonVariants({ variant: "default" }),
-            "h-10 px-4 font-semibold shadow-xs"
-          )}
-        >
-          <NewBookingIcon className="size-4 mr-2" />
+        <NewBookingButton className="h-10 px-4">
           New Booking / Check-in
-        </Link>
+        </NewBookingButton>
       </div>
 
       {/* Table Content */}

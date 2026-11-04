@@ -51,93 +51,93 @@ export function RoomCard({
   // Status card styling and tokens
   const style = !room.isActive
     ? {
-        cardClass:
-          "bg-stone-100/90 dark:bg-stone-900/40 border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700 hover:shadow-xs opacity-80",
-        roomNumberClass: "text-stone-700 dark:text-stone-300",
-        typeNameClass: "text-stone-500 dark:text-stone-400",
-        priceClass: "text-stone-700 dark:text-stone-300",
-        priceSuffixClass: "text-stone-500 dark:text-stone-400",
-        statusBadgeClass:
-          "bg-stone-500 text-white border-stone-500 shadow-2xs",
-        statusDotClass: "bg-white",
-        contextBoxClass:
-          "bg-stone-200/60 dark:bg-stone-800/40 border-stone-300/60 dark:border-stone-700/50 text-stone-700 dark:text-stone-300",
-        dividerClass: "border-stone-200 dark:border-stone-800",
-        actionBtnClass:
-          "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-800/60",
-        label: "Disabled",
-      }
+      cardClass:
+        "bg-stone-100/90 dark:bg-stone-900/40 border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700 hover:shadow-xs opacity-80",
+      roomNumberClass: "text-stone-700 dark:text-stone-300",
+      typeNameClass: "text-stone-500 dark:text-stone-400",
+      priceClass: "text-stone-700 dark:text-stone-300",
+      priceSuffixClass: "text-stone-500 dark:text-stone-400",
+      statusBadgeClass:
+        "bg-stone-500 text-white border-stone-500 shadow-2xs",
+      statusDotClass: "bg-white",
+      contextBoxClass:
+        "bg-stone-200/60 dark:bg-stone-800/40 border-stone-300/60 dark:border-stone-700/50 text-stone-700 dark:text-stone-300",
+      dividerClass: "border-stone-200 dark:border-stone-800",
+      actionBtnClass:
+        "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-800/60",
+      label: "Disabled",
+    }
     : room.status === "OCCUPIED"
       ? {
-          cardClass:
-            "bg-blue-50/90 dark:bg-blue-950/35 border-blue-200/90 dark:border-blue-800/60 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xs",
-          roomNumberClass: "text-blue-950 dark:text-blue-100",
-          typeNameClass: "text-blue-800/80 dark:text-blue-300/80",
-          priceClass: "text-blue-950 dark:text-blue-100",
-          priceSuffixClass: "text-blue-700/70 dark:text-blue-400/70",
-          statusBadgeClass:
-            "bg-blue-600 text-white dark:bg-blue-500 dark:text-blue-950 border-blue-600 dark:border-blue-500 shadow-2xs",
-          statusDotClass: "bg-white dark:bg-blue-950",
-          contextBoxClass:
-            "bg-blue-100/70 dark:bg-blue-900/30 border-blue-200/80 dark:border-blue-800/50 text-blue-900 dark:text-blue-200",
-          dividerClass: "border-blue-200/80 dark:border-blue-800/60",
-          actionBtnClass:
-            "text-blue-800 dark:text-blue-300 hover:text-blue-950 dark:hover:text-blue-100 hover:bg-blue-200/60 dark:hover:bg-blue-900/50",
-          label: "Occupied",
-        }
+        cardClass:
+          "bg-blue-50/90 dark:bg-blue-950/35 border-blue-200/90 dark:border-blue-800/60 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xs",
+        roomNumberClass: "text-blue-950 dark:text-blue-100",
+        typeNameClass: "text-blue-800/80 dark:text-blue-300/80",
+        priceClass: "text-blue-950 dark:text-blue-100",
+        priceSuffixClass: "text-blue-700/70 dark:text-blue-400/70",
+        statusBadgeClass:
+          "bg-blue-600 text-white dark:bg-blue-500 dark:text-blue-950 border-blue-600 dark:border-blue-500 shadow-2xs",
+        statusDotClass: "bg-white dark:bg-blue-950",
+        contextBoxClass:
+          "bg-blue-100/70 dark:bg-blue-900/30 border-blue-200/80 dark:border-blue-800/50 text-blue-900 dark:text-blue-200",
+        dividerClass: "border-blue-200/80 dark:border-blue-800/60",
+        actionBtnClass:
+          "text-blue-800 dark:text-blue-300 hover:text-blue-950 dark:hover:text-blue-100 hover:bg-blue-200/60 dark:hover:bg-blue-900/50",
+        label: "Occupied",
+      }
       : room.status === "RESERVED"
         ? {
-            cardClass:
-              "bg-amber-50/90 dark:bg-amber-950/35 border-amber-200/90 dark:border-amber-800/60 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs",
-            roomNumberClass: "text-amber-950 dark:text-amber-100",
-            typeNameClass: "text-amber-800/80 dark:text-amber-300/80",
-            priceClass: "text-amber-950 dark:text-amber-100",
-            priceSuffixClass: "text-amber-700/70 dark:text-amber-400/70",
-            statusBadgeClass:
-              "bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 border-amber-600 dark:border-amber-500 shadow-2xs",
-            statusDotClass: "bg-white dark:bg-amber-950",
-            contextBoxClass:
-              "bg-amber-100/70 dark:bg-amber-900/30 border-amber-200/80 dark:border-amber-800/50 text-amber-900 dark:text-amber-200",
-            dividerClass: "border-amber-200/80 dark:border-amber-800/60",
-            actionBtnClass:
-              "text-amber-800 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 hover:bg-amber-200/60 dark:hover:bg-amber-900/50",
-            label: "Reserved",
-          }
+          cardClass:
+            "bg-amber-50/90 dark:bg-amber-950/35 border-amber-200/90 dark:border-amber-800/60 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs",
+          roomNumberClass: "text-amber-950 dark:text-amber-100",
+          typeNameClass: "text-amber-800/80 dark:text-amber-300/80",
+          priceClass: "text-amber-950 dark:text-amber-100",
+          priceSuffixClass: "text-amber-700/70 dark:text-amber-400/70",
+          statusBadgeClass:
+            "bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 border-amber-600 dark:border-amber-500 shadow-2xs",
+          statusDotClass: "bg-white dark:bg-amber-950",
+          contextBoxClass:
+            "bg-amber-100/70 dark:bg-amber-900/30 border-amber-200/80 dark:border-amber-800/50 text-amber-900 dark:text-amber-200",
+          dividerClass: "border-amber-200/80 dark:border-amber-800/60",
+          actionBtnClass:
+            "text-amber-800 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 hover:bg-amber-200/60 dark:hover:bg-amber-900/50",
+          label: "Reserved",
+        }
         : room.status === "MAINTENANCE"
           ? {
-              cardClass:
-                "bg-maintenance-striped border-purple-300/90 dark:border-purple-800/60 hover:border-purple-400 dark:hover:border-purple-700 hover:shadow-xs",
-              roomNumberClass: "text-purple-950 dark:text-purple-100",
-              typeNameClass: "text-purple-800/90 dark:text-purple-200",
-              priceClass: "text-purple-950 dark:text-purple-100",
-              priceSuffixClass: "text-purple-700/70 dark:text-purple-300/80",
-              statusBadgeClass:
-                "bg-purple-700 text-white dark:bg-purple-600 dark:text-white border-purple-700 dark:border-purple-600 shadow-2xs",
-              statusDotClass: "bg-white",
-              contextBoxClass:
-                "bg-white/85 dark:bg-purple-950/70 backdrop-blur-xs border-purple-300/80 dark:border-purple-700/50 text-purple-950 dark:text-purple-200",
-              dividerClass: "border-purple-300/80 dark:border-purple-800/60",
-              actionBtnClass:
-                "text-purple-900 dark:text-purple-200 hover:text-purple-950 dark:hover:text-purple-100 hover:bg-purple-200/60 dark:hover:bg-purple-900/60",
-              label: "Maintenance",
-            }
+            cardClass:
+              "bg-maintenance-striped border-purple-300/90 dark:border-purple-800/60 hover:border-purple-400 dark:hover:border-purple-700 hover:shadow-xs",
+            roomNumberClass: "text-purple-950 dark:text-purple-100",
+            typeNameClass: "text-purple-800/90 dark:text-purple-200",
+            priceClass: "text-purple-950 dark:text-purple-100",
+            priceSuffixClass: "text-purple-700/70 dark:text-purple-300/80",
+            statusBadgeClass:
+              "bg-purple-700 text-white dark:bg-purple-600 dark:text-white border-purple-700 dark:border-purple-600 shadow-2xs",
+            statusDotClass: "bg-white",
+            contextBoxClass:
+              "bg-white/85 dark:bg-purple-950/70 backdrop-blur-xs border-purple-300/80 dark:border-purple-700/50 text-purple-950 dark:text-purple-200",
+            dividerClass: "border-purple-300/80 dark:border-purple-800/60",
+            actionBtnClass:
+              "text-purple-900 dark:text-purple-200 hover:text-purple-950 dark:hover:text-purple-100 hover:bg-purple-200/60 dark:hover:bg-purple-900/60",
+            label: "Maintenance",
+          }
           : {
-              cardClass:
-                "bg-emerald-50/90 dark:bg-emerald-950/35 border-emerald-200/90 dark:border-emerald-800/60 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs",
-              roomNumberClass: "text-emerald-950 dark:text-emerald-100",
-              typeNameClass: "text-emerald-800/80 dark:text-emerald-300/80",
-              priceClass: "text-emerald-950 dark:text-emerald-100",
-              priceSuffixClass: "text-emerald-700/70 dark:text-emerald-400/70",
-              statusBadgeClass:
-                "bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 border-emerald-600 dark:border-emerald-500 shadow-2xs",
-              statusDotClass: "bg-white dark:bg-emerald-950",
-              contextBoxClass:
-                "bg-emerald-100/70 dark:bg-emerald-900/30 border-emerald-200/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200",
-              dividerClass: "border-emerald-200/80 dark:border-emerald-800/60",
-              actionBtnClass:
-                "text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 hover:bg-emerald-200/60 dark:hover:bg-emerald-900/50",
-              label: "Available",
-            };
+            cardClass:
+              "bg-emerald-50/90 dark:bg-emerald-950/35 border-emerald-200/90 dark:border-emerald-800/60 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs",
+            roomNumberClass: "text-emerald-950 dark:text-emerald-100",
+            typeNameClass: "text-emerald-800/80 dark:text-emerald-300/80",
+            priceClass: "text-emerald-950 dark:text-emerald-100",
+            priceSuffixClass: "text-emerald-700/70 dark:text-emerald-400/70",
+            statusBadgeClass:
+              "bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 border-emerald-600 dark:border-emerald-500 shadow-2xs",
+            statusDotClass: "bg-white dark:bg-emerald-950",
+            contextBoxClass:
+              "bg-emerald-100/70 dark:bg-emerald-900/30 border-emerald-200/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200",
+            dividerClass: "border-emerald-200/80 dark:border-emerald-800/60",
+            actionBtnClass:
+              "text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 hover:bg-emerald-200/60 dark:hover:bg-emerald-900/50",
+            label: "Available",
+          };
 
   return (
     <>
@@ -343,9 +343,9 @@ export function RoomCard({
                   <div className="text-[11px] opacity-85">
                     {room.activeMaintenance?.endsAt
                       ? `Until: ${formatIST(
-                          new Date(room.activeMaintenance.endsAt),
-                          "d MMM, hh:mm a"
-                        )}`
+                        new Date(room.activeMaintenance.endsAt),
+                        "d MMM, hh:mm a"
+                      )}`
                       : "Work in progress"}
                   </div>
                   {room.hasProblem && (
@@ -763,10 +763,10 @@ export function RoomCard({
                     room.status === "MAINTENANCE"
                       ? "Room is already under maintenance."
                       : room.status === "OCCUPIED"
-                      ? "Room is currently occupied. Maintenance cannot be scheduled until check-out."
-                      : room.status === "RESERVED"
-                      ? "Room has an active reservation. Maintenance cannot be scheduled."
-                      : "Schedule room maintenance"
+                        ? "Room is currently occupied. Maintenance cannot be scheduled until check-out."
+                        : room.status === "RESERVED"
+                          ? "Room has an active reservation. Maintenance cannot be scheduled."
+                          : "Schedule room maintenance"
                   }
                   className={cn(
                     "flex-1 gap-1.5 text-xs border-status-maintenance/30",
@@ -789,28 +789,28 @@ export function RoomCard({
               href={`/rooms/${room.id}`}
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Full Room Details
+              Room Details
               <ChevronRightIcon className="size-3.5 ml-1" />
             </Link>
 
             <div className="flex items-center gap-2">
               {(room.status === "OCCUPIED" || room.status === "RESERVED") &&
-              room.currentBooking && (
-                <Link
-                  href={`/bookings/${room.currentBooking.id}`}
-                  className={buttonVariants({ variant: "default", size: "sm" })}
-                >
-                  View Booking
-                </Link>
-              )}
-              <Button
+                room.currentBooking && (
+                  <Link
+                    href={`/bookings/${room.currentBooking.id}`}
+                    className={buttonVariants({ variant: "default", size: "sm" })}
+                  >
+                    View Booking
+                  </Link>
+                )}
+              {/* <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsDetailsOpen(false)}
               >
                 Close
-              </Button>
+              </Button> */}
             </div>
           </DialogFooter>
         </DialogContent>

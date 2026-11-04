@@ -52,4 +52,6 @@ export {
   LuRefreshCw as RefreshIcon,
   LuUser as UserIcon,
   LuKeyRound as KeyIcon,
+  LuBuilding2 as BuildingIcon,
+  LuCopy as CopyIcon,
 } from "react-icons/lu";

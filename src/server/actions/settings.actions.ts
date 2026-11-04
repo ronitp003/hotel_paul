@@ -171,3 +171,19 @@ export async function deleteGstSlabAction(id: string): Promise<ActionResult> {
     return errorResult("INTERNAL_ERROR");
   }
 }
+
+export async function getBookingSettingsAction(): Promise<
+  ActionResult<{ graceMinutes: number }>
+> {
+  try {
+    await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
+    const settings = await settingsService.getSettings();
+    return successResult({ graceMinutes: settings.hotel.graceMinutes });
+  } catch (err) {
+    if (err instanceof AppError) {
+      return errorResult(err.code, err.message);
+    }
+    console.error("getBookingSettingsAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}

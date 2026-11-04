@@ -19,6 +19,7 @@ import {
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { DashboardSummary } from "@/features/dashboard/schemas";
+import { NewBookingButton } from "@/features/bookings/components/new-booking-button";
 
 interface DashboardViewProps {
   data: DashboardSummary;
@@ -196,11 +197,13 @@ export function DashboardView({ data, userRole = "OWNER" }: DashboardViewProps) 
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      {/* Page Header (New Booking / Check-in button removed per design requirement) */}
+      {/* Page Header */}
       <PageHeader
         title="Dashboard"
         description="Property overview, room occupancy, daily operations, inventory alerts, and revenue summary."
-      />
+      >
+        <NewBookingButton size="sm">New Booking / Check-in</NewBookingButton>
+      </PageHeader>
 
       {/* Role-based KPI sections ordering:
           Owner: Operations, Finance & Inventory -> Live Room Occupancy

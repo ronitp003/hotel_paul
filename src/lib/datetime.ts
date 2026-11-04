@@ -60,7 +60,7 @@ export function formatISTTime(date: Date | string | number): string {
  * Time with seconds display for the live clock (e.g., "10:30:45 AM").
  */
 export function formatISTTimeWithSeconds(date: Date | string | number): string {
-  return formatIST(date, "HH:mm:ss");
+  return formatIST(date, "hh:mm:ss a");
 }
 
 /**

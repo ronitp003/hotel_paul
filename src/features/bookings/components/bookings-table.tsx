@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
+import { NewBookingButton } from "./new-booking-button";
 import { formatISTDateTime } from "@/lib/datetime";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,6 @@ import {
   RoomIcon,
   CalendarIcon,
   SearchIcon,
-  NewBookingIcon,
   CheckOutIcon,
   DownloadIcon,
   SpinnerIcon,
@@ -18,7 +17,7 @@ import {
   ArrowDownIcon,
 } from "@/lib/icons";
 import { Input } from "@/components/ui/input";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDropdown } from "@/components/ui/select-dropdown";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -440,13 +439,9 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                   : "There are no bookings recorded yet. Create a new reservation or check in a walk-in guest."}
               </p>
             </div>
-            <Link
-              href="/bookings/new"
-              className={cn(buttonVariants({ size: "sm" }), "mt-2")}
-            >
-              <NewBookingIcon className="size-4 mr-1.5" />
+            <NewBookingButton size="sm" className="mt-2">
               Create New Booking
-            </Link>
+            </NewBookingButton>
           </div>
         ) : (
           <div>
