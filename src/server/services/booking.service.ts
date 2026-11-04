@@ -717,6 +717,13 @@ export const bookingService = {
           room: { include: { type: true } },
           guests: { where: { isPrimary: true } },
           payments: true,
+          invoice: {
+            select: {
+              id: true,
+              displayNo: true,
+              status: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -743,6 +750,7 @@ export const bookingService = {
         rateApplied: number;
         advancePaid: number;
         status: BookingStatus;
+        invoice: { id: string; displayNo: string; status: string } | null;
       }>
     >();
 
@@ -752,6 +760,13 @@ export const bookingService = {
         include: {
           room: { include: { type: true } },
           payments: true,
+          invoice: {
+            select: {
+              id: true,
+              displayNo: true,
+              status: true,
+            },
+          },
         },
         orderBy: { room: { number: "asc" } },
       });
@@ -771,6 +786,7 @@ export const bookingService = {
           rateApplied: Number(s.rateApplied),
           advancePaid: adv,
           status: s.status,
+          invoice: s.invoice ? { id: s.invoice.id, displayNo: s.invoice.displayNo, status: s.invoice.status } : null,
         });
         siblingMap.set(s.groupBookingId, list);
       }
@@ -808,6 +824,11 @@ export const bookingService = {
           ? groupRoomNumbers.join(", ")
           : b.room.number;
 
+        // Group invoice: check master booking first, or any sibling with an issued invoice
+        const matchedInvoice = isGroup
+          ? (b.invoice || groupSiblings.find((s) => s.invoice)?.invoice || null)
+          : b.invoice;
+
         return {
           id: b.id,
           reference: b.reference,
@@ -829,6 +850,8 @@ export const bookingService = {
           isGroupMaster: b.isGroupMaster,
           groupRoomNumbers: isGroup ? groupRoomNumbers : undefined,
           groupRoomCount: isGroup ? groupRoomNumbers.length : undefined,
+          invoiceId: matchedInvoice?.id || null,
+          invoiceDisplayNo: matchedInvoice?.displayNo || null,
         };
       }),
     };

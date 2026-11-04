@@ -25,7 +25,7 @@ export default async function PaymentsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
             <PaymentIcon className="size-6 text-primary" aria-hidden="true" />
-            Payments & Tax Invoices
+            Payments & Invoices
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Track stay billing, advances, settlement transactions, and download

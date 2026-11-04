@@ -82,3 +82,19 @@ export async function getInvoiceAction(
     return errorResult("INTERNAL_ERROR");
   }
 }
+
+export async function getBookingInvoiceAction(
+  bookingId: string
+): Promise<
+  ActionResult<Awaited<ReturnType<typeof invoiceService.getInvoiceByBooking>>>
+> {
+  try {
+    await requireRole([ROLES.OWNER, ROLES.RECEPTIONIST]);
+    const result = await invoiceService.getInvoiceByBooking(bookingId);
+    return successResult(result);
+  } catch (err) {
+    if (err instanceof AppError) return errorResult(err.code, err.message);
+    console.error("getBookingInvoiceAction error:", err);
+    return errorResult("INTERNAL_ERROR");
+  }
+}

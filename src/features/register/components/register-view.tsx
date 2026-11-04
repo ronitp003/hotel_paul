@@ -27,8 +27,8 @@ export function RegisterView({
     tabFromUrl === "analytics"
       ? "analytics"
       : tabFromUrl === "register"
-      ? "register"
-      : defaultTab;
+        ? "register"
+        : defaultTab;
 
   if (activeTab === "analytics") {
     return <AnalyticsTab initialData={initialAnalytics} />;
@@ -39,7 +39,7 @@ export function RegisterView({
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Check-in Register
+          Daily Report
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Official day-by-day guest register with primary and accompanying occupant records.

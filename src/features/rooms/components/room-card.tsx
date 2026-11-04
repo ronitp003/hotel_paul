@@ -17,13 +17,13 @@ import { formatINR } from "@/lib/money";
 import { formatISTDateTime, formatIST } from "@/lib/datetime";
 import {
   GuestIcon,
-  ClockIcon,
   ProblemIcon,
   MaintenanceIcon,
   EditIcon,
   ChevronRightIcon,
   RoomIcon,
   CheckIcon,
+  CalendarIcon,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { RoomWithStatus } from "@/server/services/room.service";
@@ -48,62 +48,134 @@ export function RoomCard({
 
   const isOwner = userRole === "OWNER";
 
-  // Status badge styling
-  const statusConfig = !room.isActive
+  // Status card styling and tokens
+  const style = !room.isActive
     ? {
+        cardClass:
+          "bg-stone-100/90 dark:bg-stone-900/40 border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700 hover:shadow-xs opacity-80",
+        roomNumberClass: "text-stone-700 dark:text-stone-300",
+        typeNameClass: "text-stone-500 dark:text-stone-400",
+        priceClass: "text-stone-700 dark:text-stone-300",
+        priceSuffixClass: "text-stone-500 dark:text-stone-400",
+        statusBadgeClass:
+          "bg-stone-500 text-white border-stone-500 shadow-2xs",
+        statusDotClass: "bg-white",
+        contextBoxClass:
+          "bg-stone-200/60 dark:bg-stone-800/40 border-stone-300/60 dark:border-stone-700/50 text-stone-700 dark:text-stone-300",
+        dividerClass: "border-stone-200 dark:border-stone-800",
+        actionBtnClass:
+          "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-800/60",
         label: "Disabled",
-        dotClass: "bg-muted-foreground",
-        badgeClass: "bg-muted text-muted-foreground border-border",
       }
     : room.status === "OCCUPIED"
       ? {
+          cardClass:
+            "bg-blue-50/90 dark:bg-blue-950/35 border-blue-200/90 dark:border-blue-800/60 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xs",
+          roomNumberClass: "text-blue-950 dark:text-blue-100",
+          typeNameClass: "text-blue-800/80 dark:text-blue-300/80",
+          priceClass: "text-blue-950 dark:text-blue-100",
+          priceSuffixClass: "text-blue-700/70 dark:text-blue-400/70",
+          statusBadgeClass:
+            "bg-blue-600 text-white dark:bg-blue-500 dark:text-blue-950 border-blue-600 dark:border-blue-500 shadow-2xs",
+          statusDotClass: "bg-white dark:bg-blue-950",
+          contextBoxClass:
+            "bg-blue-100/70 dark:bg-blue-900/30 border-blue-200/80 dark:border-blue-800/50 text-blue-900 dark:text-blue-200",
+          dividerClass: "border-blue-200/80 dark:border-blue-800/60",
+          actionBtnClass:
+            "text-blue-800 dark:text-blue-300 hover:text-blue-950 dark:hover:text-blue-100 hover:bg-blue-200/60 dark:hover:bg-blue-900/50",
           label: "Occupied",
-          dotClass: "bg-blue-600 dark:bg-blue-400",
-          badgeClass:
-            "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
         }
       : room.status === "RESERVED"
         ? {
+            cardClass:
+              "bg-amber-50/90 dark:bg-amber-950/35 border-amber-200/90 dark:border-amber-800/60 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs",
+            roomNumberClass: "text-amber-950 dark:text-amber-100",
+            typeNameClass: "text-amber-800/80 dark:text-amber-300/80",
+            priceClass: "text-amber-950 dark:text-amber-100",
+            priceSuffixClass: "text-amber-700/70 dark:text-amber-400/70",
+            statusBadgeClass:
+              "bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 border-amber-600 dark:border-amber-500 shadow-2xs",
+            statusDotClass: "bg-white dark:bg-amber-950",
+            contextBoxClass:
+              "bg-amber-100/70 dark:bg-amber-900/30 border-amber-200/80 dark:border-amber-800/50 text-amber-900 dark:text-amber-200",
+            dividerClass: "border-amber-200/80 dark:border-amber-800/60",
+            actionBtnClass:
+              "text-amber-800 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 hover:bg-amber-200/60 dark:hover:bg-amber-900/50",
             label: "Reserved",
-            dotClass: "bg-amber-600 dark:bg-amber-400",
-            badgeClass:
-              "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
           }
         : room.status === "MAINTENANCE"
           ? {
+              cardClass:
+                "bg-maintenance-striped border-purple-300/90 dark:border-purple-800/60 hover:border-purple-400 dark:hover:border-purple-700 hover:shadow-xs",
+              roomNumberClass: "text-purple-950 dark:text-purple-100",
+              typeNameClass: "text-purple-800/90 dark:text-purple-200",
+              priceClass: "text-purple-950 dark:text-purple-100",
+              priceSuffixClass: "text-purple-700/70 dark:text-purple-300/80",
+              statusBadgeClass:
+                "bg-purple-700 text-white dark:bg-purple-600 dark:text-white border-purple-700 dark:border-purple-600 shadow-2xs",
+              statusDotClass: "bg-white",
+              contextBoxClass:
+                "bg-white/85 dark:bg-purple-950/70 backdrop-blur-xs border-purple-300/80 dark:border-purple-700/50 text-purple-950 dark:text-purple-200",
+              dividerClass: "border-purple-300/80 dark:border-purple-800/60",
+              actionBtnClass:
+                "text-purple-900 dark:text-purple-200 hover:text-purple-950 dark:hover:text-purple-100 hover:bg-purple-200/60 dark:hover:bg-purple-900/60",
               label: "Maintenance",
-              dotClass: "bg-slate-500",
-              badgeClass:
-                "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20",
             }
           : {
+              cardClass:
+                "bg-emerald-50/90 dark:bg-emerald-950/35 border-emerald-200/90 dark:border-emerald-800/60 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs",
+              roomNumberClass: "text-emerald-950 dark:text-emerald-100",
+              typeNameClass: "text-emerald-800/80 dark:text-emerald-300/80",
+              priceClass: "text-emerald-950 dark:text-emerald-100",
+              priceSuffixClass: "text-emerald-700/70 dark:text-emerald-400/70",
+              statusBadgeClass:
+                "bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 border-emerald-600 dark:border-emerald-500 shadow-2xs",
+              statusDotClass: "bg-white dark:bg-emerald-950",
+              contextBoxClass:
+                "bg-emerald-100/70 dark:bg-emerald-900/30 border-emerald-200/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200",
+              dividerClass: "border-emerald-200/80 dark:border-emerald-800/60",
+              actionBtnClass:
+                "text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 hover:bg-emerald-200/60 dark:hover:bg-emerald-900/50",
               label: "Available",
-              dotClass: "bg-emerald-600 dark:bg-emerald-400",
-              badgeClass:
-                "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
             };
 
   return (
     <>
       <Card
+        tabIndex={0}
         onClick={() => {
           setIsDetailsOpen(true);
         }}
-        className="relative overflow-hidden transition-all duration-150 ease-out cursor-pointer flex flex-col justify-between select-none group border border-border/80 rounded-xl hover:shadow-xs hover:border-border motion-reduce:transition-none bg-card py-0 gap-0"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsDetailsOpen(true);
+          }
+        }}
+        className={cn(
+          "relative overflow-hidden transition-all duration-150 ease-out cursor-pointer flex flex-col justify-between select-none group border rounded-xl py-0 gap-0 h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+          style.cardClass
+        )}
       >
         <CardContent className="p-3.5 sm:p-4 flex flex-col justify-between h-full">
           <div>
-            {/* Top Row: Room Number & Status Badge */}
+            {/* Top Row: Room Number & Status / Issue Badges */}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <span
-                  className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-foreground leading-none truncate block"
+                  className={cn(
+                    "text-2xl sm:text-3xl font-bold font-mono tracking-tight leading-none truncate block",
+                    style.roomNumberClass
+                  )}
                   title={`Room ${room.number}`}
                 >
                   {room.number}
                 </span>
                 <p
-                  className="text-xs text-muted-foreground mt-1 truncate font-medium"
+                  className={cn(
+                    "text-xs mt-1 truncate font-semibold",
+                    style.typeNameClass
+                  )}
                   title={room.typeName}
                 >
                   {room.typeName}
@@ -114,7 +186,7 @@ export function RoomCard({
                 {room.hasProblem && (
                   <span
                     title={`${room.openProblemsCount} unresolved problem(s)`}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 shrink-0"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white shadow-2xs shrink-0"
                   >
                     <ProblemIcon
                       className="size-2.5 shrink-0"
@@ -129,134 +201,246 @@ export function RoomCard({
                 )}
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border leading-none shrink-0",
-                    statusConfig.badgeClass
+                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border leading-tight shrink-0 shadow-2xs",
+                    style.statusBadgeClass
                   )}
                 >
                   <span
                     className={cn(
                       "size-1.5 rounded-full shrink-0",
-                      statusConfig.dotClass
+                      style.statusDotClass
                     )}
                     aria-hidden="true"
                   />
-                  <span>{statusConfig.label}</span>
+                  <span>{style.label}</span>
                 </span>
               </div>
             </div>
 
             {/* Pricing Row: Price / night */}
             <div className="flex items-baseline gap-1 mt-3">
-              <span className="text-lg font-bold font-mono text-foreground tracking-tight tabular-nums">
+              <span
+                className={cn(
+                  "text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums",
+                  style.priceClass
+                )}
+              >
                 {formatINR(room.pricePerNight)}
               </span>
-              <span className="text-xs text-muted-foreground font-normal">
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  style.priceSuffixClass
+                )}
+              >
                 / night
               </span>
             </div>
 
-            {/* Inline Status Message with Small Icon */}
-            <div className="mt-2 text-xs text-muted-foreground min-w-0">
+            {/* Contextual Status Information Block */}
+            <div className="mt-3">
               {room.status === "OCCUPIED" ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <GuestIcon
-                    className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
-                    aria-hidden="true"
-                  />
-                  {room.currentBooking ? (
-                    <span className="truncate">
-                      <strong className="font-semibold text-foreground/90">
-                        {room.currentBooking.guestName}
-                      </strong>
-                      <span className="text-[11px] text-muted-foreground font-normal ml-1">
-                        • Out{" "}
+                <div
+                  className={cn(
+                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    style.contextBoxClass
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <GuestIcon
+                      className="size-3.5 shrink-0 opacity-80"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate font-semibold text-xs">
+                      {room.currentBooking
+                        ? room.currentBooking.guestName
+                        : "Guest in room"}
+                    </span>
+                  </div>
+                  {room.currentBooking && (
+                    <div className="flex items-center justify-between text-[11px] opacity-85">
+                      <span>
+                        Checkout:{" "}
                         {formatIST(
                           new Date(room.currentBooking.checkOutAt),
                           "d MMM"
                         )}
                       </span>
-                    </span>
-                  ) : (
-                    <span className="truncate font-medium text-foreground/80">
-                      Guest in room
-                    </span>
+                      <span className="font-mono text-[10px] font-semibold">
+                        {room.currentBooking.reference}
+                      </span>
+                    </div>
+                  )}
+                  {room.hasProblem && (
+                    <div className="pt-1 mt-1 border-t border-rose-300/50 dark:border-rose-700/50 flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold truncate">
+                      <ProblemIcon className="size-3 shrink-0" />
+                      <span className="truncate">
+                        {room.openProblems?.[0]?.description || "Issue reported"}
+                      </span>
+                    </div>
                   )}
                 </div>
               ) : room.status === "RESERVED" ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <ClockIcon
-                    className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
-                    aria-hidden="true"
-                  />
-                  {room.currentBooking ? (
-                    <span className="truncate">
-                      <strong className="font-semibold text-foreground/90">
-                        {room.currentBooking.guestName}
-                      </strong>
-                      <span className="text-[11px] text-muted-foreground font-normal ml-1">
-                        • In{" "}
+                <div
+                  className={cn(
+                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    style.contextBoxClass
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <CalendarIcon
+                      className="size-3.5 shrink-0 opacity-80"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate font-semibold text-xs">
+                      {room.currentBooking
+                        ? room.currentBooking.guestName
+                        : "Reserved"}
+                    </span>
+                  </div>
+                  {room.currentBooking && (
+                    <div className="flex items-center justify-between text-[11px] opacity-85">
+                      <span>
+                        Arrival:{" "}
                         {formatIST(
                           new Date(room.currentBooking.checkInAt),
                           "d MMM"
                         )}
                       </span>
-                    </span>
-                  ) : (
-                    <span className="truncate font-medium text-foreground/80">
-                      Reserved
-                    </span>
+                      <span className="font-mono text-[10px] font-semibold">
+                        {room.currentBooking.reference}
+                      </span>
+                    </div>
+                  )}
+                  {room.hasProblem && (
+                    <div className="pt-1 mt-1 border-t border-rose-300/50 dark:border-rose-700/50 flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold truncate">
+                      <ProblemIcon className="size-3 shrink-0" />
+                      <span className="truncate">
+                        {room.openProblems?.[0]?.description || "Issue reported"}
+                      </span>
+                    </div>
                   )}
                 </div>
               ) : room.status === "MAINTENANCE" ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <MaintenanceIcon
-                    className="size-3.5 shrink-0 text-slate-500"
-                    aria-hidden="true"
-                  />
-                  <span
-                    className="truncate font-medium text-foreground/80"
-                    title={room.maintenanceReason || "Under maintenance"}
-                  >
-                    {room.maintenanceReason || "Under maintenance"}
-                  </span>
+                <div
+                  className={cn(
+                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    style.contextBoxClass
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MaintenanceIcon
+                      className="size-3.5 shrink-0 opacity-80"
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="truncate font-semibold text-xs"
+                      title={room.maintenanceReason || "Under maintenance"}
+                    >
+                      {room.maintenanceReason || "Under maintenance"}
+                    </span>
+                  </div>
+                  <div className="text-[11px] opacity-85">
+                    {room.activeMaintenance?.endsAt
+                      ? `Until: ${formatIST(
+                          new Date(room.activeMaintenance.endsAt),
+                          "d MMM, hh:mm a"
+                        )}`
+                      : "Work in progress"}
+                  </div>
+                  {room.hasProblem && (
+                    <div className="pt-1 mt-1 border-t border-rose-300/50 dark:border-rose-700/50 flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold truncate">
+                      <ProblemIcon className="size-3 shrink-0" />
+                      <span className="truncate">
+                        {room.openProblems?.[0]?.description || "Issue reported"}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : !room.isActive ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <RoomIcon
-                    className="size-3.5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="truncate font-medium text-muted-foreground">
-                    Inactive in system
-                  </span>
+                <div
+                  className={cn(
+                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    style.contextBoxClass
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <RoomIcon
+                      className="size-3.5 shrink-0 opacity-80"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate font-semibold text-xs">
+                      Inactive in system
+                    </span>
+                  </div>
+                  <div className="text-[11px] opacity-75">
+                    Archived from booking
+                  </div>
+                </div>
+              ) : room.hasProblem ? (
+                <div className="rounded-lg p-2.5 text-xs border bg-rose-500/15 dark:bg-rose-500/20 border-rose-500/30 text-rose-950 dark:text-rose-100 space-y-1 min-h-[58px] flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-300 font-bold text-[11px] uppercase tracking-wide">
+                    <ProblemIcon
+                      className="size-3.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span>Inspection Needed</span>
+                  </div>
+                  <p
+                    className="truncate font-semibold text-xs text-rose-900 dark:text-rose-200"
+                    title={
+                      room.openProblems?.[0]?.description || "Unresolved issue"
+                    }
+                  >
+                    {room.openProblems?.[0]?.description ||
+                      "Room requires inspection"}
+                  </p>
                 </div>
               ) : room.upcomingMaintenance &&
                 room.upcomingMaintenance.length > 0 ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <MaintenanceIcon
-                    className="size-3.5 shrink-0 text-slate-500"
-                    aria-hidden="true"
-                  />
-                  <span
-                    className="truncate font-medium text-foreground/80"
-                    title={room.upcomingMaintenance[0].reason}
-                  >
-                    Maint:{" "}
+                <div
+                  className={cn(
+                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    style.contextBoxClass
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MaintenanceIcon
+                      className="size-3.5 shrink-0 opacity-80"
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="truncate font-semibold text-xs"
+                      title={room.upcomingMaintenance[0].reason}
+                    >
+                      Scheduled Maint
+                    </span>
+                  </div>
+                  <div className="text-[11px] opacity-85">
+                    Starts:{" "}
                     {formatIST(
                       new Date(room.upcomingMaintenance[0].startsAt),
                       "d MMM"
                     )}
-                  </span>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <CheckIcon
-                    className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
-                    aria-hidden="true"
-                  />
-                  <span className="truncate font-medium text-foreground/80">
-                    Available for check-in
-                  </span>
+                <div
+                  className={cn(
+                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    style.contextBoxClass
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <CheckIcon
+                      className="size-3.5 shrink-0 opacity-80"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate font-semibold text-xs">
+                      Ready for check-in
+                    </span>
+                  </div>
+                  <div className="text-[11px] opacity-85">Clean & inspected</div>
                 </div>
               )}
             </div>
@@ -265,7 +449,8 @@ export function RoomCard({
           {/* Bottom Section: Subtle Divider & Minimal Actions */}
           <div
             className={cn(
-              "mt-3.5 pt-2 border-t border-border/60 flex items-center text-xs",
+              "mt-3.5 pt-2 border-t flex items-center text-xs",
+              style.dividerClass,
               isOwner && onEdit ? "justify-between" : "justify-end"
             )}
             onClick={(e) => e.stopPropagation()}
@@ -276,7 +461,10 @@ export function RoomCard({
                 variant="ghost"
                 size="sm"
                 onClick={() => onEdit(room)}
-                className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors gap-1 -ml-1"
+                className={cn(
+                  "h-7 px-2 text-xs font-semibold rounded-md transition-colors gap-1 -ml-1 cursor-pointer",
+                  style.actionBtnClass
+                )}
               >
                 <EditIcon className="size-3" aria-hidden="true" />
                 <span>Edit</span>
@@ -287,11 +475,14 @@ export function RoomCard({
               variant="ghost"
               size="sm"
               onClick={() => setIsDetailsOpen(true)}
-              className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors gap-1 -mr-1"
+              className={cn(
+                "h-7 px-2 text-xs font-semibold rounded-md transition-colors gap-1 -mr-1 cursor-pointer",
+                style.actionBtnClass
+              )}
             >
               <span>View Details</span>
               <ChevronRightIcon
-                className="size-3 text-muted-foreground"
+                className="size-3 opacity-80"
                 aria-hidden="true"
               />
             </Button>

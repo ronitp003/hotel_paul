@@ -7,6 +7,7 @@ import {
   RegisterDayData,
   GuestInfo,
 } from "@/features/register/schemas";
+import { generateRegisterCsv } from "@/features/register/export-csv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,8 @@ import {
   SpinnerIcon,
 } from "@/lib/icons";
 import { formatISTTime } from "@/lib/datetime";
+
+export { generateRegisterCsv } from "@/features/register/export-csv";
 
 interface CheckInRegisterTabProps {
   initialData: RegisterDayData;
@@ -146,46 +149,11 @@ export function CheckInRegisterTab({
 
   // Export to CSV
   const handleExportCSV = () => {
-    const headers = [
-      "Check-in Date & Time",
-      "Room Number",
-      "Room Type",
-      "Booking Reference",
-      "Booking Source",
-      "Primary Guest Name",
-      "Father's Name",
-      "Mobile Contact",
-      "Age",
-      "Sex",
-      "Accompanying Occupants Count",
-      "Accompanying Names",
-      "Arriving From",
-      "Purpose of Visit",
-    ];
-
-    const rows = filteredEntries.map((e) => [
-      `"${formatISTTime(e.checkInTime)}"`,
-      `"${e.roomNumber}"`,
-      `"${e.roomTypeName}"`,
-      `"${e.reference}"`,
-      `"${e.source}"`,
-      `"${e.primaryGuest.name}"`,
-      `"${e.primaryGuest.fatherName || ""}"`,
-      `"${e.primaryGuest.mobile || ""}"`,
-      `"${e.primaryGuest.age ?? ""}"`,
-      `"${e.primaryGuest.sex || ""}"`,
-      `"${e.accompanyingGuests.length}"`,
-      `"${e.accompanyingGuests.map((g) => g.name).join("; ")}"`,
-      `"${e.arrivingFrom || ""}"`,
-      `"${e.purposeOfVisit || ""}"`,
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = generateRegisterCsv(filteredEntries);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `Hotel_Paul_Checkin_Register_${selectedDate}.csv`
@@ -193,6 +161,7 @@ export function CheckInRegisterTab({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const todayStr = format(new Date(), "yyyy-MM-dd");

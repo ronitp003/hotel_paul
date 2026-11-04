@@ -55,13 +55,13 @@ export const NAV_ITEMS: NavItem[] = [
     roles: [ROLES.OWNER, ROLES.RECEPTIONIST],
   },
   {
-    title: "Payments",
+    title: "Payments & Invoices",
     href: "/payments",
     icon: PaymentIcon,
     roles: [ROLES.OWNER, ROLES.RECEPTIONIST],
   },
   {
-    title: "Check-in Register",
+    title: "Daily Report",
     href: "/register",
     icon: InvoiceIcon,
     roles: [ROLES.OWNER],

@@ -701,6 +701,54 @@ export const invoiceService = {
   },
 
   /**
+   * Fetches the invoice associated with a booking (or group booking).
+   */
+  async getInvoiceByBooking(bookingId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        invoice: true,
+      },
+    });
+
+    if (!booking) {
+      throw new AppError("BOOKING_NOT_FOUND", "Booking not found.");
+    }
+
+    if (booking.invoice) {
+      return {
+        id: booking.invoice.id,
+        number: booking.invoice.number,
+        displayNo: booking.invoice.displayNo,
+        status: booking.invoice.status,
+      };
+    }
+
+    if (booking.groupBookingId) {
+      const siblingWithInvoice = await prisma.booking.findFirst({
+        where: {
+          groupBookingId: booking.groupBookingId,
+          invoice: { isNot: null },
+        },
+        include: {
+          invoice: true,
+        },
+      });
+
+      if (siblingWithInvoice?.invoice) {
+        return {
+          id: siblingWithInvoice.invoice.id,
+          number: siblingWithInvoice.invoice.number,
+          displayNo: siblingWithInvoice.invoice.displayNo,
+          status: siblingWithInvoice.invoice.status,
+        };
+      }
+    }
+
+    return null;
+  },
+
+  /**
    * Lists invoices with pagination and search.
    */
   async listInvoices(options?: {

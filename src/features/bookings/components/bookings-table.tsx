@@ -11,6 +11,7 @@ import {
   SearchIcon,
   NewBookingIcon,
   CheckOutIcon,
+  DownloadIcon,
   SpinnerIcon,
   ArrowUpDownIcon,
   ArrowUpIcon,
@@ -23,6 +24,8 @@ import { SelectDropdown } from "@/components/ui/select-dropdown";
 import { TablePagination } from "@/components/ui/table-pagination";
 import type { BookingStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { getBookingInvoiceAction } from "@/server/actions/invoice.actions";
 import { CheckoutDialog } from "./checkout-dialog";
 
 export interface BookingRow {
@@ -46,6 +49,8 @@ export interface BookingRow {
   isGroupMaster?: boolean;
   groupRoomNumbers?: string[];
   groupRoomCount?: number;
+  invoiceId?: string | null;
+  invoiceDisplayNo?: string | null;
 }
 
 interface BookingsTableProps {
@@ -57,6 +62,8 @@ const PAGE_SIZE = 10;
 
 export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
   const router = useRouter();
+  const [prevInitialBookings, setPrevInitialBookings] = useState(initialBookings);
+  const [bookings, setBookings] = useState<BookingRow[]>(initialBookings);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<string>("created-desc");
@@ -67,10 +74,120 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
     roomNumber: string;
   } | null>(null);
   const [isProcessingCheckoutId, setIsProcessingCheckoutId] = useState<string | null>(null);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
   const [isPendingRefresh, startRefreshTransition] = useTransition();
 
+  if (initialBookings !== prevInitialBookings) {
+    setPrevInitialBookings(initialBookings);
+    setBookings(initialBookings);
+  }
+
+  const handleCheckoutSuccess = (result: { invoiceId: string; displayNo: string }) => {
+    if (!checkoutTarget) return;
+    const targetId = checkoutTarget.id;
+
+    // Immediately transition the booking(s) to CHECKED_OUT with the invoice
+    setBookings((prev) => {
+      const targetBooking = prev.find((x) => x.id === targetId);
+      return prev.map((b) => {
+        const isTarget = b.id === targetId;
+        const isGroupSibling =
+          b.groupBookingId && targetBooking?.groupBookingId === b.groupBookingId;
+
+        if (isTarget || isGroupSibling) {
+          return {
+            ...b,
+            status: "CHECKED_OUT" as BookingStatus,
+            actualCheckOutAt: new Date(),
+            invoiceId: result.invoiceId,
+            invoiceDisplayNo: result.displayNo,
+          };
+        }
+        return b;
+      });
+    });
+
+    setCheckoutTarget(null);
+    setIsProcessingCheckoutId(null);
+    startRefreshTransition(() => {
+      router.refresh();
+    });
+  };
+
+  const handleDownloadInvoice = async (booking: BookingRow) => {
+    if (downloadingInvoiceId) return;
+
+    setDownloadingInvoiceId(booking.id);
+    try {
+      let invoiceId = booking.invoiceId;
+      let displayNo = booking.invoiceDisplayNo;
+
+      if (!invoiceId) {
+        const res = await getBookingInvoiceAction(booking.id);
+        if (!res.ok || !res.data) {
+          toast.error("Invoice is not available yet for this booking.");
+          return;
+        }
+        invoiceId = res.data.id;
+        displayNo = res.data.displayNo;
+      }
+
+      const response = await fetch(`/api/invoices/${invoiceId}/pdf`);
+      if (!response.ok) {
+        throw new Error(`Invoice download failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Invoice-${displayNo || booking.reference}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(
+        displayNo
+          ? `Invoice ${displayNo} downloaded successfully.`
+          : "Invoice downloaded successfully."
+      );
+    } catch (err) {
+      console.error("Failed to download invoice:", err);
+      toast.error("Failed to download invoice. Please try again.");
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
+
+  const handleRowClick = (
+    e: React.MouseEvent<HTMLTableRowElement>,
+    bookingId: string
+  ) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest(
+        "button, a, input, select, textarea, [data-prevent-row-click]"
+      )
+    ) {
+      return;
+    }
+    router.push(`/bookings/${bookingId}`);
+  };
+
+  const handleRowKeyDown = (
+    e: React.KeyboardEvent<HTMLTableRowElement>,
+    bookingId: string
+  ) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      router.push(`/bookings/${bookingId}`);
+    }
+  };
+
   // Filter bookings
-  const filtered = initialBookings.filter((b) => {
+  const filtered = bookings.filter((b) => {
     if (statusFilter !== "ALL" && b.status !== statusFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase().trim();
@@ -337,7 +454,6 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
               <table className="w-full text-left text-xs">
                 <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="px-4 py-3">Reference</th>
                     <th className="px-4 py-3">Room</th>
                     <th className="px-4 py-3">
                       <button
@@ -387,26 +503,16 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                   {paginatedBookings.map((b) => (
                     <tr
                       key={b.id}
-                      className="hover:bg-muted/30 transition-colors"
+                      role="link"
+                      tabIndex={0}
+                      aria-label={`View booking for ${b.guestName}, Room ${b.roomNumber}`}
+                      onClick={(e) => handleRowClick(e, b.id)}
+                      onKeyDown={(e) => handleRowKeyDown(e, b.id)}
+                      className="cursor-pointer transition-colors duration-150 hover:bg-primary-subtle dark:hover:bg-primary-subtle/40 focus-visible:outline-none focus-visible:bg-primary-subtle"
                     >
-                      <td className="px-4 py-3 font-mono font-bold">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Link
-                            href={`/bookings/${b.id}`}
-                            className="text-primary hover:underline"
-                          >
-                            {b.reference}
-                          </Link>
-                          {b.groupBookingId && (
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                              Group ({b.groupRoomCount || 2})
-                            </span>
-                          )}
-                        </div>
-                      </td>
                       <td className="px-4 py-3">
                         {b.groupBookingId && b.groupRoomNumbers && b.groupRoomNumbers.length > 1 ? (
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-1.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <RoomIcon className="size-3.5 text-primary shrink-0" />
                               <div className="flex flex-wrap gap-1 items-center">
@@ -420,14 +526,17 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                                   </Badge>
                                 ))}
                               </div>
+                              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                                Group ({b.groupRoomCount || b.groupRoomNumbers.length})
+                              </span>
                             </div>
                             <span className="text-[10px] text-muted-foreground pl-5">
-                              {b.groupRoomCount} rooms
+                              {b.groupRoomCount || b.groupRoomNumbers.length} rooms • {b.roomTypeName}
                             </span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5">
-                            <RoomIcon className="size-3.5 text-muted-foreground" />
+                            <RoomIcon className="size-3.5 text-muted-foreground shrink-0" />
                             <span className="font-bold text-foreground font-mono">
                               {b.roomNumber}
                             </span>
@@ -479,35 +588,30 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Link
-                            href={`/bookings/${b.id}`}
-                            className={cn(
-                              buttonVariants({ variant: "ghost", size: "sm" }),
-                              "h-7 px-2 text-xs"
-                            )}
-                          >
-                            Details
-                          </Link>
-                          {b.status === "CHECKED_IN" && (
+                        <div
+                          className="flex items-center justify-end gap-1.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {b.status === "CHECKED_IN" ? (
                             <Button
                               variant="default"
                               size="sm"
                               disabled={isProcessingCheckoutId === b.id || isPendingRefresh}
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setCheckoutTarget({
                                   id: b.id,
                                   reference: b.reference,
                                   roomNumber:
                                     b.groupRoomNumbers?.join(", ") || b.roomNumber,
-                                })
-                              }
+                                });
+                              }}
                               className="h-7 px-2.5 text-xs font-semibold min-w-[85px] inline-flex items-center justify-center gap-1"
                             >
                               {isProcessingCheckoutId === b.id || (isPendingRefresh && checkoutTarget?.id === b.id) ? (
                                 <>
                                   <SpinnerIcon className="size-3 animate-spin shrink-0" />
-                                  <span>Processing Checkout...</span>
+                                  <span>Processing...</span>
                                 </>
                               ) : (
                                 <>
@@ -516,7 +620,39 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                                 </>
                               )}
                             </Button>
-                          )}
+                          ) : b.status === "CHECKED_OUT" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!b.invoiceId || !!downloadingInvoiceId}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadInvoice(b);
+                              }}
+                              title={
+                                b.invoiceId
+                                  ? `Invoice ${b.invoiceDisplayNo || ""}`
+                                  : "Invoice"
+                              }
+                              className={cn(
+                                "h-7 px-2.5 text-xs font-medium inline-flex items-center gap-1.5",
+                                b.invoiceId &&
+                                  "hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-colors"
+                              )}
+                            >
+                              {downloadingInvoiceId === b.id ? (
+                                <>
+                                  <SpinnerIcon className="size-3 animate-spin shrink-0" />
+                                  <span>Downloading...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <DownloadIcon className="size-3.5 shrink-0" />
+                                  <span>Invoice</span>
+                                </>
+                              )}
+                            </Button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -552,14 +688,7 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
               setIsProcessingCheckoutId(null);
             }
           }}
-          onSuccess={() => {
-            const targetId = checkoutTarget.id;
-            setIsProcessingCheckoutId(targetId);
-            setCheckoutTarget(null);
-            startRefreshTransition(() => {
-              router.refresh();
-            });
-          }}
+          onSuccess={handleCheckoutSuccess}
         />
       )}
     </div>
