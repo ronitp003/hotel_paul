@@ -400,6 +400,7 @@ export function RoomsManager({
 
       {/* Edit Room Dialog */}
       <EditRoomDialog
+        key={editingRoom ? editingRoom.id : "closed"}
         room={editingRoom}
         open={Boolean(editingRoom)}
         onOpenChange={(open) => !open && setEditingRoom(null)}

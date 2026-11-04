@@ -48,23 +48,29 @@ interface EditRoomDialogProps {
   onSuccess?: () => void;
 }
 
-export function EditRoomDialog({
+interface EditRoomDialogContentProps {
+  room: RoomWithStatus;
+  onClose: () => void;
+  roomTypes: RoomTypeOption[];
+  onSuccess?: () => void;
+}
+
+function EditRoomDialogContent({
   room,
-  open,
-  onOpenChange,
+  onClose,
   roomTypes,
   onSuccess,
-}: EditRoomDialogProps) {
+}: EditRoomDialogContentProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const editForm = useForm({
     defaultValues: {
-      number: room?.number ?? "",
-      typeId: room?.typeId ?? roomTypes[0]?.id ?? "",
-      pricePerNight: room?.pricePerNight ?? 2000,
-      isActive: room?.isActive ?? true,
+      number: room.number,
+      typeId: room.typeId,
+      pricePerNight: room.pricePerNight,
+      isActive: room.isActive,
     },
     validators: {
       onSubmit: ({ value }) => {
@@ -75,7 +81,6 @@ export function EditRoomDialog({
       },
     },
     onSubmit: async ({ value }) => {
-      if (!room) return;
       setActionError(null);
       const res = await updateRoomAction(room.id, value);
       if (!res.ok) {
@@ -83,13 +88,12 @@ export function EditRoomDialog({
         return;
       }
       toast.success(`Room ${value.number} updated successfully.`);
-      onOpenChange(false);
+      onClose();
       onSuccess?.();
     },
   });
 
   const handleDelete = async () => {
-    if (!room) return;
     setActionError(null);
     setIsDeleting(true);
     const res = await deleteRoomAction(room.id);
@@ -101,14 +105,12 @@ export function EditRoomDialog({
     }
     toast.success(`Room ${room.number} deleted successfully.`);
     setIsDeleteConfirmOpen(false);
-    onOpenChange(false);
+    onClose();
     onSuccess?.();
   };
 
-  if (!room) return null;
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -253,7 +255,7 @@ export function EditRoomDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => onOpenChange(false)}
+                onClick={onClose}
               >
                 Cancel
               </Button>
@@ -309,6 +311,30 @@ export function EditRoomDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  );
+}
+
+export function EditRoomDialog({
+  room,
+  open,
+  onOpenChange,
+  roomTypes,
+  onSuccess,
+}: EditRoomDialogProps) {
+  if (!room) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {open && (
+        <EditRoomDialogContent
+          key={room.id}
+          room={room}
+          onClose={() => onOpenChange(false)}
+          roomTypes={roomTypes}
+          onSuccess={onSuccess}
+        />
+      )}
     </Dialog>
   );
 }

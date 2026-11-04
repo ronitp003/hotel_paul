@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { DashboardView } from "@/features/dashboard/components/dashboard-view";
 import type { DashboardSummary } from "@/features/dashboard/schemas";
 import type { RoomWithStatus } from "@/server/services/room.service";
@@ -294,5 +294,22 @@ describe("Dashboard Major Layout Redesign", () => {
 
     // Due amount badge must NOT be rendered on Room Board card
     expect(screen.queryByText(/Due: ₹/i)).toBeNull();
+  });
+
+  it("opens quick details modal on clicking a room card from Room Board and verifies Inventory State is removed", async () => {
+    render(<DashboardView data={mockDashboardData} userRole="OWNER" />);
+
+    const roomCard = screen.getByText("101").closest('[role="button"]') as HTMLElement;
+    expect(roomCard).toBeInTheDocument();
+
+    fireEvent.click(roomCard);
+
+    // Modal opens with room title
+    expect(await screen.findByRole("heading", { name: "Room 101" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /room details/i })).toBeInTheDocument();
+
+    // Inventory State must NOT exist in the modal
+    expect(screen.queryByText(/Inventory State/i)).toBeNull();
+    expect(screen.queryByText(/Active \(Bookable\)/i)).toBeNull();
   });
 });

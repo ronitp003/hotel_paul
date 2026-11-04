@@ -14,6 +14,7 @@ import {
 import { formatISTDate } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import type { RoomWithStatus } from "@/server/services/room.service";
+import { RoomQuickDetailsDialog } from "@/features/rooms/components/room-quick-details-dialog";
 
 interface RoomBoardProps {
   rooms: RoomWithStatus[];
@@ -24,6 +25,7 @@ type StatusFilter = "ALL" | "AVAILABLE" | "OCCUPIED" | "RESERVED" | "MAINTENANCE
 
 export function RoomBoard({ rooms, className }: RoomBoardProps) {
   const [filter, setFilter] = useState<StatusFilter>("ALL");
+  const [selectedRoom, setSelectedRoom] = useState<RoomWithStatus | null>(null);
 
   const totalCount = rooms.length;
   const availableCount = rooms.filter((r) => r.status === "AVAILABLE").length;
@@ -41,164 +43,179 @@ export function RoomBoard({ rooms, className }: RoomBoardProps) {
   });
 
   return (
-    <Card className={cn("flex flex-col shadow-xs border-border/80 overflow-hidden", className)}>
-      {/* Room Board Header – Reduced Padding */}
-      <CardHeader className="p-2.5 sm:px-3 pb-2 shrink-0 border-b border-border/60 gap-1.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          {/* Title & Icon */}
-          <div className="flex items-center gap-2">
-            <RoomIcon className="size-4 text-primary shrink-0" aria-hidden="true" />
-            <CardTitle className="text-base font-semibold text-foreground tracking-tight">
-              Room Board
-            </CardTitle>
+    <>
+      <Card className={cn("flex flex-col shadow-xs border-border/80 overflow-hidden", className)}>
+        {/* Room Board Header – Reduced Padding */}
+        <CardHeader className="p-2.5 sm:px-3 pb-2 shrink-0 border-b border-border/60 gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {/* Title & Icon */}
+            <div className="flex items-center gap-2">
+              <RoomIcon className="size-4 text-primary shrink-0" aria-hidden="true" />
+              <CardTitle className="text-base font-semibold text-foreground tracking-tight">
+                Room Board
+              </CardTitle>
+            </div>
+
+            {/* Action Button: All Rooms (Navigates to Rooms page) */}
+            <Link href="/rooms" className="shrink-0 self-start sm:self-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-6.5 px-2 font-medium gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <span>All Rooms</span>
+                <ChevronRightIcon className="size-3" aria-hidden="true" />
+              </Button>
+            </Link>
           </div>
 
-          {/* Action Button: All Rooms (Navigates to Rooms page) */}
-          <Link href="/rooms" className="shrink-0 self-start sm:self-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs h-6.5 px-2 font-medium gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+          {/* Compact Horizontal Status Summary Pills in order: All Rooms, Available, Occupied, Reserved, Maintenance */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {/* 1. All Rooms */}
+            <button
+              type="button"
+              onClick={() => setFilter("ALL")}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                filter === "ALL"
+                  ? "bg-primary text-primary-foreground shadow-2xs"
+                  : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
             >
               <span>All Rooms</span>
-              <ChevronRightIcon className="size-3" aria-hidden="true" />
-            </Button>
-          </Link>
-        </div>
+              <span
+                className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
+                  filter === "ALL" ? "bg-white/20 text-white" : "bg-background text-foreground"
+                )}
+              >
+                {totalCount}
+              </span>
+            </button>
 
-        {/* Compact Horizontal Status Summary Pills in order: All Rooms, Available, Occupied, Reserved, Maintenance */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          {/* 1. All Rooms */}
-          <button
-            type="button"
-            onClick={() => setFilter("ALL")}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
-              filter === "ALL"
-                ? "bg-primary text-primary-foreground shadow-2xs"
-                : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <span>All Rooms</span>
-            <span
+            {/* 2. Available */}
+            <button
+              type="button"
+              onClick={() => setFilter("AVAILABLE")}
               className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
-                filter === "ALL" ? "bg-white/20 text-white" : "bg-background text-foreground"
+                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                filter === "AVAILABLE"
+                  ? "bg-emerald-600 text-white shadow-2xs"
+                  : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
               )}
             >
-              {totalCount}
-            </span>
-          </button>
+              <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+              <span>Available</span>
+              <span
+                className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
+                  filter === "AVAILABLE" ? "bg-white/20 text-white" : "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200"
+                )}
+              >
+                {availableCount}
+              </span>
+            </button>
 
-          {/* 2. Available */}
-          <button
-            type="button"
-            onClick={() => setFilter("AVAILABLE")}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
-              filter === "AVAILABLE"
-                ? "bg-emerald-600 text-white shadow-2xs"
-                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
-            )}
-          >
-            <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-            <span>Available</span>
-            <span
+            {/* 3. Occupied */}
+            <button
+              type="button"
+              onClick={() => setFilter("OCCUPIED")}
               className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
-                filter === "AVAILABLE" ? "bg-white/20 text-white" : "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200"
+                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                filter === "OCCUPIED"
+                  ? "bg-blue-600 text-white shadow-2xs"
+                  : "bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20"
               )}
             >
-              {availableCount}
-            </span>
-          </button>
+              <span className="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
+              <span>Occupied</span>
+              <span
+                className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
+                  filter === "OCCUPIED" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                )}
+              >
+                {occupiedCount}
+              </span>
+            </button>
 
-          {/* 3. Occupied */}
-          <button
-            type="button"
-            onClick={() => setFilter("OCCUPIED")}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
-              filter === "OCCUPIED"
-                ? "bg-blue-600 text-white shadow-2xs"
-                : "bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20"
-            )}
-          >
-            <span className="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
-            <span>Occupied</span>
-            <span
+            {/* 4. Reserved */}
+            <button
+              type="button"
+              onClick={() => setFilter("RESERVED")}
               className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
-                filter === "OCCUPIED" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                filter === "RESERVED"
+                  ? "bg-amber-600 text-white shadow-2xs"
+                  : "bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
               )}
             >
-              {occupiedCount}
-            </span>
-          </button>
+              <span className="size-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
+              <span>Reserved</span>
+              <span
+                className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
+                  filter === "RESERVED" ? "bg-white/20 text-white" : "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
+                )}
+              >
+                {reservedCount}
+              </span>
+            </button>
 
-          {/* 4. Reserved */}
-          <button
-            type="button"
-            onClick={() => setFilter("RESERVED")}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
-              filter === "RESERVED"
-                ? "bg-amber-600 text-white shadow-2xs"
-                : "bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
-            )}
-          >
-            <span className="size-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
-            <span>Reserved</span>
-            <span
+            {/* 5. Maintenance (Theme-matched Purple) */}
+            <button
+              type="button"
+              onClick={() => setFilter("MAINTENANCE")}
               className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
-                filter === "RESERVED" ? "bg-white/20 text-white" : "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
+                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                filter === "MAINTENANCE"
+                  ? "bg-purple-700 text-white shadow-2xs"
+                  : "bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20"
               )}
             >
-              {reservedCount}
-            </span>
-          </button>
-
-          {/* 5. Maintenance (Theme-matched Purple) */}
-          <button
-            type="button"
-            onClick={() => setFilter("MAINTENANCE")}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
-              filter === "MAINTENANCE"
-                ? "bg-purple-700 text-white shadow-2xs"
-                : "bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20"
-            )}
-          >
-            <span className="size-1.5 rounded-full bg-purple-600 dark:bg-purple-400" />
-            <span>Maintenance</span>
-            <span
-              className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
-                filter === "MAINTENANCE" ? "bg-white/20 text-white" : "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
-              )}
-            >
-              {maintenanceCount}
-            </span>
-          </button>
-        </div>
-      </CardHeader>
-
-      {/* Room Cards Grid (Scrollable, Reduced Padding) */}
-      <CardContent className="p-2.5 sm:p-3 flex-1 min-h-0 overflow-y-auto">
-        {filteredRooms.length === 0 ? (
-          <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center h-full min-h-[200px]">
-            No rooms found matching the selected filter.
+              <span className="size-1.5 rounded-full bg-purple-600 dark:bg-purple-400" />
+              <span>Maintenance</span>
+              <span
+                className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
+                  filter === "MAINTENANCE" ? "bg-white/20 text-white" : "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
+                )}
+              >
+                {maintenanceCount}
+              </span>
+            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-2.5">
-            {filteredRooms.map((room) => (
-              <RoomBoardCard key={room.id} room={room} />
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+
+        {/* Room Cards Grid (Scrollable, Reduced Padding) */}
+        <CardContent className="p-2.5 sm:p-3 flex-1 min-h-0 overflow-y-auto">
+          {filteredRooms.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center h-full min-h-[200px]">
+              No rooms found matching the selected filter.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-2.5">
+              {filteredRooms.map((room) => (
+                <RoomBoardCard
+                  key={room.id}
+                  room={room}
+                  onSelect={setSelectedRoom}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Room Details Modal (Quick Summary Dialog) */}
+      <RoomQuickDetailsDialog
+        room={selectedRoom}
+        open={Boolean(selectedRoom)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRoom(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -207,8 +224,15 @@ export function RoomBoard({ rooms, className }: RoomBoardProps) {
  * Compact status board tile with full-background color styling matching operational status.
  * Maintenance theme matches the website predefined purple palette.
  * Unresolved issue shown as "Issue" badge at the top.
+ * Clicking opens the Quick Summary Modal.
  */
-function RoomBoardCard({ room }: { room: RoomWithStatus }) {
+function RoomBoardCard({
+  room,
+  onSelect,
+}: {
+  room: RoomWithStatus;
+  onSelect: (room: RoomWithStatus) => void;
+}) {
   const isOccupied = room.status === "OCCUPIED";
   const isAvailable = room.status === "AVAILABLE";
   const isMaintenance = room.status === "MAINTENANCE";
@@ -257,10 +281,18 @@ function RoomBoardCard({ room }: { room: RoomWithStatus }) {
     : null;
 
   return (
-    <Link
-      href={`/rooms/${room.id}`}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(room)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(room);
+        }
+      }}
       className={cn(
-        "rounded-lg border p-2.5 flex flex-col justify-between transition-all duration-150 hover:shadow-xs group cursor-pointer select-none",
+        "rounded-lg border p-2.5 flex flex-col justify-between transition-all duration-150 hover:shadow-xs group cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         cardStyle
       )}
     >
@@ -369,6 +401,6 @@ function RoomBoardCard({ room }: { room: RoomWithStatus }) {
           )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
