@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { type BookingStatus } from "@prisma/client";
+import type { RoomWithStatus } from "@/server/services/room.service";
 
 export interface DashboardRoomCounts {
   total: number;
@@ -71,6 +72,7 @@ export interface TodayGuestMovement {
 
 export interface DashboardSummary {
   rooms: DashboardRoomCounts;
+  roomList?: RoomWithStatus[];
   movements: DashboardTodayMovements;
   paymentsDue: DashboardPaymentsDue;
   billing: DashboardMonthlyBilling | null;

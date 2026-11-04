@@ -98,6 +98,14 @@ export interface RoomWithStatus {
     checkInAt: Date;
     checkOutAt: Date;
   } | null;
+  nextBooking?: {
+    id: string;
+    reference: string;
+    guestName: string;
+    checkInAt: Date;
+    checkOutAt: Date;
+  } | null;
+  balanceDue?: number;
 }
 
 export interface RoomCalculationInput {
@@ -157,6 +165,14 @@ export function calculateRoomStatus(
     checkInAt: Date;
     checkOutAt: Date;
   } | null;
+  nextBooking?: {
+    id: string;
+    reference: string;
+    guestName: string;
+    checkInAt: Date;
+    checkOutAt: Date;
+  } | null;
+  balanceDue?: number;
 } {
   const openProblems = room.problems?.filter((p) => p.status === "OPEN") ?? [];
   const hasProblem = openProblems.length > 0;
@@ -192,6 +208,27 @@ export function calculateRoomStatus(
       }
     : null;
 
+  // Find next upcoming reservation
+  const upcomingReservation = room.bookings
+    ?.filter((b) => b.status === "RESERVED" && new Date(b.checkInAt) >= now)
+    ?.sort(
+      (a, b) =>
+        new Date(a.checkInAt).getTime() - new Date(b.checkInAt).getTime()
+    )[0];
+
+  const nextBooking = upcomingReservation
+    ? {
+        id: upcomingReservation.id,
+        reference: upcomingReservation.reference,
+        guestName:
+          upcomingReservation.guests?.find((g) => g.isPrimary)?.name ||
+          upcomingReservation.guests?.[0]?.name ||
+          "Guest",
+        checkInAt: upcomingReservation.checkInAt,
+        checkOutAt: upcomingReservation.checkOutAt,
+      }
+    : null;
+
   if (activeMaintenance) {
     return {
       status: "MAINTENANCE",
@@ -202,6 +239,7 @@ export function calculateRoomStatus(
       activeMaintenance: activeMaintenanceItem,
       upcomingMaintenance,
       currentBooking: null,
+      nextBooking,
     };
   }
 
@@ -243,6 +281,7 @@ export function calculateRoomStatus(
         checkInAt: activeBooking.checkInAt,
         checkOutAt: activeBooking.checkOutAt,
       },
+      nextBooking,
     };
   }
 
@@ -275,6 +314,7 @@ export function calculateRoomStatus(
         checkInAt: reservedBooking.checkInAt,
         checkOutAt: reservedBooking.checkOutAt,
       },
+      nextBooking,
     };
   }
 
@@ -288,6 +328,7 @@ export function calculateRoomStatus(
     activeMaintenance: null,
     upcomingMaintenance,
     currentBooking: null,
+    nextBooking,
   };
 }
 
@@ -642,6 +683,7 @@ export const roomService = {
         activeMaintenance: derived.activeMaintenance,
         upcomingMaintenance: derived.upcomingMaintenance,
         currentBooking: derived.currentBooking,
+        nextBooking: derived.nextBooking,
       };
     });
   },

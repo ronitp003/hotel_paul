@@ -138,18 +138,29 @@ export const dashboardService = {
 
     let dueCount = 0;
     let dueTotal = new Decimal(0);
+    const bookingBalanceMap = new Map<string, number>();
 
     for (const b of activeCheckedInBookings) {
       try {
         const res = await billingService.getBookingBill(b.id);
-        if (res.bill.balanceDue > 0) {
+        const bal = res.bill.balanceDue;
+        bookingBalanceMap.set(b.id, bal);
+        if (bal > 0) {
           dueCount++;
-          dueTotal = dueTotal.add(new Decimal(res.bill.balanceDue));
+          dueTotal = dueTotal.add(new Decimal(bal));
         }
       } catch {
-        // Skip any errored bill
+        bookingBalanceMap.set(b.id, 0);
       }
     }
+
+    // Enrich rooms with real-time balance due
+    const enrichedRooms = rooms.map((r) => ({
+      ...r,
+      balanceDue: r.currentBooking?.id
+        ? bookingBalanceMap.get(r.currentBooking.id) ?? 0
+        : 0,
+    }));
 
     // 5. Monthly Billed Revenue and Total GST Payable (Owner role only)
     const isOwner = !userRole || userRole === Role.OWNER;
@@ -306,6 +317,7 @@ export const dashboardService = {
 
     return {
       rooms: roomCounts,
+      roomList: enrichedRooms,
       movements: {
         arrivals: {
           total: arrivalBookings.length,

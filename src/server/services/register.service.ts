@@ -18,12 +18,14 @@ import {
   toIST,
   fromISTInput,
 } from "@/lib/datetime";
+import { calculateStay } from "@/lib/stay";
 import type {
   RegisterDayData,
   RegisterEntry,
   AnalyticsData,
   AnalyticsDailyCheckIn,
   AnalyticsOccupancyDay,
+  AnalyticsWeekdayCheckIn,
   CheckInTimeSlot,
   PaymentCollectionItem,
   AnalyticsCategoryItem,
@@ -278,8 +280,20 @@ export const registerService = {
     const occupancyTrend: AnalyticsOccupancyDay[] = [];
     const dailyCollections: PaymentCollectionItem[] = [];
 
+    const weekdayMap: Record<string, { day: string; shortDay: string; count: number }> = {
+      Monday: { day: "Monday", shortDay: "Mon", count: 0 },
+      Tuesday: { day: "Tuesday", shortDay: "Tue", count: 0 },
+      Wednesday: { day: "Wednesday", shortDay: "Wed", count: 0 },
+      Thursday: { day: "Thursday", shortDay: "Thu", count: 0 },
+      Friday: { day: "Friday", shortDay: "Fri", count: 0 },
+      Saturday: { day: "Saturday", shortDay: "Sat", count: 0 },
+      Sunday: { day: "Sunday", shortDay: "Sun", count: 0 },
+    };
+
     let periodCheckInCount = 0;
     let periodTotalGuestsCount = 0;
+    let periodTotalStayDays = 0;
+    let periodArrivalBookingsCount = 0;
 
     // Check-in Time Distribution counters (Morning: 6-12, Afternoon: 12-17, Evening: 17-21, Night: 21-6)
     let morningCount = 0;
@@ -294,6 +308,7 @@ export const registerService = {
       const dayStr = formatIST(day, "yyyy-MM-dd");
       const dayLabel = formatIST(day, "dd MMM");
       const dayOfWeekShort = formatIST(day, "EEE");
+      const dayOfWeekFull = formatIST(day, "EEEE");
 
       // Check-ins starting on this day
       const dayArrivals = bookings.filter((b) => {
@@ -316,6 +331,20 @@ export const registerService = {
         } else {
           nightCount++;
         }
+
+        // Calculate stay duration for this arrival
+        const checkOutDate = b.actualCheckOutAt || b.checkOutAt;
+        try {
+          if (checkOutDate > arrivalDate) {
+            const stay = calculateStay(arrivalDate, checkOutDate);
+            periodTotalStayDays += stay.days;
+          } else {
+            periodTotalStayDays += 1;
+          }
+        } catch {
+          periodTotalStayDays += 1;
+        }
+        periodArrivalBookingsCount++;
       }
 
       const dayCheckInCount = dayArrivals.length;
@@ -326,6 +355,10 @@ export const registerService = {
 
       periodCheckInCount += dayCheckInCount;
       periodTotalGuestsCount += dayGuestsCount;
+
+      if (weekdayMap[dayOfWeekFull]) {
+        weekdayMap[dayOfWeekFull].count += dayCheckInCount;
+      }
 
       dailyCheckIns.push({
         date: dayStr,
@@ -512,6 +545,24 @@ export const registerService = {
     const avgDailyCheckIns =
       daysCount > 0 ? Math.round((periodCheckInCount / daysCount) * 10) / 10 : 0;
 
+    let avgStayDuration = 0;
+    if (periodArrivalBookingsCount > 0) {
+      avgStayDuration =
+        Math.round((periodTotalStayDays / periodArrivalBookingsCount) * 10) / 10;
+    } else if (bookings.length > 0) {
+      let bStayDays = 0;
+      for (const b of bookings) {
+        const start = b.actualCheckInAt || b.checkInAt;
+        const end = b.actualCheckOutAt || b.checkOutAt;
+        try {
+          bStayDays += end > start ? calculateStay(start, end).days : 1;
+        } catch {
+          bStayDays += 1;
+        }
+      }
+      avgStayDuration = Math.round((bStayDays / bookings.length) * 10) / 10;
+    }
+
     const avgOccupancyRate =
       occupancyTrend.length > 0
         ? Math.round(
@@ -519,6 +570,18 @@ export const registerService = {
               occupancyTrend.length
           )
         : 0;
+
+    const weekdayCheckIns: AnalyticsWeekdayCheckIn[] = [
+      weekdayMap["Monday"],
+      weekdayMap["Tuesday"],
+      weekdayMap["Wednesday"],
+      weekdayMap["Thursday"],
+      weekdayMap["Friday"],
+      weekdayMap["Saturday"],
+      weekdayMap["Sunday"],
+    ];
+
+    const totalRevenue = Math.round(totalNetCollections * 100) / 100;
 
     const topOriginItem = origins.find((o) => o.name !== "Not Specified") || origins[0];
     const topPurposeItem = purposes.find((p) => p.name !== "General") || purposes[0];
@@ -531,7 +594,9 @@ export const registerService = {
         totalCheckIns: periodCheckInCount,
         totalGuests: periodTotalGuestsCount,
         avgDailyCheckIns,
+        avgStayDuration,
         occupancyRate: avgOccupancyRate,
+        totalRevenue,
         topOrigin: topOriginItem?.name || "—",
         topPurpose: topPurposeItem?.name || "—",
       },
@@ -545,6 +610,7 @@ export const registerService = {
         totalRefunds: Math.round(totalRefunds * 100) / 100,
         totalNetCollections: Math.round(totalNetCollections * 100) / 100,
       },
+      weekdayCheckIns,
       origins,
       purposes,
       sources,

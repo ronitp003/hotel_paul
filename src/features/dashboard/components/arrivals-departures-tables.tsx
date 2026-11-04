@@ -6,7 +6,7 @@ import { MoneyText } from "@/components/shared/money-text";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckInIcon, CheckOutIcon, ChevronRightIcon, RoomIcon } from "@/lib/icons";
+import { CheckInIcon, CheckOutIcon, ChevronRightIcon, RoomIcon, ClockIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { TodayGuestMovement } from "@/features/dashboard/schemas";
 
@@ -15,6 +15,10 @@ interface MovementsProps {
   departingToday: TodayGuestMovement[];
 }
 
+/**
+ * Departing Today panel designed for the right-column of the main operational section.
+ * Has a fixed header and internal scrolling so the page height never expands.
+ */
 export function DepartingTodayCard({
   departures,
   className,
@@ -24,10 +28,11 @@ export function DepartingTodayCard({
 }) {
   return (
     <Card className={cn("flex flex-col shadow-xs border-border/80 overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0 border-b border-border/50">
+      {/* Fixed Header */}
+      <CardHeader className="p-3.5 sm:px-4 pb-3 flex flex-row items-center justify-between shrink-0 border-b border-border/60">
         <div className="space-y-0.5">
-          <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-            <CheckOutIcon className="size-4 text-primary" aria-hidden="true" />
+          <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground tracking-tight">
+            <CheckOutIcon className="size-4 text-primary shrink-0" aria-hidden="true" />
             <span>Departing Today</span>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -35,15 +40,21 @@ export function DepartingTodayCard({
           </p>
         </div>
         <Link href="/bookings?status=CHECKED_IN">
-          <Button variant="ghost" size="sm" className="text-xs gap-1 h-8">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs h-7 px-2.5 font-medium gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
             <span>View all</span>
-            <ChevronRightIcon className="size-3.5" aria-hidden="true" />
+            <ChevronRightIcon className="size-3" aria-hidden="true" />
           </Button>
         </Link>
       </CardHeader>
+
+      {/* Internally Scrollable Guest List with Subtle Scrollbar */}
       <CardContent className="p-0 flex-1 min-h-0 overflow-y-auto">
         {departures.length === 0 ? (
-          <div className="p-6 text-center text-xs text-muted-foreground flex flex-col items-center justify-center h-full min-h-[180px]">
+          <div className="p-6 text-center text-xs text-muted-foreground flex flex-col items-center justify-center h-full min-h-[220px]">
             No check-outs scheduled for today.
           </div>
         ) : (
@@ -51,26 +62,29 @@ export function DepartingTodayCard({
             {departures.map((booking) => (
               <div
                 key={booking.id}
-                className="p-3 px-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
+                className="p-3 px-3.5 sm:px-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
               >
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-xs sm:text-sm text-foreground truncate">
                       {booking.guestName}
                     </span>
-                    <StatusBadge status={booking.status} className="text-[10px] py-0 px-1.5" />
+                    <StatusBadge status={booking.status} className="text-[10px] py-0 px-1.5 shrink-0" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1 font-medium">
-                      <RoomIcon className="size-3 text-primary" aria-hidden="true" />
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1 font-medium text-foreground">
+                      <RoomIcon className="size-3 text-primary shrink-0" aria-hidden="true" />
                       Room {booking.roomNumber}
                     </span>
-                    <span>•</span>
-                    <span>Scheduled {formatISTTime(booking.time)}</span>
+                    <span className="hidden sm:inline opacity-40">•</span>
+                    <span className="flex items-center gap-1">
+                      <ClockIcon className="size-3 shrink-0 opacity-70" aria-hidden="true" />
+                      <span>{formatISTTime(booking.time)}</span>
+                    </span>
                     {booking.balanceDue > 0 && (
                       <>
-                        <span>•</span>
-                        <span className="text-destructive font-medium">
+                        <span className="opacity-40">•</span>
+                        <span className="text-destructive font-semibold">
                           Due: <MoneyText amount={booking.balanceDue} />
                         </span>
                       </>
@@ -96,6 +110,10 @@ export function DepartingTodayCard({
   );
 }
 
+/**
+ * Full-width Arriving Today section positioned directly below Room Board & Departing Today.
+ * Displays today's expected arrivals in a clean, compact row-based layout.
+ */
 export function ArrivingTodayCard({
   arrivals,
   className,
@@ -104,11 +122,11 @@ export function ArrivingTodayCard({
   className?: string;
 }) {
   return (
-    <Card className={cn("shadow-xs border-border/80 overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/50">
+    <Card className={cn("shadow-xs border-border/80 overflow-hidden w-full", className)}>
+      <CardHeader className="p-3.5 sm:px-4 pb-3 flex flex-row items-center justify-between border-b border-border/60">
         <div className="space-y-0.5">
-          <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-            <CheckInIcon className="size-4 text-primary" aria-hidden="true" />
+          <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground tracking-tight">
+            <CheckInIcon className="size-4 text-primary shrink-0" aria-hidden="true" />
             <span>Arriving Today</span>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -116,15 +134,20 @@ export function ArrivingTodayCard({
           </p>
         </div>
         <Link href="/bookings?status=RESERVED">
-          <Button variant="ghost" size="sm" className="text-xs gap-1 h-8">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs h-7 px-2.5 font-medium gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
             <span>View all</span>
-            <ChevronRightIcon className="size-3.5" aria-hidden="true" />
+            <ChevronRightIcon className="size-3" aria-hidden="true" />
           </Button>
         </Link>
       </CardHeader>
+
       <CardContent className="p-0">
         {arrivals.length === 0 ? (
-          <div className="p-6 text-center text-xs text-muted-foreground">
+          <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
             No check-ins scheduled for today.
           </div>
         ) : (
@@ -132,30 +155,55 @@ export function ArrivingTodayCard({
             {arrivals.map((booking) => (
               <div
                 key={booking.id}
-                className="p-3 px-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
+                className="p-3 px-3.5 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
               >
-                <div className="min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-xs sm:text-sm text-foreground truncate">
-                      {booking.guestName}
-                    </span>
-                    <StatusBadge status={booking.status} className="text-[10px] py-0 px-1.5" />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1 font-medium">
-                      <RoomIcon className="size-3 text-primary" aria-hidden="true" />
-                      Room {booking.roomNumber}
-                    </span>
-                    <span>•</span>
-                    <span>Scheduled {formatISTTime(booking.time)}</span>
+                {/* Guest Details & Contact */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-xs sm:text-sm text-foreground truncate">
+                        {booking.guestName}
+                      </span>
+                      <StatusBadge status={booking.status} className="text-[10px] py-0 px-1.5 shrink-0" />
+                    </div>
+                    {booking.guestMobile ? (
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {booking.guestMobile}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
-                <Link href={`/bookings/${booking.id}`} className="shrink-0">
-                  <Button variant="outline" size="sm" className="text-xs h-7 px-2.5">
-                    {booking.status === "RESERVED" ? "Check In" : "Details"}
-                  </Button>
-                </Link>
+                {/* Room and Timing Details */}
+                <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6">
+                  <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5 font-medium text-foreground">
+                      <RoomIcon className="size-3.5 text-primary shrink-0" aria-hidden="true" />
+                      <span>Room {booking.roomNumber}</span>
+                      <span className="text-[11px] text-muted-foreground font-normal">
+                        ({booking.roomTypeName})
+                      </span>
+                    </span>
+
+                    <span className="opacity-40 hidden sm:inline">•</span>
+
+                    <span className="flex items-center gap-1">
+                      <ClockIcon className="size-3 shrink-0 opacity-70" aria-hidden="true" />
+                      <span>Expected {formatISTTime(booking.time)}</span>
+                    </span>
+                  </div>
+
+                  {/* Action Button */}
+                  <Link href={`/bookings/${booking.id}`} className="shrink-0">
+                    <Button
+                      variant={booking.status === "RESERVED" ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs h-7 px-3 font-semibold"
+                    >
+                      {booking.status === "RESERVED" ? "Check In" : "Details"}
+                    </Button>
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
@@ -170,9 +218,9 @@ export function ArrivalsDeparturesTables({
   departingToday,
 }: MovementsProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <ArrivingTodayCard arrivals={arrivingToday} />
+    <div className="space-y-6">
       <DepartingTodayCard departures={departingToday} />
+      <ArrivingTodayCard arrivals={arrivingToday} />
     </div>
   );
 }

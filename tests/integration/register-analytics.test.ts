@@ -435,6 +435,21 @@ describe("Phase 3.1: Check-in Register & Analytics (Integration)", () => {
       expect(data.summary).toBeDefined();
       expect(data.summary.totalCheckIns).toBeGreaterThanOrEqual(1);
       expect(data.summary.totalGuests).toBeGreaterThanOrEqual(1);
+      expect(typeof data.summary.avgStayDuration).toBe("number");
+      expect(typeof data.summary.totalRevenue).toBe("number");
+
+      // Weekday Check-ins (Monday to Sunday)
+      expect(data.weekdayCheckIns).toBeDefined();
+      expect(data.weekdayCheckIns?.length).toBe(7);
+      expect(data.weekdayCheckIns?.map((w) => w.day)).toEqual([
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ]);
 
       // 1. Daily Check-in Volume (X-axis has actual date labels like "01 Nov", 7 days)
       expect(data.dailyCheckIns.length).toBe(7);

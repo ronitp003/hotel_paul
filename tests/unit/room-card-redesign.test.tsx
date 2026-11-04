@@ -187,14 +187,14 @@ describe("RoomCard Redesign – Full-Color Status Cards", () => {
     expect(screen.getByRole("button", { name: /View Details/i })).toBeInTheDocument();
   });
 
-  it("opens Quick Summary dialog when clicking View Details or card", () => {
+  it("opens Quick Summary dialog when clicking View Details or card", async () => {
     render(<RoomCard room={baseRoom} />);
 
     const viewDetailsBtn = screen.getByRole("button", { name: /View Details/i });
     fireEvent.click(viewDetailsBtn);
 
     // Dialog title should appear
-    expect(screen.getByRole("heading", { name: "Room 101" })).toBeInTheDocument();
-    expect(screen.getByText(/Full Room Details/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Room 101" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Room Details/i })).toBeInTheDocument();
   });
 });

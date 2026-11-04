@@ -35,9 +35,17 @@ export interface AnalyticsSummary {
   totalCheckIns: number;
   totalGuests: number;
   avgDailyCheckIns: number;
+  avgStayDuration?: number;
   occupancyRate: number;
+  totalRevenue?: number;
   topOrigin: string | null;
   topPurpose: string | null;
+}
+
+export interface AnalyticsWeekdayCheckIn {
+  day: string;
+  shortDay: string;
+  count: number;
 }
 
 export interface AnalyticsDailyCheckIn {
@@ -95,6 +103,7 @@ export interface AnalyticsData {
   occupancyTrend: AnalyticsOccupancyDay[];
   checkInTimeDistribution: CheckInTimeSlot[];
   paymentCollections: AnalyticsPaymentCollections;
+  weekdayCheckIns?: AnalyticsWeekdayCheckIn[];
   origins: AnalyticsCategoryItem[];
   purposes: AnalyticsCategoryItem[];
   sources: AnalyticsCategoryItem[];
