@@ -123,7 +123,7 @@ export function ArrivingTodayCard({
 }) {
   return (
     <Card className={cn("shadow-xs border-border/80 overflow-hidden w-full", className)}>
-      <CardHeader className="p-3.5 sm:px-4 pb-3 flex flex-row items-center justify-between border-b border-border/60">
+      <CardHeader className="p-2.5 sm:px-3 pb-2 flex flex-row items-center justify-between border-b border-border/60">
         <div className="space-y-0.5">
           <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground tracking-tight">
             <CheckInIcon className="size-4 text-primary shrink-0" aria-hidden="true" />
@@ -137,7 +137,7 @@ export function ArrivingTodayCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs h-7 px-2.5 font-medium gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="text-xs h-6.5 px-2 font-medium gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <span>View all</span>
             <ChevronRightIcon className="size-3" aria-hidden="true" />
@@ -155,55 +155,50 @@ export function ArrivingTodayCard({
             {arrivals.map((booking) => (
               <div
                 key={booking.id}
-                className="p-3 px-3.5 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
+                className="p-2.5 sm:px-3 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
               >
-                {/* Guest Details & Contact */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs sm:text-sm text-foreground truncate">
-                        {booking.guestName}
-                      </span>
-                      <StatusBadge status={booking.status} className="text-[10px] py-0 px-1.5 shrink-0" />
-                    </div>
+                {/* Guest Details, Contact & Room Information */}
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="font-semibold text-xs text-foreground truncate">
+                      {booking.guestName}
+                    </span>
+                    <StatusBadge status={booking.status} className="text-[10px] py-0 px-1.5 shrink-0" />
                     {booking.guestMobile ? (
-                      <p className="text-xs text-muted-foreground font-mono">
+                      <span className="text-[11px] text-muted-foreground font-mono">
                         {booking.guestMobile}
-                      </p>
+                      </span>
                     ) : null}
                   </div>
-                </div>
 
-                {/* Room and Timing Details */}
-                <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6">
-                  <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                      <RoomIcon className="size-3.5 text-primary shrink-0" aria-hidden="true" />
-                      <span>Room {booking.roomNumber}</span>
-                      <span className="text-[11px] text-muted-foreground font-normal">
-                        ({booking.roomTypeName})
-                      </span>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1 font-medium text-foreground">
+                      <RoomIcon className="size-3 text-primary shrink-0" aria-hidden="true" />
+                      Room {booking.roomNumber}
+                      {booking.roomTypeName ? (
+                        <span className="text-[11px] text-muted-foreground font-normal">
+                          ({booking.roomTypeName})
+                        </span>
+                      ) : null}
                     </span>
-
-                    <span className="opacity-40 hidden sm:inline">•</span>
-
+                    <span className="opacity-40">•</span>
                     <span className="flex items-center gap-1">
                       <ClockIcon className="size-3 shrink-0 opacity-70" aria-hidden="true" />
-                      <span>Expected {formatISTTime(booking.time)}</span>
+                      <span>Exp {formatISTTime(booking.time)}</span>
                     </span>
                   </div>
-
-                  {/* Action Button */}
-                  <Link href={`/bookings/${booking.id}`} className="shrink-0">
-                    <Button
-                      variant={booking.status === "RESERVED" ? "default" : "outline"}
-                      size="sm"
-                      className="text-xs h-7 px-3 font-semibold"
-                    >
-                      {booking.status === "RESERVED" ? "Check In" : "Details"}
-                    </Button>
-                  </Link>
                 </div>
+
+                {/* Action Button */}
+                <Link href={`/bookings/${booking.id}`} className="shrink-0">
+                  <Button
+                    variant={booking.status === "RESERVED" ? "default" : "outline"}
+                    size="sm"
+                    className="text-xs h-7 px-2.5 font-semibold"
+                  >
+                    {booking.status === "RESERVED" ? "Check In" : "Details"}
+                  </Button>
+                </Link>
               </div>
             ))}
           </div>

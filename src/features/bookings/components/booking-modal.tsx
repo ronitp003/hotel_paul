@@ -661,34 +661,34 @@ export function BookingModal({
 
   return (
     <Dialog open={open} onOpenChange={handleModalClose}>
-      <DialogContent className="max-w-3xl sm:max-w-4xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden shadow-2xl">
+      <DialogContent className="w-full sm:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[92vh] max-w-full flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-xl shadow-2xl">
         {/* Modal Sticky Header */}
-        <DialogHeader className="p-4 sm:p-5 border-b border-border bg-card shrink-0">
+        <DialogHeader className="p-3.5 sm:p-5 border-b border-border bg-card shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pr-6">
-            <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <CheckInIcon className="size-5" />
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="size-8 sm:size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <CheckInIcon className="size-4 sm:size-5" />
               </div>
               <div>
-                <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                <DialogTitle className="text-base sm:text-xl font-bold tracking-tight text-foreground">
                   New Booking / Front Desk Check-in
                 </DialogTitle>
-                <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                <DialogDescription className="text-xs sm:text-sm text-muted-foreground line-clamp-1 sm:line-clamp-none">
                   {step === "INFO"
-                    ? "Step 1 of 2: Dates, Room Selection & Guest Information"
+                    ? "Step 1: Dates, Rooms & Guest Details"
                     : step === "PAYMENT"
-                    ? "Step 2 of 2: Bill Summary, Tariff Breakdown & Confirmation"
-                    : "Booking successfully created and logged in the property register"}
+                    ? "Step 2: Bill Summary & Confirmation"
+                    : "Booking successfully created"}
                 </DialogDescription>
               </div>
             </div>
 
             {/* Stepper badge indicator */}
             {step !== "CONFIRMATION" && (
-              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+              <div className="flex items-center gap-1.5 self-start sm:self-auto text-xs">
                 <span
                   className={cn(
-                    "px-2.5 py-0.5 rounded-full text-[11px] font-semibold border",
+                    "px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold border",
                     step === "INFO"
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted text-muted-foreground border-border"
@@ -699,7 +699,7 @@ export function BookingModal({
                 <ChevronRightIcon className="size-3 text-muted-foreground" />
                 <span
                   className={cn(
-                    "px-2.5 py-0.5 rounded-full text-[11px] font-semibold border",
+                    "px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold border",
                     step === "PAYMENT"
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted text-muted-foreground border-border"
@@ -713,7 +713,7 @@ export function BookingModal({
         </DialogHeader>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar bg-background">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6 custom-scrollbar bg-background">
           {/* ═══════════════ STEP 1: BOOKING INFORMATION ═══════════════ */}
           {step === "INFO" && (
             <div className="space-y-6">
@@ -909,13 +909,13 @@ export function BookingModal({
                           return (
                             <div
                               key={room.id}
-                              className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg border border-border bg-muted/30 shadow-2xs"
+                              className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg border border-border bg-muted/30 shadow-2xs gap-2"
                             >
-                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 pr-1 flex-1">
                                 <div className="size-8 rounded-md bg-primary text-primary-foreground font-mono font-bold text-xs flex items-center justify-center shrink-0">
                                   {room.number}
                                 </div>
-                                <div className="truncate">
+                                <div className="truncate min-w-0">
                                   <div className="font-semibold text-xs text-foreground truncate">
                                     Room {room.number}
                                   </div>
@@ -925,8 +925,8 @@ export function BookingModal({
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <div className="inline-flex items-center h-8 rounded-md border border-input bg-background px-2 shadow-2xs focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
+                              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                                <div className="inline-flex items-center h-8 rounded-md border border-input bg-background px-1.5 sm:px-2 shadow-2xs focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
                                   <span className="text-xs font-semibold text-muted-foreground select-none mr-0.5">
                                     ₹
                                   </span>
@@ -945,10 +945,10 @@ export function BookingModal({
                                         [room.id]: v,
                                       }));
                                     }}
-                                    className="w-16 h-full px-1 text-xs font-mono font-bold text-right text-foreground bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-14 sm:w-16 h-full px-0.5 text-xs font-mono font-bold text-right text-foreground bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     title="Custom Nightly Tariff (₹)"
                                   />
-                                  <span className="text-[11px] font-medium text-muted-foreground select-none ml-0.5">
+                                  <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground select-none ml-0.5">
                                     /night
                                   </span>
                                 </div>
@@ -958,7 +958,7 @@ export function BookingModal({
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleRemoveRoom(room.id)}
-                                  className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                                  className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer shrink-0"
                                   title={`Remove Room ${room.number}`}
                                 >
                                   <DeleteIcon className="size-3.5" />
@@ -1957,15 +1957,16 @@ export function BookingModal({
         </div>
 
         {/* Modal Sticky Footer */}
+        {/* Modal Sticky Bottom Actions */}
         {step !== "CONFIRMATION" && (
-          <div className="p-4 sm:p-5 border-t border-border bg-card flex items-center justify-between gap-3 shrink-0">
+          <div className="p-3 sm:p-5 border-t border-border bg-card flex items-center justify-between gap-2 sm:gap-3 shrink-0 sticky bottom-0 z-10 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-5 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
             {step === "INFO" ? (
               <>
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => handleModalClose(false)}
-                  className="text-xs cursor-pointer"
+                  className="text-xs cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
                 >
                   Cancel
                 </Button>
@@ -1973,7 +1974,7 @@ export function BookingModal({
                 <Button
                   type="button"
                   onClick={handleProceedToPayment}
-                  className="gap-1.5 text-xs font-semibold shadow-xs cursor-pointer"
+                  className="gap-1.5 text-xs font-semibold shadow-xs cursor-pointer h-8 sm:h-9 px-3 sm:px-4"
                 >
                   <span>Proceed to Review & Payment</span>
                   <ChevronRightIcon className="size-3.5" />
@@ -1987,27 +1988,29 @@ export function BookingModal({
                   size="sm"
                   onClick={() => setStep("INFO")}
                   disabled={isSubmitting}
-                  className="gap-1 text-xs cursor-pointer"
+                  className="gap-1 text-xs cursor-pointer shrink-0 h-8 sm:h-9 px-2 sm:px-3"
                 >
                   <ChevronLeftIcon className="size-3.5" />
-                  <span>Back to Edit Info</span>
+                  <span className="hidden sm:inline">Back to Edit Info</span>
+                  <span className="sm:hidden">Back</span>
                 </Button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     disabled={isSubmitting}
                     onClick={() => handleSubmitBooking("RESERVE")}
-                    className="gap-1.5 text-xs font-semibold border-status-reserved/40 text-status-reserved hover:bg-status-reserved/10 cursor-pointer"
+                    className="gap-1 sm:gap-1.5 text-xs font-semibold border-status-reserved/40 text-status-reserved hover:bg-status-reserved/10 cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
                   >
                     {isSubmitting ? (
                       <SpinnerIcon className="size-3.5 animate-spin" />
                     ) : (
                       <CalendarIcon className="size-3.5" />
                     )}
-                    <span>Save as Reservation</span>
+                    <span className="hidden sm:inline">Save as Reservation</span>
+                    <span className="sm:hidden">Reserve</span>
                   </Button>
 
                   <Button
@@ -2016,14 +2019,15 @@ export function BookingModal({
                     size="sm"
                     disabled={isSubmitting}
                     onClick={() => handleSubmitBooking("CHECK_IN")}
-                    className="gap-1.5 text-xs font-semibold shadow-xs cursor-pointer"
+                    className="gap-1 sm:gap-1.5 text-xs font-semibold shadow-xs cursor-pointer h-8 sm:h-9 px-2.5 sm:px-3"
                   >
                     {isSubmitting ? (
                       <SpinnerIcon className="size-3.5 animate-spin" />
                     ) : (
                       <CheckInIcon className="size-3.5" />
                     )}
-                    <span>Check In Now</span>
+                    <span className="hidden sm:inline">Check In Now</span>
+                    <span className="sm:hidden">Check In</span>
                   </Button>
                 </div>
               </>

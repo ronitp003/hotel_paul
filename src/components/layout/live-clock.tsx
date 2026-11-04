@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { ClockIcon } from "@/lib/icons";
-import { formatISTDate, formatISTTimeWithSeconds } from "@/lib/datetime";
+import { formatISTDate, formatISTTime, formatISTTimeWithSeconds } from "@/lib/datetime";
 
 let currentSnapshot: string | null = null;
 const listeners = new Set<() => void>();
@@ -51,9 +51,9 @@ export function LiveClock() {
 
   if (!isoTime) {
     return (
-      <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-muted text-xs font-medium text-muted-foreground tabular-nums">
-        <ClockIcon className="size-3.5" aria-hidden="true" />
-        <span>--:--:-- IST</span>
+      <div className="flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-md bg-muted text-xs font-medium text-muted-foreground tabular-nums">
+        <ClockIcon className="size-3.5 shrink-0" aria-hidden="true" />
+        <span>--:-- IST</span>
       </div>
     );
   }
@@ -62,11 +62,12 @@ export function LiveClock() {
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1 rounded-md bg-muted/70 border border-border text-xs font-medium text-foreground tabular-nums shadow-xs"
+      className="flex items-center gap-1.5 sm:gap-2 px-2 py-0.5 sm:px-3 sm:py-1 rounded-md bg-muted/70 border border-border text-xs font-medium text-foreground tabular-nums shadow-xs"
       title={`Indian Standard Time: ${formatISTDate(time)}`}
     >
-      <ClockIcon className="size-3.5 text-primary" aria-hidden="true" />
-      <span className="font-semibold">{formatISTTimeWithSeconds(time)}</span>
+      <ClockIcon className="size-3.5 text-primary shrink-0" aria-hidden="true" />
+      <span className="font-semibold hidden sm:inline">{formatISTTimeWithSeconds(time)}</span>
+      <span className="font-semibold sm:hidden">{formatISTTime(time)}</span>
       <span className="hidden sm:inline text-muted-foreground border-l border-border pl-2">
         {formatISTDate(time)}
       </span>

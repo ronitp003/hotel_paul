@@ -178,15 +178,15 @@ export function CheckInRegisterTab({
   return (
     <div className="space-y-6">
       {/* ── Top Bar Controls: Day Picker & Actions ── */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between print:hidden">
+      <div className="flex flex-col gap-2.5 sm:gap-4 md:flex-row md:items-center md:justify-between print:hidden">
         {/* Day selection: Strictly day-by-day (No weeks) */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-lg border bg-card p-1 shadow-sm">
+          <div className="inline-flex items-center rounded-lg border bg-card p-0.5 sm:p-1 shadow-2xs">
             <Button
               variant={selectedDate === todayStr ? "default" : "ghost"}
               size="sm"
               onClick={handleToday}
-              className="h-8 text-xs font-medium"
+              className="h-7.5 sm:h-8 px-2.5 text-xs font-medium"
             >
               Today
             </Button>
@@ -194,30 +194,30 @@ export function CheckInRegisterTab({
               variant={selectedDate === yesterdayStr ? "default" : "ghost"}
               size="sm"
               onClick={handleYesterday}
-              className="h-8 text-xs font-medium"
+              className="h-7.5 sm:h-8 px-2.5 text-xs font-medium"
             >
               Yesterday
             </Button>
           </div>
 
-          <div className="inline-flex items-center rounded-lg border bg-card p-1 shadow-sm">
+          <div className="inline-flex items-center rounded-lg border bg-card p-0.5 sm:p-1 shadow-2xs">
             <Button
               variant="ghost"
               size="icon"
               onClick={handlePrevDay}
-              className="size-8"
+              className="size-7.5 sm:size-8"
               title="Previous Day"
             >
               <ChevronLeftIcon className="size-4" />
             </Button>
 
-            <div className="flex items-center gap-1.5 px-2">
-              <CalendarIcon className="size-3.5 text-muted-foreground" />
+            <div className="flex items-center gap-1.5 px-1.5 sm:px-2">
+              <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => handleDateChange(e.target.value)}
-                className="h-8 rounded bg-transparent px-1 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
+                className="h-7.5 sm:h-8 rounded bg-transparent px-1 text-xs font-medium outline-none focus:ring-1 focus:ring-primary max-w-[125px] sm:max-w-none"
               />
             </div>
 
@@ -225,7 +225,7 @@ export function CheckInRegisterTab({
               variant="ghost"
               size="icon"
               onClick={handleNextDay}
-              className="size-8"
+              className="size-7.5 sm:size-8"
               title="Next Day"
             >
               <ChevronRightIcon className="size-4" />
@@ -241,12 +241,12 @@ export function CheckInRegisterTab({
         </div>
 
         {/* Action Buttons: CSV Export */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start md:self-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="h-9 gap-1.5 text-xs font-medium shadow-sm"
+            className="h-8 sm:h-9 px-3 gap-1.5 text-xs font-medium shadow-2xs"
           >
             <DownloadIcon className="size-3.5" />
             <span>Export CSV</span>
@@ -255,42 +255,33 @@ export function CheckInRegisterTab({
       </div>
 
       {/* ── Day Summary Card ── */}
-      <div className="rounded-xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+      <div className="rounded-xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 sm:p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-semibold tracking-tight text-foreground truncate">
                 {data.formattedDate}
               </h2>
               {selectedDate === todayStr && (
-                <Badge variant="outline" className="border-primary-border bg-primary-light text-primary dark:bg-primary-subtle dark:text-primary dark:border-primary-border">
+                <Badge variant="outline" className="border-primary-border bg-primary-light text-primary dark:bg-primary-subtle dark:text-primary dark:border-primary-border text-[10px] py-0 px-1.5 h-4.5">
                   Today
                 </Badge>
               )}
             </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">
               Official guest check-in register for local authority record and hotel daily log.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg border bg-card px-3.5 py-2 text-center shadow-xs">
-              <div className="text-xl font-bold tracking-tight text-primary">
+          <div className="shrink-0">
+            <div className="rounded-lg border bg-card px-3 py-1.5 text-center shadow-xs">
+              <div className="text-lg sm:text-xl font-bold tracking-tight text-primary leading-tight">
                 {data.totalCheckIns}
               </div>
-              <div className="text-[11px] font-medium text-muted-foreground">
+              <div className="text-[10px] sm:text-[11px] font-medium text-muted-foreground leading-tight">
                 Check-ins
               </div>
             </div>
-
-            {/* <div className="rounded-lg border bg-card px-3.5 py-2 text-center shadow-xs">
-              <div className="text-xl font-bold tracking-tight text-foreground">
-                {data.totalGuests}
-              </div>
-              <div className="text-[11px] font-medium text-muted-foreground">
-                Total Guests
-              </div>
-            </div> */}
           </div>
         </div>
       </div>

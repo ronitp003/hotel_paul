@@ -259,18 +259,18 @@ export function DataManagementView() {
   return (
     <div className="space-y-8">
       {/* ── Page Header / Sub-banner ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-border bg-card shadow-xs">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <DatabaseIcon className="size-5 text-primary" />
-              Data Management, Backups & Exports
+      <div className="p-3.5 sm:p-5 rounded-xl border border-border bg-card shadow-xs">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <DatabaseIcon className="size-4 sm:size-5 text-primary shrink-0" />
+              <span>Data Management, Backups & Exports</span>
             </h2>
-            <Badge variant="outline" className="text-[11px] font-semibold border-primary/30 text-primary">
+            <Badge variant="outline" className="text-[10px] sm:text-[11px] font-semibold border-primary/30 text-primary shrink-0">
               Owner Controls
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground max-w-2xl">
+          <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
             Export full system JSON snapshots for disaster recovery, generate 32-column accountant GSTR billing reports, or safely restore from a previous backup with automatic conflict detection.
           </p>
         </div>

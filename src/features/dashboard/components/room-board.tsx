@@ -47,7 +47,7 @@ export function RoomBoard({ rooms, className }: RoomBoardProps) {
       <Card className={cn("flex flex-col shadow-xs border-border/80 overflow-hidden", className)}>
         {/* Room Board Header – Reduced Padding */}
         <CardHeader className="p-2.5 sm:px-3 pb-2 shrink-0 border-b border-border/60 gap-1.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2">
             {/* Title & Icon */}
             <div className="flex items-center gap-2">
               <RoomIcon className="size-4 text-primary shrink-0" aria-hidden="true" />
@@ -57,7 +57,7 @@ export function RoomBoard({ rooms, className }: RoomBoardProps) {
             </div>
 
             {/* Action Button: All Rooms (Navigates to Rooms page) */}
-            <Link href="/rooms" className="shrink-0 self-start sm:self-auto">
+            <Link href="/rooms" className="shrink-0">
               <Button
                 variant="outline"
                 size="sm"

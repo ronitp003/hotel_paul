@@ -135,7 +135,7 @@ export function RoomsManager({
   return (
     <div className="space-y-6">
       {/* KPI / Quick Metric Badges Row */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         {[
           {
             id: "ALL" as const,
@@ -218,7 +218,7 @@ export function RoomsManager({
               size="sm"
               onClick={() => setStatusFilter(item.id)}
               className={cn(
-                "gap-1.5 rounded-full transition-all duration-150 motion-reduce:transition-none shadow-xs font-medium cursor-pointer",
+                "h-8 px-2.5 sm:px-3 text-xs gap-1.5 rounded-full transition-all duration-150 motion-reduce:transition-none shadow-xs font-medium cursor-pointer shrink-0",
                 isActive
                   ? "bg-primary text-white border-primary hover:bg-primary/90 hover:text-white"
                   : cn(
@@ -313,12 +313,12 @@ export function RoomsManager({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsProblemOpen(true)}
-            className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10"
+            className="flex-1 sm:flex-none h-8.5 text-xs px-2.5 sm:px-3 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10"
           >
             <ProblemIcon className="size-3.5" />
             <span>Report Issue</span>
@@ -328,7 +328,7 @@ export function RoomsManager({
             variant="outline"
             size="sm"
             onClick={() => setIsMaintenanceOpen(true)}
-            className="gap-1.5 border-status-maintenance/30 text-status-maintenance hover:bg-status-maintenance/10"
+            className="flex-1 sm:flex-none h-8.5 text-xs px-2.5 sm:px-3 gap-1.5 border-status-maintenance/30 text-status-maintenance hover:bg-status-maintenance/10"
           >
             <MaintenanceIcon className="size-3.5" />
             <span>Schedule Maintenance</span>
@@ -338,7 +338,7 @@ export function RoomsManager({
             <Button
               onClick={() => setIsAddOpen(true)}
               size="sm"
-              className="gap-1.5 shadow-xs"
+              className="w-full sm:w-auto h-8.5 text-xs px-3 gap-1.5 shadow-xs"
             >
               <AddIcon className="size-4" aria-hidden="true" />
               <span>Add Rooms</span>

@@ -49,29 +49,29 @@ export function Topbar({
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card px-4 lg:px-6 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-xs">
+    <header className="h-16 border-b border-border bg-card px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 shadow-xs">
       {/* Left: Mobile hamburger & title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <Button
           variant="outline"
           size="icon"
-          className="md:hidden"
+          className="md:hidden size-8 sm:size-9"
           onClick={onMobileMenuOpen}
           aria-label="Open mobile menu"
         >
-          <MenuIcon className="size-5" aria-hidden="true" />
+          <MenuIcon className="size-4 sm:size-5" aria-hidden="true" />
         </Button>
 
-        <div className="flex items-center gap-2 md:hidden">
-          <div className="size-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center shrink-0">
-            <RoomIcon className="size-4" aria-hidden="true" />
+        <div className="flex items-center gap-1.5 sm:gap-2 md:hidden">
+          <div className="size-7 sm:size-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+            <RoomIcon className="size-3.5 sm:size-4" aria-hidden="true" />
           </div>
-          <span className="font-semibold text-sm truncate">Hotel Desk</span>
+          <span className="font-semibold text-xs sm:text-sm truncate">Hotel Desk</span>
         </div>
       </div>
 
       {/* Right: Live Clock & User Menu */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         <LiveClock />
 
         <DropdownMenu>
@@ -80,10 +80,10 @@ export function Topbar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center gap-2 px-2 hover:bg-muted"
+                className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 hover:bg-muted"
                 aria-label="Staff account menu"
               >
-                <div className="size-7 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center border border-primary/20">
+                <div className="size-7 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center border border-primary/20 shrink-0">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col items-start text-left">

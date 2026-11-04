@@ -146,28 +146,17 @@ export function RoomCard({
       >
         <CardContent className="p-3.5 sm:p-4 flex flex-col justify-between h-full">
           <div>
-            {/* Top Row: Room Number & Status / Issue Badges */}
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <span
-                  className={cn(
-                    "text-2xl sm:text-3xl font-bold font-mono tracking-tight leading-none truncate block",
-                    style.roomNumberClass
-                  )}
-                  title={`Room ${room.number}`}
-                >
-                  {room.number}
-                </span>
-                <p
-                  className={cn(
-                    "text-xs mt-1 truncate font-semibold",
-                    style.typeNameClass
-                  )}
-                  title={room.typeName}
-                >
-                  {room.typeName}
-                </p>
-              </div>
+            {/* Top Row: Room Number (Left) & Status / Issue Badges (Right) */}
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className={cn(
+                  "text-2xl sm:text-3xl font-bold font-mono tracking-tight leading-none",
+                  style.roomNumberClass
+                )}
+                title={`Room ${room.number}`}
+              >
+                {room.number}
+              </span>
 
               <div className="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
                 {room.hasProblem && (
@@ -204,24 +193,35 @@ export function RoomCard({
               </div>
             </div>
 
-            {/* Pricing Row: Price / night */}
-            <div className="flex items-baseline gap-1 mt-3">
-              <span
+            {/* Second Row: Room Type (Left) & Nightly Price (Right) */}
+            <div className="flex items-center justify-between gap-2 mt-1.5">
+              <p
                 className={cn(
-                  "text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums",
-                  style.priceClass
+                  "text-xs truncate font-semibold min-w-0 flex-1",
+                  style.typeNameClass
                 )}
+                title={room.typeName}
               >
-                {formatINR(room.pricePerNight)}
-              </span>
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  style.priceSuffixClass
-                )}
-              >
-                / night
-              </span>
+                {room.typeName}
+              </p>
+              <div className="flex items-baseline gap-1 shrink-0">
+                <span
+                  className={cn(
+                    "text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums",
+                    style.priceClass
+                  )}
+                >
+                  {formatINR(room.pricePerNight)}
+                </span>
+                <span
+                  className={cn(
+                    "text-[11px] sm:text-xs font-medium",
+                    style.priceSuffixClass
+                  )}
+                >
+                  / night
+                </span>
+              </div>
             </div>
 
             {/* Contextual Status Information Block */}
@@ -229,20 +229,27 @@ export function RoomCard({
               {room.status === "OCCUPIED" ? (
                 <div
                   className={cn(
-                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    "rounded-lg p-2.5 text-xs border space-y-1.5 min-h-[58px] flex flex-col justify-center",
                     style.contextBoxClass
                   )}
                 >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <GuestIcon
-                      className="size-3.5 shrink-0 opacity-80"
-                      aria-hidden="true"
-                    />
-                    <span className="truncate font-semibold text-xs">
-                      {room.currentBooking
-                        ? room.currentBooking.guestName
-                        : "Guest in room"}
-                    </span>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <GuestIcon
+                        className="size-3.5 shrink-0 opacity-80"
+                        aria-hidden="true"
+                      />
+                      <span className="truncate font-semibold text-xs">
+                        {room.currentBooking
+                          ? room.currentBooking.guestName
+                          : "Guest in room"}
+                      </span>
+                    </div>
+                    {room.currentBooking && (
+                      <span className="font-mono text-[10px] font-semibold shrink-0 opacity-80">
+                        {room.currentBooking.reference}
+                      </span>
+                    )}
                   </div>
                   {room.currentBooking && (
                     <div className="flex items-center justify-between text-[11px] opacity-85">
@@ -253,13 +260,10 @@ export function RoomCard({
                           "d MMM"
                         )}
                       </span>
-                      <span className="font-mono text-[10px] font-semibold">
-                        {room.currentBooking.reference}
-                      </span>
                     </div>
                   )}
                   {room.hasProblem && (
-                    <div className="pt-1 mt-1 border-t border-rose-300/50 dark:border-rose-700/50 flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold truncate">
+                    <div className="pt-1 mt-0.5 border-t border-rose-300/50 dark:border-rose-700/50 flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold truncate">
                       <ProblemIcon className="size-3 shrink-0" />
                       <span className="truncate">
                         {room.openProblems?.[0]?.description || "Issue reported"}
@@ -270,20 +274,27 @@ export function RoomCard({
               ) : room.status === "RESERVED" ? (
                 <div
                   className={cn(
-                    "rounded-lg p-2.5 text-xs border space-y-1 min-h-[58px] flex flex-col justify-center",
+                    "rounded-lg p-2.5 text-xs border space-y-1.5 min-h-[58px] flex flex-col justify-center",
                     style.contextBoxClass
                   )}
                 >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <CalendarIcon
-                      className="size-3.5 shrink-0 opacity-80"
-                      aria-hidden="true"
-                    />
-                    <span className="truncate font-semibold text-xs">
-                      {room.currentBooking
-                        ? room.currentBooking.guestName
-                        : "Reserved"}
-                    </span>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <CalendarIcon
+                        className="size-3.5 shrink-0 opacity-80"
+                        aria-hidden="true"
+                      />
+                      <span className="truncate font-semibold text-xs">
+                        {room.currentBooking
+                          ? room.currentBooking.guestName
+                          : "Reserved"}
+                      </span>
+                    </div>
+                    {room.currentBooking && (
+                      <span className="font-mono text-[10px] font-semibold shrink-0 opacity-80">
+                        {room.currentBooking.reference}
+                      </span>
+                    )}
                   </div>
                   {room.currentBooking && (
                     <div className="flex items-center justify-between text-[11px] opacity-85">
@@ -294,13 +305,10 @@ export function RoomCard({
                           "d MMM"
                         )}
                       </span>
-                      <span className="font-mono text-[10px] font-semibold">
-                        {room.currentBooking.reference}
-                      </span>
                     </div>
                   )}
                   {room.hasProblem && (
-                    <div className="pt-1 mt-1 border-t border-rose-300/50 dark:border-rose-700/50 flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold truncate">
+                    <div className="pt-1 mt-0.5 border-t border-rose-300/50 dark:border-rose-700/50 flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold truncate">
                       <ProblemIcon className="size-3 shrink-0" />
                       <span className="truncate">
                         {room.openProblems?.[0]?.description || "Issue reported"}
@@ -433,10 +441,10 @@ export function RoomCard({
             </div>
           </div>
 
-          {/* Bottom Section: Subtle Divider & Minimal Actions */}
+          {/* Bottom Section: Subtle Divider & Touch-Friendly Actions */}
           <div
             className={cn(
-              "mt-3.5 pt-2 border-t flex items-center text-xs",
+              "mt-3 pt-2 border-t flex items-center text-xs",
               style.dividerClass,
               isOwner && onEdit ? "justify-between" : "justify-end"
             )}
@@ -449,7 +457,7 @@ export function RoomCard({
                 size="sm"
                 onClick={() => onEdit(room)}
                 className={cn(
-                  "h-7 px-2 text-xs font-semibold rounded-md transition-colors gap-1 -ml-1 cursor-pointer",
+                  "h-8 sm:h-7 px-2.5 sm:px-2 text-xs font-semibold rounded-md transition-colors gap-1 -ml-1 cursor-pointer",
                   style.actionBtnClass
                 )}
               >
@@ -463,7 +471,7 @@ export function RoomCard({
               size="sm"
               onClick={() => setIsDetailsOpen(true)}
               className={cn(
-                "h-7 px-2 text-xs font-semibold rounded-md transition-colors gap-1 -mr-1 cursor-pointer",
+                "h-8 sm:h-7 px-2.5 sm:px-2 text-xs font-semibold rounded-md transition-colors gap-1 -mr-1 cursor-pointer",
                 style.actionBtnClass
               )}
             >

@@ -38,10 +38,10 @@ export function RegisterView({
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Daily Report
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
+          Guest Register / Daily Report
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
           Official day-by-day guest register with primary and accompanying occupant records.
         </p>
       </div>
