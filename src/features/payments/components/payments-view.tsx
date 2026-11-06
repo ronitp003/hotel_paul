@@ -437,16 +437,16 @@ export function PaymentsView({
                     value={invoiceSortBy}
                     onChange={handleInvoiceSortChange}
                     options={[
-                      { value: "issued-desc", label: "Latest Invoices First" },
-                      { value: "issued-asc", label: "Oldest Invoices First" },
-                      { value: "amount-desc", label: "Total Bill (High to Low)" },
-                      { value: "amount-asc", label: "Total Bill (Low to High)" },
-                      { value: "balance-desc", label: "Balance Due (High to Low)" },
-                      { value: "balance-asc", label: "Balance Due (Low to High)" },
+                      { value: "issued-desc", label: "Newest Invoices" },
+                      { value: "issued-asc", label: "Oldest Invoices" },
+                      { value: "amount-desc", label: "Highest Bill" },
+                      { value: "amount-asc", label: "Lowest Bill" },
+                      { value: "balance-desc", label: "Highest Balance" },
+                      { value: "balance-asc", label: "Lowest Balance" },
                       { value: "guest-asc", label: "Guest Name (A–Z)" },
                       { value: "guest-desc", label: "Guest Name (Z–A)" },
-                      { value: "number-desc", label: "Invoice No (High to Low)" },
-                      { value: "number-asc", label: "Invoice No (Low to High)" },
+                      { value: "number-desc", label: "Highest Invoice No." },
+                      { value: "number-asc", label: "Lowest Invoice No." },
                     ]}
                     size="sm"
                     groupLabel="Sort Invoices"
@@ -572,11 +572,10 @@ export function PaymentsView({
                               {formatINR(inv.billAmount)}
                             </td>
                             <td
-                              className={`px-4 py-3 text-right font-mono font-semibold ${
-                                inv.balance > 0
+                              className={`px-4 py-3 text-right font-mono font-semibold ${inv.balance > 0
                                   ? "text-red-600"
                                   : "text-emerald-600"
-                              }`}
+                                }`}
                             >
                               {formatINR(inv.balance)}
                             </td>
@@ -805,11 +804,10 @@ export function PaymentsView({
                               {pmt.note || "—"}
                             </td>
                             <td
-                              className={`px-4 py-3 text-right font-mono font-bold ${
-                                pmt.kind === "REFUND"
+                              className={`px-4 py-3 text-right font-mono font-bold ${pmt.kind === "REFUND"
                                   ? "text-red-600 dark:text-red-400"
                                   : "text-emerald-600 dark:text-emerald-400"
-                              }`}
+                                }`}
                             >
                               {pmt.kind === "REFUND"
                                 ? `-${formatINR(pmt.amount)}`

@@ -2,11 +2,12 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 import type { Role } from "@/lib/constants";
-import { RoomIcon, SpinnerIcon } from "@/lib/icons";
+import { SpinnerIcon } from "@/lib/icons";
 import { useNavigationState } from "@/providers/navigation-provider";
 
 interface SidebarProps {
@@ -106,10 +107,10 @@ function SidebarNavList({ userRole }: { userRole: Role }) {
               isActive
                 ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                 : isPending
-                ? "bg-primary-light text-primary font-semibold border border-primary-border"
-                : item.highlight
-                ? "bg-primary-light text-primary hover:bg-primary-light/80 border border-primary-border"
-                : "text-muted-foreground hover:bg-primary-subtle hover:text-primary"
+                  ? "bg-primary-light text-primary font-semibold border border-primary-border"
+                  : item.highlight
+                    ? "bg-primary-light text-primary hover:bg-primary-light/80 border border-primary-border"
+                    : "text-muted-foreground hover:bg-primary-subtle hover:text-primary"
             )}
           >
             <Icon
@@ -118,10 +119,10 @@ function SidebarNavList({ userRole }: { userRole: Role }) {
                 isActive
                   ? "text-primary-foreground"
                   : isPending
-                  ? "text-primary animate-pulse"
-                  : item.highlight
-                  ? "text-primary"
-                  : "text-muted-foreground group-hover/nav:text-primary"
+                    ? "text-primary animate-pulse"
+                    : item.highlight
+                      ? "text-primary"
+                      : "text-muted-foreground group-hover/nav:text-primary"
               )}
               aria-hidden="true"
             />
@@ -143,12 +144,20 @@ export function Sidebar({ userRole = "OWNER" }: SidebarProps) {
     <aside className="hidden md:flex flex-col w-16 lg:w-64 border-r border-border bg-card shrink-0 transition-all duration-200">
       {/* Brand Header */}
       <div className="h-16 flex items-center gap-3 px-4 lg:px-6 border-b border-border">
-        <div className="size-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
-          <RoomIcon className="size-5" aria-hidden="true" />
+        <div className="size-12 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
+          <Image
+            src="/hotel.svg"
+            alt="Hotel Desk"
+            width={48}
+            height={48}
+            unoptimized
+            className="size-11 object-contain brightness-0 invert"
+            priority
+          />
         </div>
         <div className="hidden lg:flex flex-col min-w-0">
           <span className="font-semibold text-base tracking-tight truncate text-foreground">
-            Hotel Desk
+            Hotel Paul Desk
           </span>
           <span className="text-[11px] text-muted-foreground truncate">
             Front Desk Operations

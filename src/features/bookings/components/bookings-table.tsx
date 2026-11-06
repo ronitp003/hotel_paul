@@ -371,16 +371,16 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
               value={sortBy}
               onChange={handleSortChange}
               options={[
-                { value: "created-desc", label: "Latest Bookings First" },
-                { value: "created-asc", label: "Oldest Bookings First" },
-                { value: "checkin-desc", label: "Check-in (Latest First)" },
-                { value: "checkin-asc", label: "Check-in (Earliest First)" },
+                { value: "created-desc", label: "Newest Bookings" },
+                { value: "created-asc", label: "Oldest Bookings" },
+                { value: "checkin-desc", label: "Latest Check-in" },
+                { value: "checkin-asc", label: "Earliest Check-in" },
                 { value: "guest-asc", label: "Guest Name (A–Z)" },
                 { value: "guest-desc", label: "Guest Name (Z–A)" },
-                { value: "tariff-desc", label: "Tariff (High to Low)" },
-                { value: "tariff-asc", label: "Tariff (Low to High)" },
-                { value: "advance-desc", label: "Advance (High to Low)" },
-                { value: "advance-asc", label: "Advance (Low to High)" },
+                { value: "tariff-desc", label: "Highest Tariff" },
+                { value: "tariff-asc", label: "Lowest Tariff" },
+                { value: "advance-desc", label: "Highest Advance" },
+                { value: "advance-asc", label: "Lowest Advance" },
               ]}
               size="sm"
               groupLabel="Sort Bookings"
@@ -632,7 +632,7 @@ export function BookingsTable({ initialBookings, total }: BookingsTableProps) {
                               className={cn(
                                 "h-7 px-2.5 text-xs font-medium inline-flex items-center gap-1.5",
                                 b.invoiceId &&
-                                  "hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-colors"
+                                "hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-colors"
                               )}
                             >
                               {downloadingInvoiceId === b.id ? (

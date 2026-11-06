@@ -46,6 +46,7 @@ export {
   LuArrowUp as ArrowUpIcon,
   LuArrowDown as ArrowDownIcon,
   LuDatabase as DatabaseIcon,
+  LuFileText as ReportIcon,
   LuFileSpreadsheet as FileSpreadsheetIcon,
   LuFileJson as FileJsonIcon,
   LuShieldAlert as ShieldAlertIcon,

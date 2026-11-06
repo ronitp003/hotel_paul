@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { LiveClock } from "./live-clock";
-import { MenuIcon, LogoutIcon, RoomIcon, UserIcon } from "@/lib/icons";
+import { MenuIcon, LogoutIcon, UserIcon } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,8 +51,9 @@ export function Topbar({
 
   return (
     <header className="h-16 border-b border-border bg-card px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 shadow-xs">
+
       {/* Left: Mobile hamburger & title */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <Button
           variant="outline"
           size="icon"
@@ -62,13 +64,23 @@ export function Topbar({
           <MenuIcon className="size-4 sm:size-5" aria-hidden="true" />
         </Button>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 md:hidden">
-          <div className="size-7 sm:size-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center shrink-0">
-            <RoomIcon className="size-3.5 sm:size-4" aria-hidden="true" />
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="size-9 sm:size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+            <Image
+              src="/hotel.svg"
+              alt="Hotel Desk"
+              width={28}
+              height={28}
+              className="size-9 sm:size-7 object-contain brightness-0 invert"
+            />
           </div>
-          <span className="font-semibold text-xs sm:text-sm truncate">Hotel Desk</span>
+
+          <span className="font-semibold text-xs sm:text-sm truncate">
+            Hotel Paul Desk
+          </span>
         </div>
       </div>
+
 
       {/* Right: Live Clock & User Menu */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">

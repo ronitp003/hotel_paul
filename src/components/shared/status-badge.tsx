@@ -52,7 +52,7 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
       Icon = CalendarIcon;
       break;
     case "MAINTENANCE":
-      displayLabel = displayLabel || "Under Maintenance";
+      displayLabel = displayLabel || "Maintenance";
       bgClass =
         "bg-status-maintenance/15 text-status-maintenance border-status-maintenance/30";
       Icon = MaintenanceIcon;

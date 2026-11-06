@@ -173,22 +173,24 @@ export function DashboardView({
       </div>
 
       {/* 3. Main Dashboard – Two Column Layout (2:1 ratio) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 items-stretch">
-        {/* Left Column: Dedicated Room Board (~66.67% width) */}
-        <div className="lg:col-span-2 flex flex-col">
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3 lg:gap-5">
+
+        {/* Room Board */}
+        <div className="flex min-w-0 flex-col lg:col-span-2">
           <RoomBoard
             rooms={rooms}
-            className="h-full min-h-[460px] lg:h-[520px]"
+            className="h-full min-h-135 lg:h-150"
           />
         </div>
 
-        {/* Right Column: Departing Today Panel (~33.33% width) */}
-        <div className="lg:col-span-1 flex flex-col">
+        {/* Departing Today */}
+        <div className="flex min-w-0 flex-col lg:col-span-1">
           <DepartingTodayCard
             departures={data.departingToday}
-            className="h-full min-h-[460px] lg:h-[520px]"
+            className="h-full min-h-135 lg:h-150"
           />
         </div>
+
       </div>
 
       {/* 4. Arriving Today – Full Width Section */}

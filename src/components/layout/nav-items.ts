@@ -5,7 +5,7 @@ import {
   CalendarIcon,
   GuestIcon,
   PaymentIcon,
-  InvoiceIcon,
+  ReportIcon,
   AnalyticsIcon,
   InventoryIcon,
   SettingsIcon,
@@ -55,7 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     title: "Daily Report",
     href: "/register",
-    icon: InvoiceIcon,
+    icon: ReportIcon,
     roles: [ROLES.OWNER],
   },
   {

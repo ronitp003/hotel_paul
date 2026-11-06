@@ -202,9 +202,8 @@ describe("Dashboard Major Layout Redesign", () => {
 
     // Arriving Today is placed outside the 2:1 grid in a full-width container below
     expect(within(leftCol as HTMLElement).queryByText("Arriving Today")).toBeNull();
-    const fullWidthSection = container.querySelector(".w-full");
+    const fullWidthSection = screen.getByText("Arriving Today").closest(".w-full");
     expect(fullWidthSection).toBeInTheDocument();
-    expect(within(fullWidthSection as HTMLElement).getByText("Arriving Today")).toBeInTheDocument();
   });
 
   it("renders hotel rooms in the Room Board using full-card status styling", () => {

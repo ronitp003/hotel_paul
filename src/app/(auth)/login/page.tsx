@@ -15,7 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  RoomIcon,
   SpinnerIcon,
   EyeIcon,
   EyeOffIcon,
@@ -91,20 +90,17 @@ function LoginForm() {
 
   return (
     <Card className="w-full max-w-md shadow-md border-border">
-      <CardHeader className="space-y-2 text-center pb-6">
-        <div className="mx-auto size-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
-          <RoomIcon className="size-6" aria-hidden="true" />
-        </div>
-        <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-          Hotel Desk
+      <CardHeader className="space-y-2 text-center p-6">
+        <CardTitle className="text-2xl font-bold tracking-tight text-foreground mb-0">
+          Hotel Paul Desk
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
-          Sign in with your staff account to access front desk operations.
+          Sign in to access front desk operations.
         </CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-8">
           {errorMessage && (
             <div
               className="flex items-start gap-2.5 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm"
@@ -165,7 +161,7 @@ function LoginForm() {
           </div>
         </CardContent>
 
-        <CardFooter className="pt-2">
+        <CardFooter className="py-4">
           <Button
             type="submit"
             disabled={loading}

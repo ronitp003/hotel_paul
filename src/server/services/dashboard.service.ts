@@ -100,12 +100,17 @@ export const dashboardService = {
       (b) => b.status === BookingStatus.CHECKED_OUT
     ).length;
     const departuresPending = departureBookings.filter(
-      (b) => b.status !== BookingStatus.CHECKED_OUT
+      (b) => b.status === BookingStatus.CHECKED_IN
     ).length;
+
+    // Filter to only include active pending departures scheduled to check out today (exclude CHECKED_OUT)
+    const pendingDepartureBookings = departureBookings.filter(
+      (b) => b.status === BookingStatus.CHECKED_IN
+    );
 
     // For departures, calculate current balance due
     const departingToday: TodayGuestMovement[] = await Promise.all(
-      departureBookings.map(async (b) => {
+      pendingDepartureBookings.map(async (b) => {
         let balanceDue = 0;
         try {
           const res = await billingService.getBookingBill(b.id);

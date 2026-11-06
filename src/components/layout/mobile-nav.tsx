@@ -2,11 +2,12 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 import type { Role } from "@/lib/constants";
-import { RoomIcon, NewBookingIcon, SpinnerIcon } from "@/lib/icons";
+import { NewBookingIcon, SpinnerIcon } from "@/lib/icons";
 import {
   Sheet,
   SheetContent,
@@ -63,10 +64,10 @@ function MobileNavList({
               isActive
                 ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                 : isPending
-                ? "bg-primary/15 text-primary font-semibold border border-primary/30"
-                : item.highlight
-                ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                  ? "bg-primary/15 text-primary font-semibold border border-primary/30"
+                  : item.highlight
+                    ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
             )}
           >
             <Icon
@@ -75,10 +76,10 @@ function MobileNavList({
                 isActive
                   ? "text-primary-foreground"
                   : isPending
-                  ? "text-primary animate-pulse"
-                  : item.highlight
-                  ? "text-primary"
-                  : "text-muted-foreground"
+                    ? "text-primary animate-pulse"
+                    : item.highlight
+                      ? "text-primary"
+                      : "text-muted-foreground"
               )}
               aria-hidden="true"
             />
@@ -107,10 +108,16 @@ export function MobileNav({
         <SheetContent side="left" className="w-72 p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border flex flex-row items-center gap-3">
             <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
-              <RoomIcon className="size-4" aria-hidden="true" />
+              <Image
+                src="/hotel.svg"
+                alt="Hotel Desk"
+                width={16}
+                height={16}
+                className="size-8 sm:size-8 object-contain brightness-0 invert"
+              />
             </div>
             <SheetTitle className="text-base font-semibold">
-              Hotel Desk
+              Hotel Paul Desk
             </SheetTitle>
           </SheetHeader>
 

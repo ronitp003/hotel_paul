@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CalendarTimeline } from "@/features/calendar/components/calendar-timeline";
+import { formatIST } from "@/lib/datetime";
 
 const mockOpenBookingModal = vi.fn();
 
@@ -188,5 +189,64 @@ describe("CalendarTimeline interaction & layout improvements", () => {
 
     // Should now be in Day View (shows Day button as active)
     expect(screen.getByRole("button", { name: "Day" })).toHaveClass("font-bold");
+  });
+
+  it("passes selected hour time, room, and date to New Booking modal when clicking an empty hour slot in Day View", async () => {
+    renderCalendar();
+
+    // Switch to Day View
+    fireEvent.click(screen.getByRole("button", { name: "Day" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("102")).toBeInTheDocument();
+    });
+
+    // Find the 2:00 PM (14:00) cell for Room 102
+    const cell14 = screen.getByTitle("Book Room 102 at 14:00");
+    expect(cell14).toBeInTheDocument();
+
+    fireEvent.click(cell14);
+
+    expect(mockOpenBookingModal).toHaveBeenCalledTimes(1);
+    const callArgs = mockOpenBookingModal.mock.calls[0]![0];
+    expect(callArgs.preselectedRoomId).toBe("room-102");
+    expect(callArgs.checkIn).toBeInstanceOf(Date);
+    expect(callArgs.checkOut).toBeInstanceOf(Date);
+
+    // Verify time is explicitly 14:00 (2:00 PM) in IST
+    expect(formatIST(callArgs.checkIn, "HH:mm")).toBe("14:00");
+    expect(formatIST(callArgs.checkOut, "HH:mm")).toBe("14:00");
+
+    // Checkout must default to 24 hours later (1-day default)
+    const diffHours =
+      (callArgs.checkOut.getTime() - callArgs.checkIn.getTime()) / (1000 * 60 * 60);
+    expect(diffHours).toBeCloseTo(24, 1);
+  });
+
+  it("passes selected hour time to New Booking modal when clicking an hour header in Day View", async () => {
+    renderCalendar();
+
+    // Switch to Day View
+    fireEvent.click(screen.getByRole("button", { name: "Day" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("101")).toBeInTheDocument();
+    });
+
+    // Find the 2:00 PM (14:00) column header in Day View
+    const headerCol14 = screen.getByTitle("Click to book at 14:00");
+    expect(headerCol14).toBeInTheDocument();
+
+    fireEvent.click(headerCol14);
+
+    expect(mockOpenBookingModal).toHaveBeenCalledTimes(1);
+    const callArgs = mockOpenBookingModal.mock.calls[0]![0];
+    expect(callArgs.preselectedRoomId).toBeUndefined();
+    expect(callArgs.checkIn).toBeInstanceOf(Date);
+    expect(callArgs.checkOut).toBeInstanceOf(Date);
+
+    // Verify time is explicitly 14:00 in IST
+    expect(formatIST(callArgs.checkIn, "HH:mm")).toBe("14:00");
+    expect(formatIST(callArgs.checkOut, "HH:mm")).toBe("14:00");
   });
 });

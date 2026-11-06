@@ -914,6 +914,20 @@ export function BookingDetailView({ booking }: BookingDetailViewProps) {
               </div>
             </div>
 
+            {(isReserved || (isGroup && booking.groupRooms?.some((r) => r.status === "RESERVED"))) && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setCheckInConfirmOpen(true)}
+                className="w-full mt-2 font-semibold shadow-xs min-h-[36px] inline-flex items-center justify-center gap-2"
+              >
+                <CheckInIcon className="size-4 shrink-0" />
+                <span>
+                  {isGroup ? "Check In Entire Group" : "Check In Guest"}
+                </span>
+              </Button>
+            )}
+
             {(isCheckedIn || (isGroup && booking.groupRooms?.some((r) => r.status === "CHECKED_IN"))) && (
               <Button
                 variant="default"

@@ -130,11 +130,20 @@ export function CalendarTimeline({
   // Booking modal trigger
   const { openBookingModal } = useBookingModal();
 
-  const handleDateClick = (date: Date, roomId?: string) => {
-    const isToday = isSameDay(toIST(date), toIST(new Date()));
-    const checkIn = isToday
-      ? new Date()
-      : fromISTInput(`${formatIST(date, "yyyy-MM-dd")}T12:00:00`);
+  const handleDateClick = (
+    date: Date,
+    roomId?: string,
+    hasExplicitTime: boolean = false
+  ) => {
+    let checkIn: Date;
+    if (hasExplicitTime) {
+      checkIn = date;
+    } else {
+      const isToday = isSameDay(toIST(date), toIST(new Date()));
+      checkIn = isToday
+        ? new Date()
+        : fromISTInput(`${formatIST(date, "yyyy-MM-dd")}T12:00:00`);
+    }
     const checkOut = new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
 
     openBookingModal({
@@ -733,7 +742,11 @@ export function CalendarTimeline({
                     <div
                       key={col.id}
                       onClick={() => {
-                        handleDateClick(col.date);
+                        handleDateClick(
+                          col.date,
+                          undefined,
+                          viewMode === "day"
+                        );
                       }}
                       className={cn(
                         "py-2 px-1 text-center border-r last:border-r-0 flex flex-col justify-center transition-colors cursor-pointer group/hcol",
@@ -745,7 +758,11 @@ export function CalendarTimeline({
                         col.isWeekend && !col.isToday && "bg-muted/70",
                         col.isToday && "bg-primary/10 text-primary"
                       )}
-                      title={`Click to book for ${formatIST(col.date, "dd MMM yyyy")}`}
+                      title={
+                        viewMode === "week"
+                          ? `Click to book for ${formatIST(col.date, "dd MMM yyyy")}`
+                          : `Click to book at ${col.subLabel}`
+                      }
                     >
                       <span
                         className={cn(
@@ -1053,7 +1070,7 @@ export function CalendarTimeline({
                                 <div
                                   key={col.id}
                                   onClick={() =>
-                                    handleDateClick(col.date, room.id)
+                                    handleDateClick(col.date, room.id, true)
                                   }
                                   title={`Book Room ${room.number} at ${col.subLabel}`}
                                   className={cn(
